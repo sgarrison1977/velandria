@@ -9,6 +9,7 @@ log = logging.getLogger("game")
 rnd = random.Random()
 VIEW_R2 = 85 ** 2
 LINKDEAD_SECS = 15
+TOWN_NAMES = {"semel": "Titus", "elderglen": "Elderglen"}
 
 
 def now():
@@ -263,7 +264,7 @@ class Game:
                 town = min(SAFE_ZONES, key=lambda s: (s["x"] - p.x) ** 2 + (s["z"] - p.z) ** 2)
                 p.x, p.z = town["x"] + rnd.uniform(-4, 4), town["z"] + rnd.uniform(-8, -5)
                 p.hp, p.mp, p.dead_until, p.path = p.max_hp * 0.6, p.max_mp * 0.6, 0, []
-                p.send({"t": "sys", "msg": f"You awaken in the safe square of {town['town'].capitalize()}."})
+                p.send({"t": "sys", "msg": f"You awaken in the safe square of {TOWN_NAMES[town['town']]}."})
                 p.dirty = True
             return
         changed = False
@@ -688,7 +689,7 @@ class Game:
             return p.send({"t": "err", "msg": "You are too far away."})
         opts, text = [], {"smith": "Steel for the road, traveler?", "merchant": "Supplies for the journey? I've a fair price.",
                           "healer": "Rest a moment. The light will mend you.", "druid": "The grove's breath will restore you.",
-                          "elder": "Semel has endured, but the woods grow restless.", "guard": "Keep your blade sharp out there.",
+                          "elder": "Titus has endured, but the woods grow restless.", "guard": "Keep your blade sharp out there.",
                           "villager": "Fine day, isn't it? Mind the spiders past the north gate.", "child": "Are you a real adventurer?!"}.get(n["kind"], "Greetings.")
         if n.get("merchant"):
             opts.append(dict(id="trade", label="Trade"))
@@ -704,7 +705,7 @@ class Game:
             elif qd["turnin"] == npc_id and p.quests.get(qid, {}).get("s") == "active":
                 text = f"How goes '{qd['name']}'? Return when the task is done."
         if npc_id == "lyra" and p.quests.get("q_letter", {}).get("s") == "done":
-            text = "Thank you for the letter. Elderglen stands with Semel."
+            text = "Thank you for the letter. Elderglen stands with Titus."
         p.send({"t": "dialog", "npc": npc_id, "text": text, "opts": opts})
 
     def npc_action(self, p, npc_id, action):
@@ -772,7 +773,7 @@ class Game:
             stock[item] -= qty
         p.send({"t": "trade", "msg": f"Bought {qty}x {ITEMS[item]['name']} for {cost} gold."})
         p.send(self.merchant_view(n["merchant"], npc_id))
-        asyncio.create_task(self.db.transactions.insert_one(dict(char=p.id, kind="buy", item=item, qty=qty, gold=cost, ts=datetime.now(timezone.utc).isoformat())))
+        asyncio.ensure_future(self.db.transactions.insert_one(dict(char=p.id, kind="buy", item=item, qty=qty, gold=cost, ts=datetime.now(timezone.utc).isoformat())))
         asyncio.create_task(self.save(p))
 
     def sell(self, p, npc_id, suid, qty):
@@ -792,7 +793,7 @@ class Game:
         p.gold += gain
         p.dirty = True
         p.send({"t": "trade", "msg": f"Sold {qty}x {it['name']} for {gain} gold."})
-        asyncio.create_task(self.db.transactions.insert_one(dict(char=p.id, kind="sell", item=s["item"], qty=qty, gold=gain, ts=datetime.now(timezone.utc).isoformat())))
+        asyncio.ensure_future(self.db.transactions.insert_one(dict(char=p.id, kind="sell", item=s["item"], qty=qty, gold=gain, ts=datetime.now(timezone.utc).isoformat())))
         asyncio.create_task(self.save(p))
 
     def equip(self, p, suid):

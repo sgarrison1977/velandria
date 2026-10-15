@@ -117,7 +117,7 @@ export function QuestPanel({ data }) {
   const qs = Object.entries(me.quests);
   return (
     <Panel title="Quest Journal" testid="quest-panel" className="quest-panel" onClose={() => togglePanel("quests", false)}>
-      {!qs.length && <p className="hint">No quests yet. Speak with Elder Toman and Captain Rhea in Semel's square (right-click them).</p>}
+      {!qs.length && <p className="hint">No quests yet. Speak with Elder Toman and Captain Rhea in Titus's square (right-click them).</p>}
       {qs.map(([id, q]) => {
         const d = data.quests[id], giver = data.npcs[d.turnin];
         let prog = "";

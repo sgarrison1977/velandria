@@ -169,16 +169,13 @@ input { font-family: inherit; }
 .tip { min-width: 190px; max-width: 260px; font-size: 13px; line-height: 1.4; }
 .tip-name { font-family: var(--serif); font-size: 16px; } .tip-meta { color: var(--muted); font-size: 12px; text-transform: capitalize; } .tip-desc { color: #c8b898; font-style: italic; margin-top: 4px; }
 .hov { position: relative; display: inline-block; }
-.hov-tip { display: none; position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: #0d0a08f5; border: 1px solid var(--edge); padding: 8px 10px; z-index: 30; box-shadow: 0 8px 24px #000; pointer-events: none; }
-.hov:hover .hov-tip { display: block; }
-.inv-grid .hov-tip, .equip-grid .hov-tip, .mlist .hov-tip { bottom: auto; top: 50%; left: auto; right: calc(100% + 8px); transform: translateY(-50%); }
+.hov-tip { position: fixed; background: #0d0a08f5; font-family: var(--sans); color: var(--text); font-size: 14px; max-width: 300px; border: 1px solid var(--edge); padding: 8px 10px; z-index: 1000; box-shadow: 0 8px 24px #000; pointer-events: none; }
 
 .char-head { display: flex; flex-direction: column; margin-bottom: 8px; } .char-head b { font-family: var(--serif); font-size: 20px; } .char-head span { color: var(--muted); }
 .char-points { background: #0b0907; border: 1px solid var(--edge2); padding: 6px 10px; margin-bottom: 8px; } .char-points b { color: var(--gold); }
 .attr-row { display: grid; grid-template-columns: 1fr 40px 30px; align-items: center; padding: 4px 0; border-bottom: 1px solid #2a2016; }
 .attr-name { font-family: var(--serif); font-size: 15px; cursor: help; border-bottom: 1px dotted #5a4a36; }
 .attr-row b { text-align: right; padding-right: 8px; color: var(--gold); }
-.attr-row .hov-tip { left: 0; transform: none; bottom: calc(100% + 4px); }
 .plus { width: 26px; height: 26px; background: #2a2016; border: 1px solid var(--edge); color: var(--gold); display: grid; place-items: center; } .plus:disabled { opacity: .3; cursor: default; }
 .derived { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; margin-top: 12px; font-size: 13px; } .derived div { display: flex; justify-content: space-between; } .derived em { color: var(--muted); font-style: normal; }
 .skill-row { display: grid; grid-template-columns: 48px 1fr auto; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #2a2016; }
@@ -198,7 +195,6 @@ input { font-family: inherit; }
 .mrow input { width: 44px; background: #070605; border: 1px solid #3a2c1c; color: var(--text); padding: 3px; }
 .price { color: var(--gold); font-family: var(--serif); min-width: 44px; text-align: right; }
 .mrow .btn { padding: 4px 10px; font-size: 13px; }
-.mlist .hov-tip { right: auto; left: calc(100% + 8px); }
 
 .binds { display: flex; flex-direction: column; max-height: 50vh; overflow-y: auto; }
 .bind-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid #2a2016; font-size: 14px; }

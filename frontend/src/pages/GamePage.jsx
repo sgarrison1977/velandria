@@ -74,8 +74,10 @@ export default function GamePage() {
       if (!action) return;
       e.preventDefault();
       const n = net.current;
-      if (action.startsWith("ability:")) { const ab = action.slice(8); if (!st.me.abilities.includes(ab)) { toast(`${data.abilities[ab].name} is locked.`, "error"); return; } n.send({ t: "cast", ab, id: eng.current?.targetId }); }
-      else if (action === "attack_nearest") n.send({ t: "attack_nearest" });
+      if (action.startsWith("ability:")) { const ab = action.slice(8); if (!st.me.abilities.includes(ab)) { toast(`${data.abilities[ab].name} is locked.`, "error"); return; } const ad = data.abilities[ab], hov = eng.current?.hover;
+        const id = ad.kind !== "melee" && hov?.kind === "monster" && !hov.anim.dead ? hov.id : eng.current?.targetId;
+        n.send({ t: "cast", ab, id }); }
+      else if (action === "attack_nearest") { const hov = eng.current?.hover; if (hov?.kind === "monster" && !hov.anim.dead) n.send({ t: "target", id: hov.id }); else n.send({ t: "attack_nearest" }); }
       else if (action === "stop") n.send({ t: "stop" });
       else if (action === "chat") setState((s) => ({ chatFocus: (s.chatFocus || 0) + 1 }));
       else if (action === "menu") {

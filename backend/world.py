@@ -53,7 +53,7 @@ STREAMS = [[(300, -5), (290, 80), (310, 160), (300, 235), (320, 320), (310, 405)
 LAKES = [dict(x=1045, z=335, rx=30, rz=20), dict(x=420, z=330, rx=14, rz=9)]
 
 REGIONS = [
-    dict(name="Semel", x=90, z=200, r=58, lvl="Safe town"),
+    dict(name="Titus", x=90, z=200, r=58, lvl="Safe town"),
     dict(name="Elderglen", x=1000, z=210, r=64, lvl="Safe town"),
     dict(name="Silkfield Meadows", x=92, z=90, r=45, lvl="1-2"),
     dict(name="Imp Hollow", x=102, z=318, r=40, lvl="1-3"),
@@ -84,7 +84,7 @@ def _rect(x, z, w, d, kind, style, **kw):
 
 SEMEL_BUILDINGS = [
     _rect(64, 180, 12, 10, "smithy", "semel", name="Brannoc's Forge"), _rect(118, 180, 11, 9, "shop", "semel", name="Vell's Sundries"),
-    _rect(63, 222, 10, 14, "chapel", "semel", name="Chapel of Dawn"), _rect(119, 224, 14, 10, "hall", "semel", name="Semel Hall"),
+    _rect(63, 222, 10, 14, "chapel", "semel", name="Chapel of Dawn"), _rect(119, 224, 14, 10, "hall", "semel", name="Titus Hall"),
     _rect(50, 196, 8, 8, "house", "semel"), _rect(60, 165, 9, 7, "house", "semel"), _rect(118, 165, 8, 8, "house", "semel"),
     _rect(118, 238, 9, 7, "house", "semel"), _rect(64, 240, 8, 8, "house", "semel"), _rect(44, 215, 7, 8, "house", "semel"),
 ]

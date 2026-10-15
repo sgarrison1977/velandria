@@ -303,7 +303,7 @@ export class Engine {
     for (const r of this.world.regions) { const d = Math.hypot(r.x - x, r.z - z); if (d < r.r && (!best || d / r.r < best.k)) best = { r, k: d / r.r }; }
     if (best) return best.r.name;
     const rd = this.terrain.sample(this.terrain.RD, x, z);
-    if (x < 330) return rd < 6 ? "Semel Forest Road" : "Westwood";
+    if (x < 330) return rd < 6 ? "Titus Forest Road" : "Westwood";
     if (x < 700) return rd < 6 ? "The Long Road" : "Shadowpine Deep";
     return rd < 6 ? "Elderglen Road" : "Mossveil Wilds";
   }

@@ -61,7 +61,7 @@ ABILITIES = {
                        desc="A careful shot for 180% weapon damage +3 at long range."),
     "venom_arrow": dict(name="Venom Arrow", cls="ranger", level=4, cost=14, cd=12, range=16, kind="dot", base=6, scale=0.5, ticks=6,
                         desc="Poison the target, dealing damage every second for 6s."),
-    "minor_heal": dict(name="Minor Heal", cls=None, level=2, cost=12, cd=8, kind="heal", base=25, scale=1.5,
+    "minor_heal": dict(name="Minor Heal", cls=None, level=2, cost=12, cd=0, kind="heal", base=25, scale=1.5,
                        desc="Restore 25 + 150% Wisdom health to yourself."),
     "quickstep": dict(name="Quickstep", cls=None, level=2, cost=10, cd=20, kind="buff", buff="speed", value=0.5, dur=5,
                       desc="Move 50% faster for 5 seconds."),
@@ -99,7 +99,7 @@ ITEMS = {
     "gold": dict(name="Gold Coins", type="gold", rarity="common", price=1, desc="Shiny coins.", stack=10**9),
     # weapons
     "rusty_sword": W("Rusty Sword", ["warrior"], "common", [3, 6], 1.6, 12, desc="Pitted but serviceable."),
-    "iron_sword": W("Iron Sword", ["warrior"], "common", [5, 9], 1.55, 70, 3, desc="Honest Semel iron."),
+    "iron_sword": W("Iron Sword", ["warrior"], "common", [5, 9], 1.55, 70, 3, desc="Honest Titus iron."),
     "spider_fang_blade": W("Spider-Fang Blade", ["warrior", "ranger"], "uncommon", [6, 10], 1.35, 110, 3, stats={"dex": 2}, desc="Light, wickedly sharp.", color="#c9d6c0"),
     "steel_longsword": W("Steel Longsword", ["warrior"], "uncommon", [9, 15], 1.6, 260, 7, stats={"str": 2}, desc="Elderglen-forged steel."),
     "orc_cleaver": W("Orc Cleaver", ["warrior"], "rare", [14, 22], 1.75, 520, 10, stats={"str": 4, "sta": 2}, desc="Brutal and heavy.", color="#7a5b3a"),
@@ -202,7 +202,7 @@ NPCS = {
     # ambient townsfolk
     "v1": dict(name="Hob the Farmer", role="Villager", town="semel", pos=[70, 225], kind="villager", ambient=True),
     "v2": dict(name="Ella", role="Villager", town="semel", pos=[112, 178], kind="villager", ambient=True),
-    "v3": dict(name="Tobin", role="Child of Semel", town="semel", pos=[95, 186], kind="child", ambient=True),
+    "v3": dict(name="Tobin", role="Child of Titus", town="semel", pos=[95, 186], kind="child", ambient=True),
     "v4": dict(name="Wren the Weaver", role="Villager", town="elderglen", pos=[985, 230], kind="villager", ambient=True),
     "v5": dict(name="Moss", role="Elderglen Forester", town="elderglen", pos=[1020, 215], kind="villager", ambient=True),
 }

@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState, useRef, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
 import { Sword, Wand2, Crosshair, Shield, BookOpen, HardHat, Shirt, Footprints, Hand, Gem, FlaskConical, Coins, Bone, ScrollText, Package, Layers, Circle, X } from "lucide-react";
 import { RARITY } from "../../game/models";
 
@@ -71,7 +72,26 @@ export function Bar({ value, max, kind, label, testid }) {
 }
 
 export function Hover({ tip, children }) {
-  return <div className="hov">{children}<div className="hov-tip">{tip}</div></div>;
+  const [rect, setRect] = useState(null);
+  const [pos, setPos] = useState(null);
+  const tipRef = useRef();
+  useLayoutEffect(() => {
+    if (!rect || !tipRef.current) { setPos(null); return; }
+    const tw = tipRef.current.offsetWidth, th = tipRef.current.offsetHeight, m = 8, W = window.innerWidth, H = window.innerHeight;
+    let x = rect.left - tw - m;
+    if (x < m) x = rect.right + m;
+    if (x + tw > W - m) x = Math.max(m, Math.min(W - tw - m, rect.left + rect.width / 2 - tw / 2));
+    let y = rect.top + rect.height / 2 - th / 2;
+    if (x === Math.max(m, Math.min(W - tw - m, rect.left + rect.width / 2 - tw / 2)) && (x < rect.right && x + tw > rect.left)) y = rect.top - th - m < m ? rect.bottom + m : rect.top - th - m;
+    y = Math.max(m, Math.min(H - th - m, y));
+    setPos({ x, y });
+  }, [rect]);
+  return (
+    <div className="hov" onMouseEnter={(e) => setRect(e.currentTarget.getBoundingClientRect())} onMouseLeave={() => setRect(null)} onMouseDown={() => setRect(null)}>
+      {children}
+      {rect && createPortal(<div ref={tipRef} className="hov-tip" data-testid="tooltip" style={{ left: pos ? pos.x : -9999, top: pos ? pos.y : -9999 }}>{tip}</div>, document.body)}
+    </div>
+  );
 }
 
 const AB_ICONS = { power_strike: [Sword, "#e8c27a", "#5a2a12"], iron_guard: [Shield, "#9ac8ff", "#1a2a4a"], cleave: [Layers, "#ffb070", "#4a1a0a"], arcane_bolt: [Wand2, "#9ac8ff", "#1a1a5a"],
