@@ -70,11 +70,16 @@ REGIONS = [
 ]
 
 SPAWNS = [
-    ("giant_spider", 92, 92, 30, 11), ("giant_spider", 190, 240, 18, 6), ("imp", 102, 318, 26, 10), ("imp", 225, 165, 18, 5),
-    ("forest_wolf", 268, 180, 22, 6), ("forest_wolf", 350, 285, 24, 6), ("goblin_scout", 455, 255, 20, 8),
-    ("skeleton", 400, 112, 24, 8), ("skeleton", 545, 122, 18, 5), ("forest_bandit", 600, 322, 22, 8),
-    ("venomous_spider", 520, 75, 18, 6), ("venomous_spider", 650, 140, 22, 6), ("orc_warrior", 800, 122, 26, 8),
-    ("dark_cultist", 762, 300, 20, 7), ("forest_troll", 962, 70, 28, 5), ("forest_troll", 885, 335, 18, 3),
+    ("giant_spider", 92, 88, 46, 24), ("giant_spider", 190, 245, 30, 12), ("giant_spider", 165, 120, 28, 10),
+    ("imp", 102, 322, 42, 22), ("imp", 225, 160, 28, 10), ("imp", 180, 330, 26, 9),
+    ("forest_wolf", 268, 175, 34, 12), ("forest_wolf", 350, 290, 36, 12), ("forest_wolf", 330, 140, 26, 8),
+    ("goblin_scout", 455, 258, 34, 16), ("goblin_scout", 500, 230, 22, 7),
+    ("skeleton", 400, 112, 38, 16), ("skeleton", 545, 122, 30, 10), ("skeleton", 470, 60, 22, 6),
+    ("forest_bandit", 600, 322, 36, 16), ("forest_bandit", 650, 270, 24, 8),
+    ("venomous_spider", 520, 78, 28, 12), ("venomous_spider", 650, 140, 34, 12), ("venomous_spider", 590, 60, 22, 6),
+    ("orc_warrior", 800, 122, 40, 16), ("orc_warrior", 860, 160, 24, 8),
+    ("dark_cultist", 762, 300, 32, 13), ("dark_cultist", 830, 350, 22, 6),
+    ("forest_troll", 962, 72, 44, 10), ("forest_troll", 885, 335, 28, 6), ("forest_troll", 1060, 90, 26, 5),
 ]
 
 
