@@ -4,6 +4,10 @@ import { buildStructures, animateStructures } from "./structures";
 import { buildMonster, buildNpc, buildPlayer, buildLoot, proxy, animateRig, RARITY } from "./models";
 import { getState, setState } from "./store";
 import { sfx } from "./audio";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 
 const glowTex = (() => {
   const c = document.createElement("canvas"); c.width = c.height = 64;
@@ -19,17 +23,18 @@ export class Engine {
   constructor({ canvas, overlay, data, world, net, meId, quality }) {
     Object.assign(this, { canvas, overlay, data, world, net, meId });
     this.entities = new Map(); this.fxList = []; this.nums = []; this.hover = null; this.discovered = new Set(JSON.parse(localStorage.getItem(`sx_disc_${meId}`) || "[]"));
-    this.yaw = 0; this.zoom = 26; this.camTarget = new THREE.Vector3(90, 0, 195); this.clock = new THREE.Clock();
+    this.yaw = 0; this.zoom = 19; this.camTarget = new THREE.Vector3(90, 0, 195); this.clock = new THREE.Clock();
     this.quality = quality || "high"; this.stepT = 0; this.lastRegion = ""; this.ray = new THREE.Raycaster(); this.mouse = new THREE.Vector2(); this.mouseIn = false;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.quality === "high" ? 1.5 : 1));
     this.renderer.shadowMap.enabled = true; this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.05;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.2;
     const scene = (this.scene = new THREE.Scene());
-    scene.background = new THREE.Color("#1a2320"); scene.fog = new THREE.FogExp2("#1a2320", 0.0125);
+    scene.background = new THREE.Color("#2a3631"); scene.fog = new THREE.FogExp2("#2a3631", 0.011);
     this.camera = new THREE.PerspectiveCamera(42, 1, 0.5, 150);
-    scene.add(new THREE.HemisphereLight("#9fb4c0", "#3a3022", 1.0));
-    const sun = (this.sun = new THREE.DirectionalLight("#ffd9a8", 2.6));
+    scene.add(new THREE.HemisphereLight("#b8cad4", "#4a3c26", 1.35));
+    const rim = new THREE.DirectionalLight("#8fb0ff", 0.6); rim.position.set(60, 40, -80); scene.add(rim);
+    const sun = (this.sun = new THREE.DirectionalLight("#ffe2b8", 3.0));
     sun.castShadow = true; const sz = this.quality === "high" ? 2048 : 1024; sun.shadow.mapSize.set(sz, sz);
     Object.assign(sun.shadow.camera, { left: -48, right: 48, top: 48, bottom: -48, near: 1, far: 160 }); sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.04;
     scene.add(sun, sun.target);
@@ -44,12 +49,16 @@ export class Engine {
     this.marker.rotation.x = -Math.PI / 2; this.marker.visible = false; scene.add(this.marker);
     this.proxies = [];
     for (const [id, n] of Object.entries(data.npcs)) this.addEntity(id, "npc", { name: n.name, role: n.role, x: n.pos[0], z: n.pos[1], npcKind: n.kind, ambient: n.ambient });
+    this.composer = new EffectComposer(this.renderer);
+    this.composer.addPass(new RenderPass(scene, this.camera));
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(512, 512), 0.55, 0.5, 0.82);
+    this.composer.addPass(this.bloom); this.composer.addPass(new OutputPass());
     this.bindInput(); this.resize();
     window.addEventListener("resize", this.resize);
     this.running = true; this.fpsAcc = []; this.loop();
   }
   dispose() { this.running = false; window.removeEventListener("resize", this.resize); this.unbind?.(); this.renderer.dispose(); this.overlay.innerHTML = ""; }
-  resize = () => { const w = this.canvas.clientWidth, h = this.canvas.clientHeight; this.renderer.setSize(w, h, false); this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); };
+  resize = () => { const w = this.canvas.clientWidth, h = this.canvas.clientHeight; this.renderer.setSize(w, h, false); if (this.composer) { this.composer.setPixelRatio(this.renderer.getPixelRatio()); this.composer.setSize(w, h); this.bloom.resolution.set(w / 2, h / 2); } this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); };
   groundY(x, z) {
     let h = this.terrain.height(x, z);
     for (const b of this.world.bridges) if (Math.hypot(b.x - x, b.z - z) < 5.5) h = Math.max(h, 0.42);
@@ -350,7 +359,7 @@ export class Engine {
     animateStructures(this.animatedProps, t);
     this.updateHover();
     this.holdWalk(now);
-    this.renderer.render(this.scene, this.camera);
+    if (this.quality === "low") this.renderer.render(this.scene, this.camera); else this.composer.render();
     this.updatePlates(now);
     this.fpsAcc.push(dt);
     if (this.fpsAcc.length >= 60) { const fps = Math.round(60 / this.fpsAcc.reduce((a, b) => a + b, 0)); this.fpsAcc = []; setState({ fps }); this.slow = fps < 24 ? (this.slow || 0) + 1 : 0; if (this.slow >= 2 && this.quality !== "low") { this.setQuality(this.quality === "high" ? "medium" : "low"); this.slow = 0; } if (this.discDirty) { this.discDirty = false; localStorage.setItem(`sx_disc_${this.meId}`, JSON.stringify([...this.discovered])); } }

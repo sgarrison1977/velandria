@@ -3,11 +3,12 @@ import * as THREE from "three";
 const cache = {};
 const M = (color, o = {}) => {
   const k = color + JSON.stringify(o);
-  if (!cache[k]) cache[k] = new THREE.MeshStandardMaterial({ color, roughness: 0.75, flatShading: true, ...o });
+  if (!cache[k]) cache[k] = new THREE.MeshStandardMaterial({ color, roughness: 0.62, metalness: 0.05, flatShading: false, ...o });
   return cache[k];
 };
 const mesh = (geo, mat, x = 0, y = 0, z = 0, parent) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; parent && parent.add(m); return m; };
 const B = (w, h, d) => new THREE.BoxGeometry(w, h, d);
+const cap = (r, l) => new THREE.CapsuleGeometry(r, l, 4, 10);
 const grp = (x = 0, y = 0, z = 0, parent) => { const g = new THREE.Group(); g.position.set(x, y, z); parent && parent.add(g); return g; };
 export const RARITY = { common: "#c9c3b4", uncommon: "#5fd35a", rare: "#4f9bff", epic: "#b45cff", legendary: "#ffb22e" };
 
@@ -38,32 +39,32 @@ function weaponMesh(kind, color = "#9aa0a6", glow) {
 const weaponKind = (id) => !id ? null : /staff/.test(id) ? "staff" : /bow/.test(id) ? "bow" : /maul|cleaver/.test(id) ? (id.includes("maul") ? "club" : "axe") : "sword";
 
 export function humanoid(o) {
-  const s = o.scale || 1, bulk = o.bulk || 1, thin = o.thin ? 0.55 : 1;
+  const s = (o.scale || 1) * 1.22, bulk = o.bulk || 1, thin = o.thin ? 0.55 : 1;
   const root = new THREE.Group(), body = grp(0, 0, 0, root);
   const skin = M(o.skin || "#c9a084"), shirt = M(o.shirt || "#5a4a3a"), pants = M(o.pants || "#3a3028"), boots = M(o.boots || "#2a1f16");
   const rig = { root, body, s };
   const leg = (side) => {
     const hip = grp(side * 0.12 * bulk, 0.88, 0, body);
-    mesh(B(0.17 * bulk * thin, 0.46, 0.19 * thin), pants, 0, -0.22, 0, hip);
+    mesh(cap(0.092 * bulk * thin, 0.3), pants, 0, -0.22, 0, hip);
     const knee = grp(0, -0.45, 0, hip);
-    mesh(B(0.15 * bulk * thin, 0.4, 0.16 * thin), pants, 0, -0.2, 0, knee);
-    mesh(B(0.17 * bulk, 0.12, 0.26), boots, 0, -0.4, 0.04, knee);
+    mesh(cap(0.078 * bulk * thin, 0.27), pants, 0, -0.19, 0, knee);
+    mesh(cap(0.088 * bulk, 0.12), boots, 0, -0.3, 0, knee); const toe = mesh(cap(0.075 * bulk, 0.14), boots, 0, -0.41, 0.06, knee); toe.rotation.x = Math.PI / 2;
     return { hip, knee };
   };
   rig.legL = leg(-1); rig.legR = leg(1);
   const torso = grp(0, 0.88, 0, body); rig.torso = torso;
   if (o.hunch) torso.rotation.x = 0.35;
-  mesh(B(0.48 * bulk * (o.thin ? 0.7 : 1), 0.62, 0.28 * bulk), o.thin ? M("#d8d2bc") : shirt, 0, 0.33, 0, torso);
+  mesh(cap(0.2, 0.3), o.thin ? M("#d8d2bc") : shirt, 0, 0.36, 0, torso).scale.set(1.22 * bulk * (o.thin ? 0.6 : 1), 1, 0.72 * bulk); mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.1, 8), skin, 0, 0.68, 0, torso); mesh(B(0.07, 0.07, 0.03), M("#c9a24e", { metalness: 0.8, roughness: 0.3 }), 0, 0.05, 0.16 * bulk, torso);
   if (o.thin) for (let i = 0; i < 4; i++) mesh(B(0.4, 0.035, 0.3), M("#e6e0cc"), 0, 0.2 + i * 0.1, 0, torso);
-  mesh(B(0.5 * bulk, 0.08, 0.3 * bulk), M(o.belt || "#2a1d12"), 0, 0.05, 0, torso);
+  mesh(new THREE.CylinderGeometry(0.235 * bulk, 0.235 * bulk, 0.08, 14), M(o.belt || "#2a1d12"), 0, 0.05, 0, torso).scale.set(1, 1, 0.66);
   if (o.robe) { const r = mesh(new THREE.CylinderGeometry(0.24 * bulk, 0.42 * bulk, 0.9, 8), M(o.robe), 0, -0.42, 0, torso); r.name = "robe"; }
   if (o.pauldrons) for (const sd of [-1, 1]) mesh(new THREE.SphereGeometry(0.16 * bulk, 6, 4, 0, Math.PI * 2, 0, Math.PI / 2), M(o.pauldrons, { metalness: 0.5, roughness: 0.4 }), sd * 0.3 * bulk, 0.6, 0, torso);
   if (o.cape) { const c = mesh(B(0.5 * bulk, 0.95, 0.04), M(o.cape), 0, 0.15, -0.17 * bulk, torso); c.rotation.x = 0.12; c.name = "cape"; }
   const head = grp(0, 0.7, 0, torso); rig.head = head;
-  mesh(new THREE.IcosahedronGeometry(0.16 * (o.headScale || 1), 1), o.head === "skull" ? M("#e3dcc6") : skin, 0, 0.12, 0, head);
+  mesh(new THREE.SphereGeometry(0.15 * (o.headScale || 1), 16, 12), o.head === "skull" ? M("#e3dcc6") : skin, 0, 0.13, 0, head).scale.set(0.95, 1.08, 1); if (o.head !== "skull") mesh(B(0.035, 0.06, 0.05), skin, 0, 0.11, 0.15, head);
   if (o.head === "skull") { for (const sd of [-1, 1]) mesh(B(0.05, 0.05, 0.02), M("#000"), sd * 0.06, 0.14, 0.15, head); }
   else for (const sd of [-1, 1]) mesh(B(0.035, 0.035, 0.02), M(o.eyes || "#1a1a1a", o.eyes ? { emissive: o.eyes, emissiveIntensity: 2 } : {}), sd * 0.06, 0.14, 0.15, head);
-  if (o.hair) mesh(B(0.34, 0.14, 0.34), M(o.hair), 0, 0.24, -0.02, head);
+  if (o.hair) mesh(new THREE.SphereGeometry(0.165, 14, 8, 0, Math.PI * 2, 0, Math.PI / 1.7), M(o.hair, { roughness: 0.9 }), 0, 0.15, -0.015, head);
   if (o.mohawk) mesh(B(0.06, 0.16, 0.3), M(o.mohawk), 0, 0.3, 0, head);
   if (o.beard) mesh(B(0.22, 0.18, 0.1), M(o.beard), 0, 0.0, 0.12, head);
   if (o.helm) { mesh(new THREE.SphereGeometry(0.2, 8, 5, 0, Math.PI * 2, 0, Math.PI / 1.8), M(o.helm, { metalness: 0.6, roughness: 0.35 }), 0, 0.12, 0, head); mesh(B(0.04, 0.12, 0.05), M(o.helm), 0, 0.1, 0.18, head); }
@@ -75,9 +76,9 @@ export function humanoid(o) {
   if (o.antlers) for (const sd of [-1, 1]) { const a = mesh(B(0.03, 0.35, 0.03), M("#8a7a5a"), sd * 0.12, 0.38, 0, head); a.rotation.z = -sd * 0.6; }
   const arm = (side) => {
     const sh = grp(side * 0.31 * bulk, 0.58, 0, torso);
-    mesh(B(0.13 * bulk * thin, 0.33, 0.13 * thin), o.sleeve ? M(o.sleeve) : (o.thin ? M("#d8d2bc") : shirt), 0, -0.16, 0, sh);
+    mesh(cap(0.068 * bulk * thin, 0.22), o.sleeve ? M(o.sleeve) : (o.thin ? M("#d8d2bc") : shirt), 0, -0.15, 0, sh);
     const el = grp(0, -0.32, 0, sh);
-    mesh(B(0.11 * bulk * thin, 0.3, 0.11 * thin), o.thin ? M("#d8d2bc") : skin, 0, -0.14, 0, el);
+    mesh(cap(0.056 * bulk * thin, 0.2), o.thin ? M("#d8d2bc") : (o.sleeve ? M(o.sleeve) : skin), 0, -0.13, 0, el); mesh(new THREE.SphereGeometry(0.055 * bulk, 8, 6), o.thin ? M("#d8d2bc") : skin, 0, -0.29, 0.01, el);
     const hand = grp(0, -0.3, 0.02, el);
     return { sh, el, hand };
   };

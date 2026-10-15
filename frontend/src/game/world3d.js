@@ -77,8 +77,8 @@ export class Terrain {
   groundColor(x, z, out) {
     const n = fbm(x * 3.1, z * 3.1), n2 = vnoise(x * 0.6, z * 0.6);
     const east = smooth(780, 900, x), mid = smooth(330, 480, x) * (1 - east);
-    let r = mix(0.27, 0.2, mid), g = mix(0.33, 0.25, mid), b = mix(0.15, 0.13, mid);
-    r = mix(r, 0.16, east); g = mix(g, 0.26, east); b = mix(b, 0.2, east);
+    let r = mix(0.3, 0.22, mid), g = mix(0.4, 0.3, mid), b = mix(0.16, 0.14, mid);
+    r = mix(r, 0.18, east); g = mix(g, 0.32, east); b = mix(b, 0.24, east);
     const dirt = smooth(0.55, 0.8, n2) * 0.6;
     r = mix(r, 0.3, dirt); g = mix(g, 0.24, dirt); b = mix(b, 0.15, dirt);
     const v = 0.82 + n * 0.36;
@@ -86,7 +86,7 @@ export class Terrain {
     const rd = this.sample(this.RD, x, z);
     if (rd < 1.6) {
       const t = smooth(1.6, -0.3, rd), nn = 0.85 + hash(Math.floor(x * 3), Math.floor(z * 3)) * 0.25;
-      r = mix(r, 0.42 * nn, t); g = mix(g, 0.33 * nn, t); b = mix(b, 0.21 * nn, t);
+      r = mix(r, 0.5 * nn, t); g = mix(g, 0.39 * nn, t); b = mix(b, 0.25 * nn, t);
       if (rd > 0.2 && rd < 1.2) { r *= 0.9; g *= 0.9; b *= 0.88; }
     }
     const sd = this.sample(this.SD, x, z);
@@ -315,17 +315,17 @@ export function buildWater(world, terrain, scene) {
 
 export function plazaTexture(style) {
   const cv = document.createElement("canvas"); cv.width = cv.height = 1024;
-  const ctx = cv.getContext("2d"), S = 1024 / 44;
+  const ctx = cv.getContext("2d"), S = 1024 / 88;
   ctx.fillStyle = style === "semel" ? "#3a3631" : "#2c3430"; ctx.fillRect(0, 0, 1024, 1024);
-  for (let j = 0; j < 44; j++) for (let i = 0; i < 44 + 1; i++) {
+  for (let j = 0; j < 88; j++) for (let i = 0; i < 88 + 1; i++) {
     const off = (j % 2) * 0.5, x = (i - off) * S, y = j * S;
     const l = 30 + Math.random() * 16;
     ctx.fillStyle = style === "semel" ? `hsl(${30 + Math.random() * 10},${8 + Math.random() * 8}%,${l + 12}%)` : `hsl(${140 + Math.random() * 40},${10 + Math.random() * 10}%,${l}%)`;
     const w = style === "semel" ? S : S * (0.8 + Math.random() * 0.4);
-    ctx.beginPath(); ctx.roundRect(x + 2, y + 2, w - 4, S - 4, 4); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(x + 1, y + 1, w - 2, S - 2, 2); ctx.fill();
     if (style !== "semel" && Math.random() < 0.3) { ctx.fillStyle = "rgba(70,110,60,0.5)"; ctx.fillRect(x + Math.random() * S, y + Math.random() * S, 6, 6); }
   }
-  const b0 = (22 - 16) * S, b1 = (22 + 16) * S;
+  const b0 = (22 - 16) * 2 * S, b1 = (22 + 16) * 2 * S;
   ctx.strokeStyle = style === "semel" ? "#c9a24e" : "#6fd0d8"; ctx.lineWidth = 10; ctx.globalAlpha = 0.8;
   ctx.strokeRect(b0, b0, b1 - b0, b1 - b0);
   ctx.lineWidth = 3; ctx.strokeRect(b0 + 12, b0 + 12, b1 - b0 - 24, b1 - b0 - 24);
