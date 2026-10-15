@@ -1,0 +1,20 @@
+{
+  "summary": "Frontend-only focused test of 4 bug fixes. All passed: hold-walk, tooltip portal inside viewport, Semel->Titus rename, no app console errors.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Inventory tooltip (Minor Healing Draught)", "issues": ["Effect text duplicated: 'Restores 45 health' (green stat line) and 'Restores 45 health.' (italic description) both shown - cosmetic"]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": ["Optional: de-duplicate consumable tooltip effect vs description line"],
+  "critical_code_review_comments": ["holdWalk sends move frames every 150ms with a target 7 units ahead and sends 'stop' on mouseup only when hold went directional - works as intended"],
+  "updated_files": [],
+  "success_rate": {"backend": "skipped", "frontend": "100%"},
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Login hero@suminex.io/hero1234 -> play-Aldric -> wait 16s. Hold-walk verified by capturing WS framesent: 1 click move + 47 {t:move,hold:1} frames over ~4s + 1 stop on mouseup; char x moved ~100 -> ~199 (Titus town -> Titus Forest Road). Tooltip on inv-slot-0 is portaled to BODY, bbox x=1118..1330, y=343, within 1920x1080. region-name='Titus', body has no 'Semel'. Only console error: 404 from ap.emergent.sh analytics (not app). Ability-at-hover-target (bug 2) not tested per request scope."
+}

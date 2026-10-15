@@ -42,7 +42,7 @@ export function ItemTip({ id, item, me, extra }) {
       {Object.entries(item.stats || {}).map(([k, v]) => <div key={k} className="up">+{v} {STAT[k]}</div>)}
       {item.heal && <div className="up">Restores {item.heal} health</div>}
       {item.mana && <div className="up">Restores {item.mana} mana</div>}
-      {item.desc && <div className="tip-desc">{item.desc}</div>}
+      {item.desc && item.type !== "consumable" && <div className="tip-desc">{item.desc}</div>}
       {cur && cur !== item && <div className="tip-meta">Equipped: {cur.name}</div>}
       {extra}
     </div>
