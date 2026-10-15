@@ -147,6 +147,12 @@ function wolf(o) {
 }
 
 const MONSTER_BUILD = {
+  dire_wolf: () => wolf({ color: "#2e2c30", dark: "#141216", scale: 1.75 }),
+  broodmother: () => spider({ body: "#2a1030", abd: "#3a1440", mark: "#ff3a8a", leg: "#1a0a20", glow: true, scale: 2.4 }),
+  shadow_wraith: () => humanoid({ scale: 1.15, skin: "#3a3a4a", robe: "#0e0e18", shirt: "#14141f", sleeve: "#14141f", hood: "#0e0e18", weapon: "staff", weaponColor: "#1a1a2a", glow: "#5affe0", eyes: "#5affe0" }),
+  stone_golem: () => humanoid({ scale: 2.1, bulk: 1.7, hunch: true, skin: "#7a7468", shirt: "#6a6458", pants: "#5a5448", boots: "#4a463e", pauldrons: "#8a8478", eyes: "#ff9a3a", weapon: "club", weaponColor: "#5a5448" }),
+  death_knight: () => humanoid({ scale: 1.35, bulk: 1.2, skin: "#d8d2bc", head: "skull", shirt: "#22222a", pants: "#1a1a20", boots: "#141418", helm: "#2a2a32", pauldrons: "#3a3a44", cape: "#3a0a10", weapon: "sword", weaponColor: "#3a3a50", glow: "#ff3a3a", off: "shield", shieldColor: "#1a1a20", eyes: "#ff3a3a" }),
+  abyssal_fiend: () => humanoid({ scale: 2.4, bulk: 1.4, skin: "#5a1010", shirt: "#4a0a0a", pants: "#2a0505", boots: "#1a0505", horns: "#1a0a0a", wings: "#2a0505", tail: "#4a0a0a", eyes: "#ffea3a", weapon: "axe", weaponColor: "#2a1a1a", glow: "#ff5a1a" }),
   giant_spider: () => spider({ body: "#2e231a", abd: "#3b2b1d", mark: "#9a6a32", scale: 1.0 }),
   venomous_spider: () => spider({ body: "#16201a", abd: "#21301a", mark: "#8aff3a", leg: "#2a1a30", glow: true, scale: 1.45 }),
   imp: () => humanoid({ scale: 0.62, skin: "#a8352a", shirt: "#8a2a22", pants: "#3a1410", boots: "#2a0e0a", horns: "#2a1a10", wings: "#5a1a14", tail: "#8a2a22", eyes: "#ffd23a", ears: true }),

@@ -115,11 +115,11 @@ ITEMS = {
     "spider_fang_blade": W("Spider-Fang Blade", ["warrior", "ranger"], "uncommon", [6, 10], 1.35, 110, 3, stats={"dex": 2}, desc="Light, wickedly sharp.", color="#c9d6c0"),
     "steel_longsword": W("Steel Longsword", ["warrior"], "uncommon", [9, 15], 1.6, 260, 7, stats={"str": 2}, desc="Elderglen-forged steel."),
     "orc_cleaver": W("Orc Cleaver", ["warrior"], "rare", [14, 22], 1.75, 520, 10, stats={"str": 4, "sta": 2}, desc="Brutal and heavy.", color="#7a5b3a"),
-    "troll_maul": W("Troll-Bone Maul", ["warrior"], "epic", [22, 34], 1.9, 1200, 15, stats={"str": 7, "sta": 4}, desc="Carved from a troll's femur.", color="#d8ccb0"),
-    "dawnblade": W("Suminex Dawnblade", ["warrior"], "legendary", [30, 44], 1.4, 4000, 18, stats={"str": 10, "dex": 5, "sta": 5}, desc="Said to hold the first light of the world.", color="#ffd36b"),
+    "troll_maul": W("Troll-Bone Maul", ["warrior"], "epic", [22, 34], 1.9, 1200, 15, stats={"str": 7, "sta": 4, "hp_regen": 3}, desc="Carved from a troll's femur.", color="#d8ccb0"),
+    "dawnblade": W("Suminex Dawnblade", ["warrior"], "legendary", [30, 44], 1.4, 4000, 18, stats={"str": 10, "dex": 5, "sta": 5, "life_steal": 2}, desc="Said to hold the first light of the world.", color="#ffd36b"),
     "oak_staff": W("Oak Staff", ["mage"], "common", [3, 5], 1.7, 12, magic=True, stats={"int": 1}, desc="A gnarled oak stave.", color="#7a5a35"),
     "ember_staff": W("Ember Staff", ["mage"], "uncommon", [6, 10], 1.65, 240, 5, magic=True, stats={"int": 3}, desc="Its tip smoulders.", color="#c4502a"),
-    "cultist_staff": W("Staff of the Veiled", ["mage"], "rare", [11, 17], 1.6, 600, 10, magic=True, stats={"int": 5, "wis": 3}, desc="Whispers in the dark.", color="#6b3fa0"),
+    "cultist_staff": W("Staff of the Veiled", ["mage"], "rare", [11, 17], 1.6, 600, 10, magic=True, stats={"int": 5, "wis": 3, "mp_regen": 2}, desc="Whispers in the dark.", color="#6b3fa0"),
     "hunting_bow": W("Hunting Bow", ["ranger"], "common", [3, 6], 1.6, 12, desc="Yew and sinew."),
     "longbow": W("Elderglen Longbow", ["ranger"], "uncommon", [7, 12], 1.6, 250, 5, stats={"dex": 2}, desc="Strung with spider silk."),
     "bandit_bow": W("Bandit's Recurve", ["ranger"], "rare", [11, 18], 1.45, 560, 9, stats={"dex": 4}, desc="Stolen, many times over."),
@@ -144,10 +144,32 @@ ITEMS = {
     "ring_vigor": A("Ring of Vigor", "ring", "uncommon", 0, 200, 3, stats={"sta": 3}, desc="Warm to the touch."),
     "ring_focus": A("Ring of Focus", "ring", "uncommon", 0, 200, 3, stats={"int": 2, "wis": 2}),
     "amulet_dawn": A("Amulet of First Dawn", "amulet", "epic", 2, 1500, 12, stats={"str": 3, "sta": 3, "wis": 3, "int": 3, "dex": 3}),
+    # high-tier drops with special properties
+    "vampiric_blade": W("Vampiric Blade", ["warrior"], "rare", [26, 38], 1.5, 1400, 22, stats={"str": 6, "life_steal": 4}, desc="It drinks what it cuts.", color="#9a1a2a"),
+    "soulreaver_blade": W("Soulreaver", ["warrior"], "epic", [44, 64], 1.5, 3200, 40, stats={"str": 12, "sta": 6, "life_steal": 6, "hp_regen": 5}, desc="Souls scream along its edge.", color="#5a2a8a"),
+    "doom_blade": W("Doombringer", ["warrior"], "legendary", [80, 112], 1.45, 9000, 60, stats={"str": 24, "sta": 14, "life_steal": 8, "hp_regen": 10}, desc="Forged in the Abyssal Rift.", color="#ff3a1a"),
+    "wraith_staff": W("Wraithwood Staff", ["mage"], "rare", [20, 30], 1.6, 1400, 25, magic=True, stats={"int": 10, "mana_steal": 4, "mp_regen": 3}, desc="Cold whispers coil around it.", color="#5affe0"),
+    "void_staff": W("Staff of the Void", ["mage"], "epic", [30, 46], 1.55, 3400, 45, magic=True, stats={"int": 18, "wis": 8, "mana_steal": 6, "mp_regen": 6}, desc="It hungers for light.", color="#3a1a6a"),
+    "abyss_staff": W("Eye of the Abyss Staff", ["mage"], "legendary", [46, 66], 1.5, 9000, 60, magic=True, stats={"int": 30, "wis": 14, "mana_steal": 8, "mp_regen": 10, "hp_regen": 5}, desc="Something within it is watching.", color="#ff5a1a"),
+    "bloodthorn_bow": W("Bloodthorn Bow", ["ranger"], "rare", [24, 36], 1.5, 1400, 22, stats={"dex": 8, "life_steal": 4}, desc="Thorns drink from every wound.", color="#8a1a1a"),
+    "stormcaller_bow": W("Stormcaller Bow", ["ranger"], "epic", [42, 60], 1.35, 3300, 42, stats={"dex": 16, "life_steal": 5, "mana_steal": 3}, desc="Thunder follows every shot.", color="#8ab8ff"),
+    "heartseeker_bow": W("Heartseeker Bow", ["ranger"], "legendary", [70, 98], 1.3, 9000, 60, stats={"dex": 28, "str": 8, "life_steal": 7, "mana_steal": 4}, desc="It never misses a beating heart.", color="#ff3a6a"),
+    "wraithweave_robe": A("Wraithweave Robe", "chest", "epic", 18, 1800, 30, cls=["mage"], stats={"int": 10, "wis": 8, "mp_regen": 4}, color="#1a2a3a"),
+    "golemstone_plate": A("Golemstone Plate", "chest", "epic", 50, 2000, 35, cls=["warrior"], stats={"sta": 14, "hp_regen": 6}, color="#7a7468"),
+    "broodsilk_cloak": A("Broodsilk Hunter's Garb", "chest", "epic", 28, 1800, 25, cls=["ranger"], stats={"dex": 10, "sta": 6, "life_steal": 2}, color="#3a1440"),
+    "dreadknight_helm": A("Dreadknight Helm", "head", "epic", 20, 2200, 45, stats={"sta": 10, "str": 6, "life_steal": 2}, color="#2a2a32"),
+    "fiendhide_boots": A("Fiendhide Boots", "feet", "epic", 16, 2400, 55, stats={"dex": 10, "sta": 6, "hp_regen": 4}, color="#5a1010"),
+    "ring_vampire": A("Ring of the Vampire", "ring", "epic", 0, 2000, 35, stats={"life_steal": 3, "mana_steal": 3}, desc="Cold, and always thirsty."),
+    "dire_fang": M("Dire Wolf Fang", "uncommon", 40, "A fang as long as a dagger."),
+    "brood_silk": M("Broodmother Silk", "uncommon", 55, "Shimmering, nearly unbreakable."),
+    "wraith_essence": M("Wraith Essence", "rare", 80, "A wisp of trapped spirit."),
+    "golem_core": M("Golem Core", "rare", 120, "Still warm with binding magic."),
+    "dread_shard": M("Dread Shard", "rare", 160, "A splinter of cursed armor."),
+    "fiend_horn": M("Fiend Horn", "epic", 300, "Smoulders faintly. Collectors pay well."),
     # legendary arms (Elderglen - Vaelric)
-    "sunforged_blade": W("Sunforged Greatblade", ["warrior"], "legendary", [62, 88], 1.45, 2800, 50, stats={"str": 18, "sta": 10, "dex": 6}, desc="Quenched in the heart of a dying star.", color="#ffd36b"),
-    "starfall_staff": W("Starfall Staff", ["mage"], "legendary", [34, 50], 1.5, 2800, 50, magic=True, stats={"int": 22, "wis": 14}, desc="Constellations wheel within its crystal.", color="#8ab8ff"),
-    "galeheart_bow": W("Galeheart Longbow", ["ranger"], "legendary", [54, 78], 1.3, 2800, 50, stats={"dex": 20, "str": 6, "sta": 6}, desc="Its string hums with the north wind.", color="#a8f0c8"),
+    "sunforged_blade": W("Sunforged Greatblade", ["warrior"], "legendary", [62, 88], 1.45, 2800, 50, stats={"str": 18, "sta": 10, "dex": 6, "life_steal": 3, "hp_regen": 4}, desc="Quenched in the heart of a dying star.", color="#ffd36b"),
+    "starfall_staff": W("Starfall Staff", ["mage"], "legendary", [34, 50], 1.5, 2800, 50, magic=True, stats={"int": 22, "wis": 14, "mana_steal": 3, "mp_regen": 5}, desc="Constellations wheel within its crystal.", color="#8ab8ff"),
+    "galeheart_bow": W("Galeheart Longbow", ["ranger"], "legendary", [54, 78], 1.3, 2800, 50, stats={"dex": 20, "str": 6, "sta": 6, "life_steal": 3, "mp_regen": 2}, desc="Its string hums with the north wind.", color="#a8f0c8"),
     "aegis_dawn": A("Aegis of Dawn", "off", "legendary", 28, 1200, 50, cls=["warrior"], stats={"sta": 12, "str": 5}, desc="No blow has ever pierced it."),
     "codex_eternity": A("Codex of Eternity", "off", "legendary", 6, 1200, 50, cls=["mage"], stats={"int": 12, "wis": 10}, desc="Its pages write themselves."),
     "quiver_windrider": A("Windrider Quiver", "off", "legendary", 6, 1200, 50, cls=["ranger"], stats={"dex": 12, "str": 4}, desc="Arrows that never miss their mark."),
@@ -158,8 +180,8 @@ ITEMS = {
     "titan_greaves": A("Titan Greaves", "legs", "epic", 24, 1200, 50, stats={"sta": 10, "str": 4, "dex": 4}, color="#9a9aa6"),
     "gauntlets_might": A("Gauntlets of Might", "hands", "epic", 12, 700, 50, stats={"str": 6, "dex": 6, "int": 4}, color="#b0a070"),
     "boots_wind": A("Boots of the Swift Wind", "feet", "epic", 12, 700, 50, stats={"dex": 8, "sta": 4}, color="#7aa0a0"),
-    "ring_ancients": A("Ring of the Ancients", "ring", "legendary", 0, 600, 50, stats={"str": 6, "sta": 6, "wis": 6, "int": 6, "dex": 6}, desc="Older than the world's name."),
-    "amulet_eternity": A("Amulet of Eternity", "amulet", "legendary", 6, 900, 50, stats={"sta": 10, "wis": 8, "int": 8, "str": 6, "dex": 6}, desc="Time slows around its wearer."),
+    "ring_ancients": A("Ring of the Ancients", "ring", "legendary", 0, 600, 50, stats={"str": 6, "sta": 6, "wis": 6, "int": 6, "dex": 6, "hp_regen": 3, "mp_regen": 3}, desc="Older than the world's name."),
+    "amulet_eternity": A("Amulet of Eternity", "amulet", "legendary", 6, 900, 50, stats={"sta": 10, "wis": 8, "int": 8, "str": 6, "dex": 6, "hp_regen": 5, "mp_regen": 5}, desc="Time slows around its wearer."),
     "cultist_amulet": A("Veiled Sigil", "amulet", "rare", 0, 500, 10, stats={"int": 4, "wis": 2}),
     # consumables
     "minor_hp": dict(name="Minor Healing Draught", type="consumable", rarity="common", heal=45, price=8, stack=20, desc="Restores 45 health."),
@@ -215,7 +237,36 @@ MONSTERS = {
     "forest_troll": dict(name="Forest Troll", level=16, hp=700, dmg=[30, 45], interval=2.8, speed=3.4, armor=30, aggro=12, range=2.8, xp=350,
                          gold=[40, 90], radius=1.3, leash=26, respawn=45, regen=4, resist={"phys": 0.9, "magic": 1.0},
                          loot=[("troll_hide", 0.5), ("troll_maul", 0.02), ("troll_hide_gloves", 0.03), ("amulet_dawn", 0.006), ("dawnblade", 0.002)]),
+    "dire_wolf": dict(name="Dire Wolf", level=20, hp=1100, dmg=[40, 58], interval=1.4, speed=6.0, armor=30, aggro=14, range=2.4, xp=520,
+                      gold=[0, 0], radius=1.2, leash=30, respawn=40, resist={"phys": 1.0, "magic": 1.0},
+                      loot=[("dire_fang", 0.6), ("hp_potion", 0.25), ("bloodthorn_bow", 0.03), ("vampiric_blade", 0.03), ("wolf_boots", 0.1)]),
+    "broodmother": dict(name="Broodmother", level=25, hp=1600, dmg=[48, 70], interval=1.9, speed=4.0, armor=28, aggro=12, range=3.0, xp=750,
+                        gold=[0, 0], radius=2.0, leash=26, respawn=50, poison=[12, 18], resist={"phys": 1.0, "magic": 0.9},
+                        loot=[("brood_silk", 0.6), ("hp_potion", 0.3), ("broodsilk_cloak", 0.04), ("bloodthorn_bow", 0.03), ("wraith_staff", 0.02)]),
+    "shadow_wraith": dict(name="Shadow Wraith", level=30, hp=1500, dmg=[55, 80], interval=2.2, speed=4.2, armor=15, aggro=16, range=12.0, xp=1000,
+                          gold=[0, 0], radius=0.7, leash=28, respawn=45, ranged=True, resist={"phys": 0.7, "magic": 1.1},
+                          loot=[("wraith_essence", 0.55), ("mp_potion", 0.3), ("wraith_staff", 0.04), ("wraithweave_robe", 0.04), ("ring_vampire", 0.01)]),
+    "stone_golem": dict(name="Stone Golem", level=38, hp=3200, dmg=[80, 115], interval=3.0, speed=2.8, armor=70, aggro=10, range=3.2, xp=1500,
+                        gold=[0, 0], radius=1.6, leash=24, respawn=60, regen=10, resist={"phys": 0.7, "magic": 1.25},
+                        loot=[("golem_core", 0.55), ("hp_potion", 0.35), ("golemstone_plate", 0.05), ("ring_vampire", 0.03), ("soulreaver_blade", 0.015)]),
+    "death_knight": dict(name="Death Knight", level=48, hp=4200, dmg=[110, 150], interval=1.8, speed=4.4, armor=60, aggro=14, range=2.6, xp=2300,
+                         gold=[0, 0], radius=0.8, leash=28, respawn=60, resist={"phys": 0.85, "magic": 0.85},
+                         loot=[("dread_shard", 0.55), ("hp_potion", 0.4), ("dreadknight_helm", 0.05), ("soulreaver_blade", 0.03), ("void_staff", 0.03), ("stormcaller_bow", 0.03)]),
+    "abyssal_fiend": dict(name="Abyssal Fiend", level=60, hp=7500, dmg=[150, 210], interval=2.2, speed=4.6, armor=70, aggro=16, range=3.4, xp=3800,
+                          gold=[0, 0], radius=2.0, leash=28, respawn=90, regen=20, resist={"phys": 0.85, "magic": 0.85},
+                          loot=[("fiend_horn", 0.6), ("fiendhide_boots", 0.06), ("doom_blade", 0.012), ("abyss_staff", 0.012), ("heartseeker_bow", 0.012),
+                                ("void_staff", 0.04), ("stormcaller_bow", 0.04), ("ring_ancients", 0.03)]),
 }
+
+# Gold scales with monster level: [lo, hi] = GOLD_SCALE * level^GOLD_EXP
+GOLD_SCALE, GOLD_EXP = (2.0, 5.0), 1.45
+for _m in MONSTERS.values():
+    _m["gold"] = [max(1, round(GOLD_SCALE[0] * _m["level"] ** GOLD_EXP)), max(3, round(GOLD_SCALE[1] * _m["level"] ** GOLD_EXP))]
+# Extra loot rolls: higher-level monsters roll their loot table more times
+EXTRA_ROLLS = [(10, 1), (25, 2), (45, 3)]
+# Level-gated bonus drops every monster can roll
+BONUS_LOOT = [(5, "hp_potion", 0.08), (8, "mp_potion", 0.08), (12, "ring_vigor", 0.015), (12, "ring_focus", 0.015),
+              (16, "amulet_dawn", 0.004), (20, "ring_vampire", 0.004), (30, "dreadknight_helm", 0.003), (40, "fiendhide_boots", 0.002)]
 
 NPCS = {
     "brannoc": dict(name="Brannoc the Smith", role="Equipment Merchant", town="semel", pos=[78, 191], kind="smith", merchant="semel_arms"),

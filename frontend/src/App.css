@@ -215,3 +215,5 @@ input { font-family: inherit; }
   .inv-panel, .char-panel, .skills-panel, .quest-panel, .inspect { left: 8px; right: 8px; width: auto; top: 90px; }
   .merchant-cols { grid-template-columns: 1fr; }
 }
+
+.hov-tip .prop { color: #ff9ad0; }

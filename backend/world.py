@@ -66,9 +66,18 @@ REGIONS = [
     dict(name="Grimtusk Orc Camp", x=800, z=120, r=34, lvl="10"),
     dict(name="Troll Fells", x=962, z=68, r=46, lvl="16 (Danger)"),
     dict(name="Moonmere Lake", x=1045, z=335, r=40, lvl="14-16"),
+    dict(name="Direfang Hollow", x=230, z=40, r=32, lvl="20 (Danger)"),
+    dict(name="Broodmother's Lair", x=380, z=372, r=30, lvl="25 (Danger)"),
+    dict(name="Wraithmoor", x=660, z=48, r=32, lvl="30 (Danger)"),
+    dict(name="Shattered Quarry", x=505, z=365, r=30, lvl="38 (Danger)"),
+    dict(name="Dreadkeep Ruins", x=820, z=35, r=28, lvl="48 (Deadly)"),
+    dict(name="Abyssal Rift", x=1040, z=25, r=26, lvl="60 (Deadly)"),
     dict(name="The Sealed Pass", x=1090, z=210, r=14, lvl="Future region"),
 ]
 
+SCATTER_BANDS = [(200, ["giant_spider", "imp"]), (330, ["forest_wolf", "imp", "goblin_scout"]), (450, ["goblin_scout", "skeleton", "forest_wolf"]),
+                 (600, ["forest_bandit", "venomous_spider", "skeleton"]), (760, ["orc_warrior", "venomous_spider", "forest_bandit"]),
+                 (900, ["dark_cultist", "orc_warrior"]), (99999, ["forest_troll", "dark_cultist"])]
 SPAWNS = [
     ("giant_spider", 92, 88, 46, 24), ("giant_spider", 190, 245, 30, 12), ("giant_spider", 165, 120, 28, 10),
     ("imp", 102, 322, 42, 22), ("imp", 225, 160, 28, 10), ("imp", 180, 330, 26, 9),
@@ -79,6 +88,8 @@ SPAWNS = [
     ("venomous_spider", 520, 78, 28, 12), ("venomous_spider", 650, 140, 34, 12), ("venomous_spider", 590, 60, 22, 6),
     ("orc_warrior", 800, 122, 40, 16), ("orc_warrior", 860, 160, 24, 8),
     ("dark_cultist", 762, 300, 32, 13), ("dark_cultist", 830, 350, 22, 6),
+    ("dire_wolf", 230, 40, 30, 10), ("broodmother", 380, 372, 28, 6), ("shadow_wraith", 660, 48, 30, 8),
+    ("stone_golem", 505, 365, 28, 6), ("death_knight", 820, 35, 26, 7), ("abyssal_fiend", 1040, 25, 24, 4),
     ("forest_troll", 962, 72, 44, 10), ("forest_troll", 885, 335, 28, 6), ("forest_troll", 1060, 90, 26, 5),
 ]
 
@@ -150,6 +161,7 @@ class World:
         self.spawns = []
         for (m, x, z, r, n) in SPAWNS:
             self.spawns.append(dict(monster=m, x=x, z=z, r=r, n=n))
+        self._scatter_spawns()
         self.npc_block()
 
     # ---------- stamping helpers
@@ -374,6 +386,31 @@ class World:
                 j -= 1
             out.append(pts[j]); anchor = pts[j]; i = j
         return out or [(tx, tz)]
+
+    def _scatter_spawns(self):
+        rnd = random.Random(4242)
+        def band(x):
+            for lim, opts in SCATTER_BANDS:
+                if x < lim:
+                    return rnd.choice(opts)
+        def ok(x, z):
+            if not (5 < x < W - 5 and 5 < z < H - 5) or not self.walkable(x, z):
+                return False
+            if math.hypot(x - SEMEL[0], z - SEMEL[1]) < 48 or math.hypot(x - ELDER[0], z - ELDER[1]) < 52:
+                return False
+            return all(math.hypot(x - s["x"], z - s["z"]) > s["r"] + 14 for s in self.spawns)
+        road = self.main_road
+        for i in range(0, len(road), 16):
+            x, z = road[i]
+            side = 1 if (i // 16) % 2 else -1
+            px, pz = x + rnd.uniform(-6, 6), z + side * rnd.uniform(12, 22)
+            if ok(px, pz):
+                self.spawns.append(dict(monster=band(px), x=px, z=pz, r=10, n=3))
+        for gx in range(30, W, 60):
+            for gz in range(30, H, 60):
+                px, pz = gx + rnd.uniform(-18, 18), gz + rnd.uniform(-18, 18)
+                if ok(px, pz):
+                    self.spawns.append(dict(monster=band(px), x=px, z=pz, r=12, n=3))
 
     def random_point(self, x, z, r, rnd):
         for _ in range(40):

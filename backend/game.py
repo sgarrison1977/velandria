@@ -2,7 +2,7 @@
 import asyncio, time, math, random, uuid, json, logging, re
 from datetime import datetime, timezone
 from game_data import (ITEMS, MONSTERS, ABILITIES, CLASSES, NPCS, MERCHANTS, QUESTS, XP_TABLE, MAX_LEVEL, INV_SLOTS, TICK, COMBAT,
-                       PLAYER_SPEED, PICKUP_RANGE, NPC_RANGE, LOOT_OWNER_SECS, LOOT_EXPIRE_SECS, ACTIONS, RESTOCK_SECS, sell_price, default_binds)
+                       PLAYER_SPEED, PICKUP_RANGE, NPC_RANGE, LOOT_OWNER_SECS, LOOT_EXPIRE_SECS, ACTIONS, RESTOCK_SECS, sell_price, default_binds, EXTRA_ROLLS, BONUS_LOOT)
 from world import World, in_safe, SAFE_ZONES
 
 log = logging.getLogger("game")
@@ -278,8 +278,8 @@ class Game:
         if p.regen_acc >= 1.0:
             p.regen_acc -= 1.0
             mult = COMBAT["safe_regen_mult"] if in_safe(p.x, p.z) else 1.0
-            p.hp = min(p.max_hp, p.hp + (COMBAT["hp_regen_base"] + p.tot["sta"] * COMBAT["hp_regen_per_sta"]) * mult)
-            p.mp = min(p.max_mp, p.mp + (COMBAT["mp_regen_base"] + p.tot["wis"] * COMBAT["mp_regen_per_wis"]) * mult)
+            p.hp = min(p.max_hp, p.hp + (COMBAT["hp_regen_base"] + p.tot["sta"] * COMBAT["hp_regen_per_sta"]) * mult + p.tot.get("hp_regen", 0))
+            p.mp = min(p.max_mp, p.mp + (COMBAT["mp_regen_base"] + p.tot["wis"] * COMBAT["mp_regen_per_wis"]) * mult + p.tot.get("mp_regen", 0))
         if p.pending:
             kind, oid = p.pending
             obj = self.loot.get(oid) if kind == "loot" else NPCS.get(oid)
@@ -443,6 +443,12 @@ class Game:
             if not m.target and m.state != "return":
                 m.target, m.state = p.id, "chase"
         self.fx(m.x, m.z, {"t": "fx", "k": "dmg", "tgt": m.id, "v": dmg, "crit": 1 if crit else 0, "dt": dtype})
+        if p and dtype != "poison" and not p.dead_until:
+            ls, ms = p.tot.get("life_steal", 0), p.tot.get("mana_steal", 0)
+            if ls:
+                p.hp = min(p.max_hp, p.hp + dmg * ls / 100)
+            if ms:
+                p.mp = min(p.max_mp, p.mp + dmg * ms / 100)
         if m.hp <= 0:
             self.kill_monster(m)
 
@@ -463,9 +469,15 @@ class Game:
         xp = m.d["xp"] if lvl_diff <= 4 else max(1, round(m.d["xp"] * max(0.1, 1 - (lvl_diff - 4) * 0.15)))
         self.give_xp(killer, xp)
         drops = [("gold", rnd.randint(*m.d["gold"]))]
-        for item, chance in m.d["loot"]:
-            if rnd.random() < chance:
+        rolls = 1 + max([n for lv, n in EXTRA_ROLLS if m.d["level"] >= lv] or [0])
+        for _ in range(rolls):
+            for item, chance in m.d["loot"]:
+                if rnd.random() < chance:
+                    drops.append((item, 1))
+        for lv, item, chance in BONUS_LOOT:
+            if m.d["level"] >= lv and rnd.random() < chance:
                 drops.append((item, 1))
+        drops = drops[:8]
         for i, (item, qty) in enumerate(drops):
             a = i * 2.1 + rnd.uniform(0, 1)
             lx, lz = m.x + math.cos(a) * (0.6 + 0.4 * i), m.z + math.sin(a) * (0.6 + 0.4 * i)
