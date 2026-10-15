@@ -76,7 +76,8 @@ export default function GamePage() {
       const n = net.current;
       if (action.startsWith("ability:")) { const ab = action.slice(8); if (!st.me.abilities.includes(ab)) { toast(`${data.abilities[ab].name} is locked.`, "error"); return; } const ad = data.abilities[ab], hov = eng.current?.hover;
         const id = ad.kind !== "melee" && hov?.kind === "monster" && !hov.anim.dead ? hov.id : eng.current?.targetId;
-        n.send({ t: "cast", ab, id }); }
+        const gp = ad.kind === "aoe_target" ? eng.current?.pointerGround() : null;
+        n.send({ t: "cast", ab, id, pt: gp ? [gp.x, gp.z] : undefined }); }
       else if (action === "attack_nearest") { const hov = eng.current?.hover; if (hov?.kind === "monster" && !hov.anim.dead) n.send({ t: "target", id: hov.id }); else n.send({ t: "attack_nearest" }); }
       else if (action === "stop") n.send({ t: "stop" });
       else if (action === "chat") setState((s) => ({ chatFocus: (s.chatFocus || 0) + 1 }));

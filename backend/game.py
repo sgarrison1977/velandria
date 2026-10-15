@@ -531,7 +531,7 @@ class Game:
                     mm.target = None
         p.dirty = True
 
-    def cast(self, p, ab_id, target_id):
+    def cast(self, p, ab_id, target_id, pt=None):
         ab = ABILITIES.get(ab_id)
         t = now()
         if not ab or p.dead_until:
@@ -546,7 +546,20 @@ class Game:
             return f"{ab['name']} is not ready."
         if p.mp < ab["cost"]:
             return "Not enough mana."
-        needs_target = ab["kind"] in ("melee", "spell", "ranged", "dot", "aoe_target")
+        if ab["kind"] == "aoe_target":
+            m = self.monsters.get(target_id)
+            if m and not m.dead_until and dist(p, m) <= ab["range"] + m.d["radius"]:
+                return self.do_cast(p, ab_id, m)
+            if in_safe(p.x, p.z):
+                return "You cannot fight from within a safe square."
+            cx, cz = p.x, p.z
+            if pt:
+                dx, dz = pt[0] - p.x, pt[1] - p.z
+                d = math.hypot(dx, dz)
+                k = min(1.0, ab["range"] / d) if d > 0 else 0
+                cx, cz = p.x + dx * k, p.z + dz * k
+            return self.do_cast(p, ab_id, None, (cx, cz))
+        needs_target = ab["kind"] in ("melee", "spell", "ranged", "dot")
         if needs_target:
             m = self.monsters.get(target_id or p.target)
             if not m or m.dead_until:
@@ -559,7 +572,7 @@ class Game:
             return "You cannot fight from within a safe square."
         return self.do_cast(p, ab_id, None)
 
-    def do_cast(self, p, ab_id, m):
+    def do_cast(self, p, ab_id, m, center=None):
         ab = ABILITIES[ab_id]
         t = now()
         if p.mp < ab["cost"] or p.cds.get(ab_id, 0) > t:
@@ -569,7 +582,10 @@ class Game:
         p.mp -= ab["cost"]
         p.cds[ab_id] = t + ab["cd"]
         k = ab["kind"]
-        self.fx(p.x, p.z, {"t": "fx", "k": "cast", "src": p.id, "ab": ab_id, "tgt": m.id if m else None})
+        cfx = {"t": "fx", "k": "cast", "src": p.id, "ab": ab_id, "tgt": m.id if m else None}
+        if center:
+            cfx["x"], cfx["z"] = round(center[0], 2), round(center[1], 2)
+        self.fx(p.x, p.z, cfx)
         if k in ("melee", "ranged"):
             p.last_attack = t
             dmg = rnd.uniform(p.dmg_lo, p.dmg_hi) * ab["mult"] + ab["flat"]
@@ -580,7 +596,7 @@ class Game:
             crit = rnd.random() < p.crit
             self.damage_monster(m, dmg * (COMBAT["crit_mult"] if crit else 1), p, "magic", crit)
         elif k == "aoe_target" or k == "aoe_self":
-            cx, cz = (m.x, m.z) if m else (p.x, p.z)
+            cx, cz = (m.x, m.z) if m else (center or (p.x, p.z))
             for mm in list(self.monsters.values()):
                 if not mm.dead_until and math.hypot(mm.x - cx, mm.z - cz) <= ab["radius"] + mm.d["radius"]:
                     if "base" in ab:
@@ -976,7 +992,9 @@ class Game:
             else:
                 err = "No enemies nearby."
         elif t == "cast":
-            err = self.cast(p, msg.get("ab"), msg.get("id"))
+            pt = msg.get("pt")
+            pt = (float(pt[0]), float(pt[1])) if isinstance(pt, list) and len(pt) == 2 and all(isinstance(v, (int, float)) for v in pt) else None
+            err = self.cast(p, msg.get("ab"), msg.get("id"), pt)
         elif t == "pickup":
             if msg.get("id") in self.loot:
                 p.pending, p.target = ("loot", msg["id"]), None

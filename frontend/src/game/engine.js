@@ -141,7 +141,7 @@ export class Engine {
       case "pdeath": if (tgt) tgt.anim.dead = true; if (f.tgt === this.meId) sfx("death"); break;
       case "heal": if (tgt) { this.burst(tgt, "#7aff9a", 14, 1.4); if (f.v) this.number(tgt, `+${f.v}`, "#7aff9a"); if (near(tgt)) sfx("heal"); } break;
       case "levelup": if (src) { this.pillar(src); sfx("levelup"); } break;
-      case "cast": if (src) this.castFx(src, tgt, f.ab); break;
+      case "cast": if (src) this.castFx(src, tgt || (f.x != null ? { x: f.x, z: f.z, height: 0 } : null), f.ab); break;
       default:
     }
   }
@@ -219,6 +219,13 @@ export class Engine {
     const list = hits.map((h) => this.entities.get(h.object.userData.id)).filter((e) => e && !(e.kind === "monster" && e.anim.dead) && e.id !== this.meId);
     list.sort((a, b) => pri[a.kind] - pri[b.kind]);
     return list[0] || null;
+  }
+  pointerGround() {
+    if (!this.lastMove) return null;
+    const r = this.canvas.getBoundingClientRect();
+    this.mouse.set(((this.lastMove.clientX - r.left) / r.width) * 2 - 1, -((this.lastMove.clientY - r.top) / r.height) * 2 + 1);
+    this.ray.setFromCamera(this.mouse, this.camera);
+    return this.groundPoint();
   }
   groundPoint() {
     const o = this.ray.ray.origin, d = this.ray.ray.direction;
