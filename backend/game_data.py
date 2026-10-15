@@ -47,23 +47,35 @@ ATTR_INFO = {
 }
 
 ABILITIES = {
-    "power_strike": dict(name="Power Strike", cls="warrior", level=1, cost=8, cd=6, range=2.6, kind="melee", mult=1.9, flat=4,
+    "power_strike": dict(name="Power Strike", cls="warrior", level=1, cost=8, cd=0, range=2.6, kind="melee", mult=1.9, flat=4,
                          desc="A crushing blow dealing 190% weapon damage +4."),
-    "iron_guard": dict(name="Iron Guard", cls="warrior", level=3, cost=15, cd=25, kind="buff", buff="armor", value=25, dur=10,
+    "iron_guard": dict(name="Iron Guard", cls="warrior", level=3, cost=15, cd=0, kind="buff", buff="armor", value=25, dur=10,
                        desc="Brace yourself: +25 armor for 10 seconds."),
-    "cleave": dict(name="Cleave", cls="warrior", level=5, cost=18, cd=10, kind="aoe_self", radius=4.0, mult=1.3, flat=2,
+    "cleave": dict(name="Cleave", cls="warrior", level=5, cost=18, cd=0, kind="aoe_self", radius=4.0, mult=1.3, flat=2,
                    desc="Sweep all enemies within 4m for 130% weapon damage."),
-    "arcane_bolt": dict(name="Arcane Bolt", cls="mage", level=1, cost=6, cd=2.5, range=14, kind="spell", base=8, scale=1.2,
+    "arcane_bolt": dict(name="Arcane Bolt", cls="mage", level=1, cost=6, cd=0, range=14, kind="spell", base=8, scale=1.2,
                         desc="Hurl a bolt of arcane force: 8 + 120% Intelligence damage."),
-    "flame_burst": dict(name="Flame Burst", cls="mage", level=3, cost=20, cd=9, range=12, kind="aoe_target", radius=4.0, base=12, scale=1.0,
+    "flame_burst": dict(name="Flame Burst", cls="mage", level=3, cost=20, cd=0, range=12, kind="aoe_target", radius=4.0, base=12, scale=1.0,
                         desc="Erupt fire at your target, burning everything within 4m."),
-    "aimed_shot": dict(name="Aimed Shot", cls="ranger", level=1, cost=7, cd=5, range=16, kind="ranged", mult=1.8, flat=3,
+    "aimed_shot": dict(name="Aimed Shot", cls="ranger", level=1, cost=7, cd=0, range=16, kind="ranged", mult=1.8, flat=3,
                        desc="A careful shot for 180% weapon damage +3 at long range."),
-    "venom_arrow": dict(name="Venom Arrow", cls="ranger", level=4, cost=14, cd=12, range=16, kind="dot", base=6, scale=0.5, ticks=6,
+    "venom_arrow": dict(name="Venom Arrow", cls="ranger", level=4, cost=14, cd=0, range=16, kind="dot", base=6, scale=0.5, ticks=6,
                         desc="Poison the target, dealing damage every second for 6s."),
+    "whirlwind": dict(name="Whirlwind", cls="warrior", level=8, cost=25, cd=0, kind="aoe_self", radius=6.0, mult=1.6, flat=6,
+                      desc="Spin with your blade, striking every enemy within 6m for 160% weapon damage +6."),
+    "earthshatter": dict(name="Earthshatter", cls="warrior", level=12, cost=32, cd=0, range=8, kind="aoe_target", radius=6.0, mult=2.0, flat=8,
+                         desc="Slam the ground at your target, hitting all enemies within 6m for 200% weapon damage +8."),
+    "frost_nova": dict(name="Frost Nova", cls="mage", level=6, cost=22, cd=0, kind="aoe_self", radius=7.0, base=18, scale=1.3,
+                       desc="Blast frost outward, dealing 18 + 130% Intelligence to all enemies within 7m."),
+    "meteor_storm": dict(name="Meteor Storm", cls="mage", level=8, cost=35, cd=0, range=16, kind="aoe_target", radius=7.0, base=30, scale=1.8,
+                         desc="Call down meteors on your target: 30 + 180% Intelligence to everything within 7m."),
+    "volley": dict(name="Volley", cls="ranger", level=6, cost=20, cd=0, range=18, kind="aoe_target", radius=6.0, mult=1.3, flat=4,
+                   desc="Rain arrows on your target, hitting all enemies within 6m for 130% weapon damage +4."),
+    "multishot": dict(name="Multishot", cls="ranger", level=8, cost=24, cd=0, range=16, kind="multi", count=5, mult=1.2, flat=3,
+                      desc="Loose arrows at up to 5 nearby enemies within 16m for 120% weapon damage +3 each."),
     "minor_heal": dict(name="Minor Heal", cls=None, level=2, cost=12, cd=0, kind="heal", base=25, scale=1.5,
                        desc="Restore 25 + 150% Wisdom health to yourself."),
-    "quickstep": dict(name="Quickstep", cls=None, level=2, cost=10, cd=20, kind="buff", buff="speed", value=0.5, dur=5,
+    "quickstep": dict(name="Quickstep", cls=None, level=2, cost=10, cd=0, kind="buff", buff="speed", value=0.5, dur=5,
                       desc="Move 50% faster for 5 seconds."),
 }
 
@@ -74,7 +86,7 @@ DEFAULT_BINDS = {"attack_nearest": "Space", "stop": "KeyS", "inventory": "KeyI",
 
 def default_binds(cls):
     b = dict(DEFAULT_BINDS)
-    keys = ["Digit1", "Digit2", "Digit3", "Digit4", "Digit5", "Digit6"]
+    keys = ["Digit1", "Digit2", "Digit3", "Digit4", "Digit5", "Digit6", "Digit7", "Digit8", "Digit9", "Digit0"]
     abil = [k for k, a in ABILITIES.items() if a["cls"] == cls] + [k for k, a in ABILITIES.items() if a["cls"] is None]
     for i, a in enumerate(abil):
         b[f"ability:{a}"] = keys[i] if i < len(keys) else ""

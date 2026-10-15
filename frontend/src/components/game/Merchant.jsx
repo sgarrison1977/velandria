@@ -59,7 +59,7 @@ const ACTION_LABEL = { attack_nearest: "Attack nearest enemy", stop: "Stop / can
 export function defaultBinds(data, cls) {
   const b = { attack_nearest: "Space", stop: "KeyS", inventory: "KeyI", character: "KeyC", skills: "KeyK", map: "KeyM", quests: "KeyL", chat: "Enter", menu: "Escape" };
   const abil = [...Object.keys(data.abilities).filter((k) => data.abilities[k].cls === cls), ...Object.keys(data.abilities).filter((k) => !data.abilities[k].cls)];
-  abil.forEach((a, i) => { b[`ability:${a}`] = i < 6 ? `Digit${i + 1}` : ""; });
+  abil.forEach((a, i) => { b[`ability:${a}`] = i < 10 ? `Digit${(i + 1) % 10}` : ""; });
   return b;
 }
 

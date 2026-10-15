@@ -17,7 +17,7 @@ const glowTex = (() => {
   return new THREE.CanvasTexture(c);
 })();
 const sprite = (color, size) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); s.scale.setScalar(size); return s; };
-const AB_COLOR = { arcane_bolt: "#7fb8ff", flame_burst: "#ff7a2a", aimed_shot: "#ffd36b", venom_arrow: "#7aff5a", power_strike: "#ffe0a0", cleave: "#ffc080", minor_heal: "#7aff9a", iron_guard: "#9ac8ff", quickstep: "#c8f0ff" };
+const AB_COLOR = { arcane_bolt: "#7fb8ff", flame_burst: "#ff7a2a", aimed_shot: "#ffd36b", venom_arrow: "#7aff5a", power_strike: "#ffe0a0", cleave: "#ffc080", minor_heal: "#7aff9a", iron_guard: "#9ac8ff", quickstep: "#c8f0ff", whirlwind: "#ffc080", earthshatter: "#d8a060", frost_nova: "#a8e8ff", meteor_storm: "#ff5a1a", volley: "#ffd36b", multishot: "#ffe08a" };
 
 export class Engine {
   constructor({ canvas, overlay, data, world, net, meId, quality }) {
@@ -147,9 +147,15 @@ export class Engine {
   }
   castFx(src, tgt, ab) {
     const c = AB_COLOR[ab] || "#fff";
-    src.anim.cast = ab === "power_strike" || ab === "cleave" ? 0 : 1;
-    if (ab === "power_strike" || ab === "cleave") src.anim.atk = 1;
-    if (Math.hypot(src.x - (this.me?.x || 0), src.z - (this.me?.z || 0)) < 30) sfx(ab === "power_strike" || ab === "cleave" ? "heavy" : ab === "minor_heal" ? "heal" : "spell");
+    const melee = ["power_strike", "cleave", "whirlwind", "earthshatter"].includes(ab);
+    src.anim.cast = melee ? 0 : 1;
+    if (melee) src.anim.atk = 1;
+    if (Math.hypot(src.x - (this.me?.x || 0), src.z - (this.me?.z || 0)) < 30) sfx(melee ? "heavy" : ab === "minor_heal" ? "heal" : "spell");
+    if (ab === "whirlwind") { this.shock(src.x, src.z, c, 6); this.shock(src.x, src.z, "#fff0d0", 3.5); }
+    if (ab === "frost_nova") { this.shock(src.x, src.z, c, 7); this.burst(src, c, 30, 3); }
+    if (ab === "earthshatter" && tgt) { this.shock(tgt.x, tgt.z, c, 6); if (src.id === this.meId) this.shake = 0.35; }
+    if (ab === "meteor_storm" && tgt) { for (let i = 0; i < 3; i++) setTimeout(() => this.projectile(src, tgt, c, false, 1.3, () => this.shock(tgt.x + (Math.random() - 0.5) * 4, tgt.z + (Math.random() - 0.5) * 4, c, 7)), i * 140); }
+    if (ab === "volley" && tgt) { for (let i = 0; i < 4; i++) setTimeout(() => this.projectile(src, tgt, c, true, 1), i * 90); this.shock(tgt.x, tgt.z, c, 6); }
     if (ab === "arcane_bolt" && tgt) this.projectile(src, tgt, c, false, 0.9);
     if ((ab === "aimed_shot" || ab === "venom_arrow") && tgt) this.projectile(src, tgt, c, true, 1);
     if (ab === "flame_burst" && tgt) { this.projectile(src, tgt, c, false, 1.1, () => this.shock(tgt.x, tgt.z, c, 4.5)); }

@@ -96,7 +96,7 @@ export function Hover({ tip, children }) {
 
 const AB_ICONS = { power_strike: [Sword, "#e8c27a", "#5a2a12"], iron_guard: [Shield, "#9ac8ff", "#1a2a4a"], cleave: [Layers, "#ffb070", "#4a1a0a"], arcane_bolt: [Wand2, "#9ac8ff", "#1a1a5a"],
   flame_burst: [FlaskConical, "#ffb347", "#5a1a00"], aimed_shot: [Crosshair, "#ffe08a", "#3a2a0a"], venom_arrow: [Bone, "#9aff6a", "#13300a"], minor_heal: [Gem, "#9affb0", "#0a3a1a"],
-  quickstep: [Footprints, "#c8f0ff", "#0a2a3a"], basic: [Sword, "#ccc", "#2a2a2a"] };
+  quickstep: [Footprints, "#c8f0ff", "#0a2a3a"], whirlwind: [Layers, "#ffd0a0", "#4a2a0a"], earthshatter: [Shield, "#d8a060", "#3a200a"], frost_nova: [Gem, "#a8e8ff", "#0a2a4a"], meteor_storm: [FlaskConical, "#ff5a1a", "#4a0a00"], volley: [Crosshair, "#ffd36b", "#2a200a"], multishot: [Crosshair, "#ffe08a", "#3a1a2a"], basic: [Sword, "#ccc", "#2a2a2a"] };
 export function AbIcon({ id, size = 22 }) {
   const [I, c, bg] = AB_ICONS[id] || AB_ICONS.basic;
   return <span className="ab-glyph" style={{ background: `radial-gradient(circle at 50% 40%, ${bg}, #0b0908 80%)`, borderColor: c + "66" }}><I size={size} color={c} strokeWidth={1.8} /></span>;

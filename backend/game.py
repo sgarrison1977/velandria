@@ -555,7 +555,7 @@ class Game:
                 p.target, p.queued, p.pending = m.id, ab_id, None
                 return None
             return self.do_cast(p, ab_id, m)
-        if ab["kind"] == "aoe_self" and in_safe(p.x, p.z):
+        if ab["kind"] in ("aoe_self", "multi") and in_safe(p.x, p.z):
             return "You cannot fight from within a safe square."
         return self.do_cast(p, ab_id, None)
 
@@ -583,10 +583,16 @@ class Game:
             cx, cz = (m.x, m.z) if m else (p.x, p.z)
             for mm in list(self.monsters.values()):
                 if not mm.dead_until and math.hypot(mm.x - cx, mm.z - cz) <= ab["radius"] + mm.d["radius"]:
-                    if k == "aoe_target":
+                    if "base" in ab:
                         self.damage_monster(mm, ab["base"] + p.tot["int"] * ab["scale"] + rnd.uniform(0, 4), p, "magic")
                     else:
                         self.damage_monster(mm, rnd.uniform(p.dmg_lo, p.dmg_hi) * ab["mult"] + ab["flat"], p, "phys")
+        elif k == "multi":
+            near = sorted((mm for mm in self.monsters.values() if not mm.dead_until and dist(p, mm) <= ab["range"] + mm.d["radius"] and not in_safe(mm.x, mm.z)), key=lambda mm: dist(p, mm))[:ab["count"]]
+            p.last_attack = t
+            for mm in near:
+                self.fx(p.x, p.z, {"t": "fx", "k": "cast", "src": p.id, "ab": "aimed_shot", "tgt": mm.id})
+                self.damage_monster(mm, rnd.uniform(p.dmg_lo, p.dmg_hi) * ab["mult"] + ab["flat"], p, "phys")
         elif k == "dot":
             per = ab["base"] + p.tot["dex"] * ab["scale"]
             m.dots.append(dict(dmg=per, n=ab["ticks"], next=t + 1, src=p.id))
