@@ -166,6 +166,7 @@ ITEMS = {
     "golem_core": M("Golem Core", "rare", 120, "Still warm with binding magic."),
     "dread_shard": M("Dread Shard", "rare", 160, "A splinter of cursed armor."),
     "fiend_horn": M("Fiend Horn", "epic", 300, "Smoulders faintly. Collectors pay well."),
+    "crown_hollow": A("Crown of the Hollow King", "head", "legendary", 30, 15000, 70, stats={"sta": 16, "str": 8, "int": 8, "dex": 8, "wis": 8, "life_steal": 3, "hp_regen": 8, "mp_regen": 6}, desc="Vorgath's crown. It still whispers commands.", color="#c9a24e"),
     # legendary arms (Elderglen - Vaelric)
     "sunforged_blade": W("Sunforged Greatblade", ["warrior"], "legendary", [62, 88], 1.45, 2800, 50, stats={"str": 18, "sta": 10, "dex": 6, "life_steal": 3, "hp_regen": 4}, desc="Quenched in the heart of a dying star.", color="#ffd36b"),
     "starfall_staff": W("Starfall Staff", ["mage"], "legendary", [34, 50], 1.5, 2800, 50, magic=True, stats={"int": 22, "wis": 14, "mana_steal": 3, "mp_regen": 5}, desc="Constellations wheel within its crystal.", color="#8ab8ff"),
@@ -256,12 +257,30 @@ MONSTERS = {
                           gold=[0, 0], radius=2.0, leash=28, respawn=90, regen=20, resist={"phys": 0.85, "magic": 0.85},
                           loot=[("fiend_horn", 0.6), ("fiendhide_boots", 0.06), ("doom_blade", 0.012), ("abyss_staff", 0.012), ("heartseeker_bow", 0.012),
                                 ("void_staff", 0.04), ("stormcaller_bow", 0.04), ("ring_ancients", 0.03)]),
+    "cave_crawler": dict(name="Cave Crawler", level=35, hp=2600, dmg=[70, 95], interval=1.6, speed=4.4, armor=45, aggro=12, range=2.4, xp=1400,
+                         gold=[0, 0], radius=1.3, leash=22, respawn=45, poison=[18, 5], resist={"phys": 1.0, "magic": 0.9},
+                         loot=[("brood_silk", 0.5), ("hp_potion", 0.3), ("broodsilk_cloak", 0.05), ("bloodthorn_bow", 0.04), ("wraith_staff", 0.04), ("ring_vampire", 0.03)]),
+    "crypt_ghoul": dict(name="Crypt Ghoul", level=42, hp=3400, dmg=[90, 125], interval=1.4, speed=4.8, armor=50, aggro=13, range=2.2, xp=1900,
+                        gold=[0, 0], radius=0.7, leash=22, respawn=50, resist={"phys": 1.0, "magic": 1.0},
+                        loot=[("dread_shard", 0.45), ("hp_potion", 0.35), ("golemstone_plate", 0.04), ("soulreaver_blade", 0.03), ("void_staff", 0.03), ("stormcaller_bow", 0.03)]),
+    "bone_colossus": dict(name="Bone Colossus", level=52, hp=6000, dmg=[130, 175], interval=2.6, speed=3.2, armor=85, aggro=12, range=3.4, xp=3000,
+                          gold=[0, 0], radius=1.6, leash=22, respawn=70, resist={"phys": 0.75, "magic": 1.2},
+                          loot=[("golem_core", 0.5), ("dreadknight_helm", 0.06), ("soulreaver_blade", 0.05), ("void_staff", 0.05), ("stormcaller_bow", 0.05), ("ring_ancients", 0.03)]),
+    "hollow_shade": dict(name="Hollow Shade", level=58, hp=4800, dmg=[140, 190], interval=2.0, speed=4.6, armor=30, aggro=16, range=12.0, xp=3500,
+                         gold=[0, 0], radius=0.8, leash=24, respawn=60, ranged=True, resist={"phys": 0.7, "magic": 1.0},
+                         loot=[("wraith_essence", 0.55), ("mp_potion", 0.4), ("fiendhide_boots", 0.05), ("void_staff", 0.05), ("abyss_staff", 0.01), ("heartseeker_bow", 0.01), ("doom_blade", 0.01)]),
+    "hollow_king": dict(name="Vorgath, the Hollow King", level=75, hp=30000, dmg=[220, 300], interval=2.0, speed=4.0, armor=90, aggro=18, range=4.0, xp=40000,
+                        gold=[0, 0], gold_mult=10, radius=2.6, leash=30, respawn=600, regen=15, boss=True, slam=dict(every=7, radius=9, mult=1.4),
+                        resist={"phys": 0.9, "magic": 0.9},
+                        loot=[("crown_hollow", 0.5), ("doom_blade", 0.25), ("abyss_staff", 0.25), ("heartseeker_bow", 0.25), ("ring_ancients", 0.4),
+                              ("amulet_eternity", 0.4), ("fiendhide_boots", 0.5), ("dreadknight_helm", 0.5), ("fiend_horn", 1.0), ("hp_potion", 1.0)]),
 }
 
 # Gold scales with monster level: [lo, hi] = GOLD_SCALE * level^GOLD_EXP
 GOLD_SCALE, GOLD_EXP = (2.0, 5.0), 1.45
 for _m in MONSTERS.values():
-    _m["gold"] = [max(1, round(GOLD_SCALE[0] * _m["level"] ** GOLD_EXP)), max(3, round(GOLD_SCALE[1] * _m["level"] ** GOLD_EXP))]
+    _g = _m.get("gold_mult", 1)
+    _m["gold"] = [max(1, round(GOLD_SCALE[0] * _m["level"] ** GOLD_EXP * _g)), max(3, round(GOLD_SCALE[1] * _m["level"] ** GOLD_EXP * _g))]
 # Extra loot rolls: higher-level monsters roll their loot table more times
 EXTRA_ROLLS = [(10, 1), (25, 2), (45, 3)]
 # Level-gated bonus drops every monster can roll

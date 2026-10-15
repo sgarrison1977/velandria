@@ -3,7 +3,7 @@ import asyncio, time, math, random, uuid, json, logging, re
 from datetime import datetime, timezone
 from game_data import (ITEMS, MONSTERS, ABILITIES, CLASSES, NPCS, MERCHANTS, QUESTS, XP_TABLE, MAX_LEVEL, INV_SLOTS, TICK, COMBAT,
                        PLAYER_SPEED, PICKUP_RANGE, NPC_RANGE, LOOT_OWNER_SECS, LOOT_EXPIRE_SECS, ACTIONS, RESTOCK_SECS, sell_price, default_binds, EXTRA_ROLLS, BONUS_LOOT)
-from world import World, in_safe, SAFE_ZONES
+from world import PORTALS, World, in_safe, SAFE_ZONES
 
 log = logging.getLogger("game")
 rnd = random.Random()
@@ -267,6 +267,16 @@ class Game:
                 p.send({"t": "sys", "msg": f"You awaken in the safe square of {TOWN_NAMES[town['town']]}."})
                 p.dirty = True
             return
+        for pt in PORTALS:
+            if (p.x - pt["x"]) ** 2 + (p.z - pt["z"]) ** 2 < 2.6:
+                p.x, p.z = pt["to"]
+                p.path, p.target, p.pending, p.queued = [], None, None, None
+                p.send({"t": "sys", "msg": pt["msg"]})
+                for mm in self.monsters.values():
+                    if mm.target == p.id:
+                        mm.target = None
+                p.dirty = True
+                return
         changed = False
         for k in [k for k, v in p.buffs.items() if t > v[1]]:
             del p.buffs[k]
@@ -396,7 +406,14 @@ class Game:
             else:
                 m.path, m.moving = [], False
                 m.rot = math.atan2(tgt.x - m.x, tgt.z - m.z)
-                if t - m.last_attack >= d["interval"]:
+                if d.get("slam") and t > getattr(m, "next_slam", 0):
+                    m.next_slam = t + d["slam"]["every"]
+                    self.fx(m.x, m.z, {"t": "fx", "k": "slam", "src": m.id, "r": d["slam"]["radius"]})
+                    for pp in list(self.players.values()):
+                        if not pp.dead_until and dist(m, pp) <= d["slam"]["radius"]:
+                            k = COMBAT["armor_k"] + COMBAT["armor_k_per_level"] * d["level"]
+                            self.damage_player(pp, max(1, round(rnd.uniform(*d["dmg"]) * d["slam"]["mult"] * (1 - pp.armor / (pp.armor + k)))), m, "phys")
+                elif t - m.last_attack >= d["interval"]:
                     m.last_attack = t
                     self.monster_attack(m, tgt)
             return
@@ -477,7 +494,9 @@ class Game:
         for lv, item, chance in BONUS_LOOT:
             if m.d["level"] >= lv and rnd.random() < chance:
                 drops.append((item, 1))
-        drops = drops[:8]
+        drops = drops[:16 if m.d.get("boss") else 8]
+        if m.d.get("boss"):
+            self.broadcast_sys(f"{killer.name} has slain {m.d['name']}! The Hollow Deep falls silent... for now.")
         for i, (item, qty) in enumerate(drops):
             a = i * 2.1 + rnd.uniform(0, 1)
             lx, lz = m.x + math.cos(a) * (0.6 + 0.4 * i), m.z + math.sin(a) * (0.6 + 0.4 * i)

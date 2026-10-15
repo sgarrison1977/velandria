@@ -159,6 +159,28 @@ function prop(p, terrain, lights) {
       for (let i = 0; i < n; i++) { const h = 1 + ((i * 7919) % 5) * 0.6; const along = (i + 0.5) / n - 0.5; box(p.w > p.d ? p.w / n : p.w, h, p.w > p.d ? p.d : p.d / n, M(i % 3 ? "#6a665c" : "#5c6450"), p.w > p.d ? along * p.w : 0, h / 2, p.w > p.d ? 0 : along * p.d, g); }
       break; }
     case "pillar": { cyl(0.55, 0.65, p.h, 8, M("#77736a"), 0, p.h / 2, 0, g); box(1.4, 0.4, 1.4, M("#6a665c"), 0, 0.2, 0, g); break; }
+    case "portal": {
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(1.6, 0.16, 8, 32), M("#8a6aff", { emissive: "#7a4aff", emissiveIntensity: 2.4 }));
+      ring.rotation.x = -Math.PI / 2; ring.position.y = 0.12; ring.name = "spin"; g.add(ring);
+      const disc = new THREE.Mesh(new THREE.CircleGeometry(1.5, 32), new THREE.MeshBasicMaterial({ color: "#6a3aff", transparent: true, opacity: 0.45, depthWrite: false }));
+      disc.rotation.x = -Math.PI / 2; disc.position.y = 0.1; g.add(disc);
+      const beam = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.5, 3.2, 20, 1, true), new THREE.MeshBasicMaterial({ color: "#9a7aff", transparent: true, opacity: 0.18, side: THREE.DoubleSide, depthWrite: false }));
+      beam.position.y = 1.6; beam.name = "spin"; g.add(beam);
+      for (let i = 0; i < 4; i++) { const r = box(0.5, 1.6, 0.5, M("#3a3640"), Math.cos(i * 1.57 + 0.78) * 2.3, 0.8, Math.sin(i * 1.57 + 0.78) * 2.3, g); r.rotation.y = i; box(0.3, 0.3, 0.3, M("#b090ff", { emissive: "#8a5aff", emissiveIntensity: 2 }), r.position.x, 1.75, r.position.z, g).name = "pulse"; }
+      break; }
+    case "brazier": {
+      cyl(0.18, 0.28, 1.1, 6, M("#2a2622", { metalness: 0.6 }), 0, 0.55, 0, g); cyl(0.55, 0.3, 0.35, 8, M("#2a2622", { metalness: 0.6 }), 0, 1.2, 0, g);
+      const f = cone(0.38, 0.95, 6, M("#ffb347", { emissive: "#ff6a00", emissiveIntensity: 3, transparent: true, opacity: 0.9 }), 0, 1.75, 0, g); f.name = "flame"; break; }
+    case "stalagmite": { const sc = p.s || 1; cone(0.7 * sc, 3.2 * sc, 6, M("#4a4540"), 0, 1.6 * sc, 0, g); cone(0.4 * sc, 1.8 * sc, 5, M("#55504a"), 0.6 * sc, 0.9 * sc, 0.3 * sc, g); break; }
+    case "bones": {
+      const bm = M("#d8d0b8");
+      for (let i = 0; i < 5; i++) { const b = cyl(0.05, 0.05, 0.7, 4, bm, Math.cos(i * 1.3) * 0.4, 0.06, Math.sin(i * 1.3) * 0.4, g); b.rotation.set(Math.PI / 2, i * 0.9, 0); }
+      const sk = new THREE.Mesh(new THREE.SphereGeometry(0.17, 8, 6), bm); sk.position.set(0.1, 0.15, 0); g.add(sk); g.scale.setScalar(p.s || 1); break; }
+    case "throne": {
+      const stn = M("#2a2630"), gold = M("#c9a24e", { metalness: 0.8, roughness: 0.3 });
+      box(4, 0.6, 4, stn, 0, 0.3, 0, g); box(2.2, 1.2, 2, stn, 0, 1.2, 0, g); box(0.5, 4.5, 2.4, stn, 0.9, 2.8, 0, g);
+      for (const sz of [-1.1, 1.1]) { box(1.8, 0.4, 0.3, stn, 0, 2.0, sz, g); cone(0.2, 1.2, 4, gold, 0.9, 5.6, sz, g); }
+      box(0.15, 1, 1, M("#b060ff", { emissive: "#8a3aff", emissiveIntensity: 2 }), 0.62, 4.2, 0, g).name = "pulse"; break; }
     default: return null;
   }
   g.position.set(p.x, terrain.height(p.x, p.z), p.z);
@@ -197,6 +219,11 @@ export function buildStructures(world, terrain, scene) {
     m.rotation.x = -Math.PI / 2; m.position.set(x, 0.04, z); m.receiveShadow = true;
     root.add(m);
   }
+  if (world.cave_rocks?.length) {
+    const im = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1, 0), M("#3a3632"), world.cave_rocks.length), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
+    world.cave_rocks.forEach(([x, z, sc], i) => { e.set(i * 0.7, i * 1.3, i * 0.4); q.setFromEuler(e); m4.compose(new THREE.Vector3(x, terrain.height(x, z) * 0.45, z), q, new THREE.Vector3(sc * 1.1, sc * 0.85, sc * 1.1)); im.setMatrixAt(i, m4); });
+    root.add(im);
+  }
   root.traverse((o) => { if (o.isMesh) { o.castShadow = !o.material.transparent && o.geometry.type !== "PlaneGeometry"; o.receiveShadow = true; } });
   scene.add(root);
   return animated;
@@ -208,6 +235,7 @@ export function animateStructures(list, t) {
     else if (o.name === "flicker") o.intensity = 34 + Math.sin(t * 17) * 6 + Math.sin(t * 7.3) * 5;
     else if (o.name === "float") o.position.y += Math.sin(t * 1.5 + o.id) * 0.004;
     else if (o.name === "pulse") o.material.emissiveIntensity = 1 + Math.sin(t * 2) * 0.6;
+    else if (o.name === "spin") o.rotation.z = t * 0.8;
     else if (o.name === "ember") o.material.emissiveIntensity = 1.6 + Math.sin(t * 5) * 0.6;
   }
 }

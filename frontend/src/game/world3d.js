@@ -61,7 +61,14 @@ export class Terrain {
     for (const l of this.w.lakes) m = Math.min(m, Math.hypot((x - l.x) / l.rx, (z - l.z) / l.rz));
     return m;
   }
+  caveHeight(x, z) {
+    if (!this.blocked(x, z)) return vnoise(x * 0.5, z * 0.5) * 0.12;
+    let n = 0;
+    for (const [dx, dz] of [[1.6, 0], [-1.6, 0], [0, 1.6], [0, -1.6], [1.1, 1.1], [-1.1, -1.1], [1.1, -1.1], [-1.1, 1.1]]) n += this.blocked(x + dx, z + dz) ? 1 : 0;
+    return 0.4 + (n / 8) * 3.2 + fbm(x * 0.7, z * 0.7) * 1.4;
+  }
   height(x, z) {
+    if (z > this.w.oh - 3) return this.caveHeight(x, z);
     const rd = this.sample(this.RD, x, z), sd = this.sample(this.SD, x, z);
     let amp = 5.5;
     if (x > 880 && z < 130) amp = 11;
@@ -75,6 +82,12 @@ export class Terrain {
     return h;
   }
   groundColor(x, z, out) {
+    if (z > this.w.oh - 3) {
+      const n = fbm(x * 2.3, z * 2.3), moss = smooth(0.6, 0.8, vnoise(x * 0.3, z * 0.3));
+      const wall = this.blocked(x, z) ? 1 : 0, v = 0.75 + n * 0.5;
+      out[0] = (wall ? 0.27 : 0.13) * v; out[1] = (wall ? 0.25 : 0.13 + moss * 0.05) * v; out[2] = (wall ? 0.23 : 0.14) * v;
+      return;
+    }
     const n = fbm(x * 3.1, z * 3.1), n2 = vnoise(x * 0.6, z * 0.6);
     const east = smooth(780, 900, x), mid = smooth(330, 480, x) * (1 - east);
     let r = mix(0.3, 0.22, mid), g = mix(0.4, 0.3, mid), b = mix(0.16, 0.14, mid);

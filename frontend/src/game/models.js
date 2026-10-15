@@ -147,6 +147,11 @@ function wolf(o) {
 }
 
 const MONSTER_BUILD = {
+  cave_crawler: () => spider({ body: "#8a8478", abd: "#a09a8a", mark: "#5affe0", leg: "#6a645a", glow: true, scale: 1.9 }),
+  crypt_ghoul: () => humanoid({ scale: 1.1, hunch: true, skin: "#7a8a6a", shirt: "#3a3a2a", pants: "#2a2a1e", boots: "#1a1a14", eyes: "#d0ff5a", ears: true, hair: "#2a2a20" }),
+  bone_colossus: () => humanoid({ scale: 2.3, bulk: 1.3, thin: true, skin: "#e0d8c0", head: "skull", pants: "#3a342a", boots: "#2a241c", weapon: "club", weaponColor: "#d8d0b8", eyes: "#7fe0ff", pauldrons: "#d8d0b8" }),
+  hollow_shade: () => humanoid({ scale: 1.25, skin: "#4a3a5a", robe: "#140a1e", shirt: "#1e1028", sleeve: "#1e1028", hood: "#140a1e", weapon: "staff", weaponColor: "#2a1a3a", glow: "#c070ff", eyes: "#e0a0ff" }),
+  hollow_king: () => humanoid({ scale: 2.6, bulk: 1.35, skin: "#9a90a8", head: "skull", shirt: "#1a1222", pants: "#140e1a", boots: "#0e0a12", helm: "#c9a24e", pauldrons: "#c9a24e", cape: "#3a0a4a", robe: "#1a1222", weapon: "sword", weaponColor: "#2a2040", glow: "#b060ff", eyes: "#d080ff" }),
   dire_wolf: () => wolf({ color: "#2e2c30", dark: "#141216", scale: 1.75 }),
   broodmother: () => spider({ body: "#2a1030", abd: "#3a1440", mark: "#ff3a8a", leg: "#1a0a20", glow: true, scale: 2.4 }),
   shadow_wraith: () => humanoid({ scale: 1.15, skin: "#3a3a4a", robe: "#0e0e18", shirt: "#14141f", sleeve: "#14141f", hood: "#0e0e18", weapon: "staff", weaponColor: "#1a1a2a", glow: "#5affe0", eyes: "#5affe0" }),

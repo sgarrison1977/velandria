@@ -25,6 +25,7 @@ Later requests: hold-to-walk toward pointer; ranged/spell abilities fire at the 
 - 30 backend pytest tests pass (/app/backend/tests); frontend focused test iteration_1: 100%.
 
 ## Backlog
-- P1: Party system, bank/storage NPC, PvP arenas outside towns, dungeon interior (Hollow Deep)
+- DONE: Hollow Deep dungeon (6 chambers, 4 dungeon monsters, boss Vorgath lvl 75 with slam AoE, portals at (518,51) and inside)
+- P1: Party system, bank/storage NPC, PvP arenas outside towns
 - P1: Client-side movement prediction; more quests; crafting from materials
 - P2: GLTF character art pass, day/night cycle, music, mobile controls

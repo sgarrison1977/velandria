@@ -2,7 +2,8 @@
 import math, random, base64, heapq
 import numpy as np
 
-W, H = 1100, 400
+W, H = 1100, 600
+OH = 400
 SEMEL = (90.0, 200.0)
 ELDER = (1000.0, 210.0)
 SAFE_HALF = 16.0
@@ -58,7 +59,7 @@ REGIONS = [
     dict(name="Silkfield Meadows", x=92, z=90, r=45, lvl="1-2"),
     dict(name="Imp Hollow", x=102, z=318, r=40, lvl="1-3"),
     dict(name="Old Watch Ruins", x=400, z=112, r=40, lvl="5-7"),
-    dict(name="Hollow Deep (Sealed Dungeon)", x=520, z=62, r=28, lvl="8+"),
+    dict(name="Hollow Deep Entrance", x=520, z=62, r=28, lvl="Dungeon 35-75"),
     dict(name="Goblin Thicket", x=452, z=255, r=30, lvl="4"),
     dict(name="Ring of Kael", x=560, z=150, r=18, lvl="-"),
     dict(name="Bandit Hideout", x=600, z=322, r=32, lvl="6"),
@@ -75,10 +76,22 @@ REGIONS = [
     dict(name="The Sealed Pass", x=1090, z=210, r=14, lvl="Future region"),
 ]
 
+DUNGEON_ROOMS = [
+    dict(name="Hollow Deep Antechamber", x=420, z=555, r=12, lvl="Dungeon"),
+    dict(name="Fungal Grotto", x=470, z=505, r=15, lvl="35"),
+    dict(name="Bone Gallery", x=540, z=555, r=15, lvl="42"),
+    dict(name="Drowned Crypt", x=605, z=495, r=15, lvl="52"),
+    dict(name="Shade Sanctum", x=655, z=560, r=14, lvl="58"),
+    dict(name="Throne of the Hollow King", x=700, z=500, r=19, lvl="75 (Boss)"),
+]
+PORTALS = [dict(id="hollow_in", x=518.0, z=51.0, to=(426.0, 550.0), name="Hollow Deep", msg="You descend into the Hollow Deep..."),
+           dict(id="hollow_out", x=411.0, z=562.0, to=(518.0, 45.0), name="Exit to the surface", msg="You climb back into the daylight.")]
 SCATTER_BANDS = [(200, ["giant_spider", "imp"]), (330, ["forest_wolf", "imp", "goblin_scout"]), (450, ["goblin_scout", "skeleton", "forest_wolf"]),
                  (600, ["forest_bandit", "venomous_spider", "skeleton"]), (760, ["orc_warrior", "venomous_spider", "forest_bandit"]),
                  (900, ["dark_cultist", "orc_warrior"]), (99999, ["forest_troll", "dark_cultist"])]
 SPAWNS = [
+    ("cave_crawler", 470, 505, 11, 8), ("crypt_ghoul", 540, 555, 11, 8), ("bone_colossus", 605, 495, 10, 5),
+    ("hollow_shade", 655, 560, 10, 6), ("crypt_ghoul", 507, 528, 4, 2), ("cave_crawler", 630, 530, 4, 2), ("hollow_king", 702, 500, 3, 1),
     ("giant_spider", 92, 88, 46, 24), ("giant_spider", 190, 245, 30, 12), ("giant_spider", 165, 120, 28, 10),
     ("imp", 102, 322, 42, 22), ("imp", 225, 160, 28, 10), ("imp", 180, 330, 26, 9),
     ("forest_wolf", 268, 175, 34, 12), ("forest_wolf", 350, 290, 36, 12), ("forest_wolf", 330, 140, 26, 8),
@@ -122,7 +135,7 @@ class World:
         rnd = random.Random(1337)
         self.blocked = np.zeros((H, W), dtype=np.uint8)
         b = self.blocked
-        b[:3, :] = 1; b[-3:, :] = 1; b[:, :3] = 1; b[:, -3:] = 1
+        b[:3, :] = 1; b[OH - 3:, :] = 1; b[:, :3] = 1; b[:, -3:] = 1
         self.road_dist = np.full((H, W), 99.0, dtype=np.float32)
         self.main_road = catmull(MAIN_ROAD, 2.0)
         self.paths = [dict(w=p["w"], hidden=p.get("hidden", False), pts=catmull(p["pts"], 2.0)) for p in SIDE_PATHS]
@@ -155,6 +168,7 @@ class World:
         for bd in self.buildings:
             self._block_rect(bd["x"], bd["z"], bd["w"], bd["d"])
         self._town_props()
+        self._dungeon(random.Random(909))
         self._camps(rnd)
         self.trees, self.rocks, self.bushes, self.grass = [], [], [], []
         self._vegetation(rnd)
@@ -230,6 +244,59 @@ class World:
             elif r:
                 self._disc(x, z, r)
 
+    def _dungeon(self, rnd):
+        b = self.blocked
+        def carve(x, z, r):
+            for zi in range(int(z - r) - 1, int(z + r) + 2):
+                for xi in range(int(x - r) - 1, int(x + r) + 2):
+                    if OH + 8 < zi < H - 4 and 4 < xi < W - 4 and (xi + 0.5 - x) ** 2 + (zi + 0.5 - z) ** 2 <= r * r:
+                        b[zi, xi] = 0
+        for rm in DUNGEON_ROOMS:
+            ph = rnd.uniform(0, 6.28)
+            for i in range(72):
+                a = i / 72 * 6.283
+                rr = rm["r"] * (1 + 0.14 * math.sin(3 * a + ph) + 0.08 * math.sin(5 * a + ph * 2))
+                for f in (0.35, 0.6, 0.85):
+                    carve(rm["x"] + math.cos(a) * rr * f, rm["z"] + math.sin(a) * rr * f, rr * 0.28)
+            carve(rm["x"], rm["z"], rm["r"] * 0.6)
+        for a, c in zip(DUNGEON_ROOMS, DUNGEON_ROOMS[1:]):
+            n = int(math.hypot(c["x"] - a["x"], c["z"] - a["z"]) / 0.5)
+            nx, nz = -(c["z"] - a["z"]), c["x"] - a["x"]
+            ln = math.hypot(nx, nz)
+            for i in range(n + 1):
+                t = i / n
+                off = math.sin(t * math.pi * 2) * 5
+                carve(a["x"] + (c["x"] - a["x"]) * t + nx / ln * off, a["z"] + (c["z"] - a["z"]) * t + nz / ln * off, 2.8)
+        P = self.props
+        for pt in PORTALS:
+            P.append(dict(kind="portal", x=pt["x"], z=pt["z"], name=pt["name"]))
+        for k, rm in enumerate(DUNGEON_ROOMS):
+            for i in range(4):
+                a = i * math.pi / 2 + 0.7
+                x, z = rm["x"] + math.cos(a) * rm["r"] * 0.72, rm["z"] + math.sin(a) * rm["r"] * 0.72
+                if self.walkable(x, z):
+                    P.append(dict(kind="brazier", x=x, z=z)); self._disc(x, z, 0.6)
+            for i in range(5):
+                a, d = rnd.uniform(0, 6.28), rnd.uniform(0.45, 0.8) * rm["r"]
+                x, z = rm["x"] + math.cos(a) * d, rm["z"] + math.sin(a) * d
+                if self.walkable(x, z):
+                    kind = "bones" if i % 2 else "stalagmite"
+                    P.append(dict(kind=kind, x=x, z=z, s=round(rnd.uniform(0.7, 1.4), 2)))
+                    if kind == "stalagmite":
+                        self._disc(x, z, 0.7)
+            if rm["name"].startswith("Drowned"):
+                for i in range(6):
+                    a = i / 6 * 6.283
+                    x, z = rm["x"] + math.cos(a) * rm["r"] * 0.5, rm["z"] + math.sin(a) * rm["r"] * 0.5
+                    P.append(dict(kind="pillar", x=x, z=z, h=4.5)); self._disc(x, z, 0.7)
+            if rm["name"].startswith("Throne"):
+                P.append(dict(kind="throne", x=rm["x"] + 13, z=rm["z"])); self._disc(rm["x"] + 13, rm["z"], 2.2)
+        self.cave_rocks = []
+        for zi in range(OH + 2, H - 2, 2):
+            for xi in range(4, W - 4, 2):
+                if b[zi, xi] and (not b[zi - 2, xi] or not b[zi + 2, xi] or not b[zi, xi - 2] or not b[zi, xi + 2]):
+                    self.cave_rocks.append([xi + rnd.uniform(-0.4, 0.4), zi + rnd.uniform(-0.4, 0.4), round(rnd.uniform(1.0, 2.0), 2)])
+
     def _camps(self, rnd):
         camps = [(455, 255, "goblin"), (600, 322, "bandit"), (800, 122, "orc"), (762, 300, "cultist"), (962, 68, "troll")]
         for (cx, cz, k) in camps:
@@ -258,12 +325,12 @@ class World:
         clearings = [(r["x"], r["z"], r["r"] * 0.55) for r in REGIONS[2:]] + [(s[1], s[2], s[3] * 0.7) for s in SPAWNS]
         def ok(x, z, road_gap):
             xi, zi = int(x), int(z)
-            if not (4 <= xi < W - 4 and 4 <= zi < H - 4) or b[zi, xi] or self.road_dist[zi, xi] < road_gap:
+            if not (4 <= xi < W - 4 and 4 <= zi < OH - 4) or b[zi, xi] or self.road_dist[zi, xi] < road_gap:
                 return False
             return True
         n_tree = 0
         for _ in range(11000):
-            x, z = rnd.uniform(3, W - 3), rnd.uniform(3, H - 3)
+            x, z = rnd.uniform(3, W - 3), rnd.uniform(3, OH - 3)
             if town_d(x, z) < 1.05:
                 continue
             dens = 0.75
@@ -271,7 +338,7 @@ class World:
                 if (x - cx) ** 2 + (z - cz) ** 2 < cr * cr:
                     dens = 0.06
                     break
-            edge = min(x, W - x, z, H - z)
+            edge = min(x, W - x, z, OH - z)
             if edge < 25:
                 dens = 1.0
             if rnd.random() > dens or not ok(x, z, 4.0):
@@ -286,7 +353,7 @@ class World:
                 self._disc(x, z, 0.9)
             n_tree += 1
         for _ in range(1100):
-            x, z = rnd.uniform(5, W - 5), rnd.uniform(5, H - 5)
+            x, z = rnd.uniform(5, W - 5), rnd.uniform(5, OH - 5)
             if town_d(x, z) < 1.1 or not ok(x, z, 3.0):
                 continue
             big = rnd.random() < 0.25 or (x > 900 and z < 120)
@@ -295,12 +362,12 @@ class World:
             if s > 0.6:
                 self._disc(x, z, s * 0.75)
         for _ in range(9000):
-            x, z = rnd.uniform(4, W - 4), rnd.uniform(4, H - 4)
+            x, z = rnd.uniform(4, W - 4), rnd.uniform(4, OH - 4)
             if town_d(x, z) < 0.9 or not ok(x, z, 1.5):
                 continue
             self.bushes.append([round(x, 1), round(z, 1), round(rnd.uniform(0.6, 1.4), 2), 1 if x > 820 else 0])
         for _ in range(16000):
-            x, z = rnd.uniform(4, W - 4), rnd.uniform(4, H - 4)
+            x, z = rnd.uniform(4, W - 4), rnd.uniform(4, OH - 4)
             if not ok(x, z, 0.8) or any(abs(x - t["x"]) < 23 and abs(z - t["z"]) < 23 for t in SAFE_ZONES):
                 continue
             self.grass.append([round(x, 1), round(z, 1), round(rnd.uniform(0.6, 1.3), 2)])
@@ -394,7 +461,7 @@ class World:
                 if x < lim:
                     return rnd.choice(opts)
         def ok(x, z):
-            if not (5 < x < W - 5 and 5 < z < H - 5) or not self.walkable(x, z):
+            if not (5 < x < W - 5 and 5 < z < OH - 5) or not self.walkable(x, z):
                 return False
             if math.hypot(x - SEMEL[0], z - SEMEL[1]) < 48 or math.hypot(x - ELDER[0], z - ELDER[1]) < 52:
                 return False
@@ -407,7 +474,7 @@ class World:
             if ok(px, pz):
                 self.spawns.append(dict(monster=band(px), x=px, z=pz, r=10, n=3))
         for gx in range(30, W, 60):
-            for gz in range(30, H, 60):
+            for gz in range(30, OH, 60):
                 px, pz = gx + rnd.uniform(-18, 18), gz + rnd.uniform(-18, 18)
                 if ok(px, pz):
                     self.spawns.append(dict(monster=band(px), x=px, z=pz, r=12, n=3))
@@ -426,4 +493,5 @@ class World:
                     paths=[dict(w=p["w"], hidden=p["hidden"], pts=[[round(a, 1), round(b, 1)] for a, b in p["pts"]]) for p in self.paths],
                     streams=[[[round(a, 1), round(b, 1)] for a, b in s] for s in self.streams], bridges=self.bridges, lakes=LAKES,
                     walls=self.walls, buildings=self.buildings, props=self.props, trees=self.trees, rocks=self.rocks, bushes=self.bushes,
-                    grass=self.grass, regions=REGIONS, safe_zones=SAFE_ZONES, towns=dict(semel=SEMEL, elderglen=ELDER))
+                    grass=self.grass, regions=REGIONS + DUNGEON_ROOMS, safe_zones=SAFE_ZONES, oh=OH, cave_rocks=self.cave_rocks,
+                    portals=[dict(x=p['x'], z=p['z'], name=p['name']) for p in PORTALS], towns=dict(semel=SEMEL, elderglen=ELDER))

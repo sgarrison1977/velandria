@@ -32,8 +32,9 @@ export class Engine {
     const scene = (this.scene = new THREE.Scene());
     scene.background = new THREE.Color("#2a3631"); scene.fog = new THREE.FogExp2("#2a3631", 0.011);
     this.camera = new THREE.PerspectiveCamera(42, 1, 0.5, 150);
-    scene.add(new THREE.HemisphereLight("#b8cad4", "#4a3c26", 1.35));
-    const rim = new THREE.DirectionalLight("#8fb0ff", 0.6); rim.position.set(60, 40, -80); scene.add(rim);
+    scene.add((this.hemi = new THREE.HemisphereLight("#b8cad4", "#4a3c26", 1.35)));
+    this.lantern = new THREE.PointLight("#ffb070", 0, 30, 1.2); scene.add(this.lantern); this.cave = 0;
+    const rim = (this.rim = new THREE.DirectionalLight("#8fb0ff", 0.6)); rim.position.set(60, 40, -80); scene.add(rim);
     const sun = (this.sun = new THREE.DirectionalLight("#ffe2b8", 3.0));
     sun.castShadow = true; const sz = this.quality === "high" ? 2048 : 1024; sun.shadow.mapSize.set(sz, sz);
     Object.assign(sun.shadow.camera, { left: -48, right: 48, top: 48, bottom: -48, near: 1, far: 160 }); sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.04;
@@ -141,6 +142,7 @@ export class Engine {
       case "pdeath": if (tgt) tgt.anim.dead = true; if (f.tgt === this.meId) sfx("death"); break;
       case "heal": if (tgt) { this.burst(tgt, "#7aff9a", 14, 1.4); if (f.v) this.number(tgt, `+${f.v}`, "#7aff9a"); if (near(tgt)) sfx("heal"); } break;
       case "levelup": if (src) { this.pillar(src); sfx("levelup"); } break;
+      case "slam": if (src) { this.shock(src.x, src.z, "#b060ff", f.r); this.shock(src.x, src.z, "#ff6a3a", f.r * 0.6); src.anim.atk = 1; if (near(src)) { sfx("heavy"); this.shake = 0.4; } } break;
       case "cast": if (src) this.castFx(src, tgt || (f.x != null ? { x: f.x, z: f.z, height: 0 } : null), f.ab); break;
       default:
     }
@@ -324,6 +326,7 @@ export class Engine {
     let best = null;
     for (const r of this.world.regions) { const d = Math.hypot(r.x - x, r.z - z); if (d < r.r && (!best || d / r.r < best.k)) best = { r, k: d / r.r }; }
     if (best) return best.r.name;
+    if (z > this.world.oh) return "The Hollow Deep";
     const rd = this.terrain.sample(this.terrain.RD, x, z);
     if (x < 330) return rd < 6 ? "Titus Forest Road" : "Westwood";
     if (x < 700) return rd < 6 ? "The Long Road" : "Shadowpine Deep";
@@ -354,6 +357,11 @@ export class Engine {
       for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) { const key = `${cx + i},${cz + j}`; if (!this.discovered.has(key)) { this.discovered.add(key); this.discDirty = true; } }
       const reg = this.regionAt(me.x, me.z);
       if (reg !== this.lastRegion) { this.lastRegion = reg; setState({ region: reg }); }
+      this.cave += ((me.z > this.world.oh ? 1 : 0) - this.cave) * Math.min(1, dt * 3);
+      const k = this.cave;
+      this.hemi.intensity = 1.35 - k * 1.0; this.sun.intensity = 3.0 - k * 2.6; this.rim.intensity = 0.6 - k * 0.45;
+      this.scene.fog.density = 0.011 + k * 0.022; this.scene.fog.color.setRGB(0.165 * (1 - k) + 0.035 * k, 0.212 * (1 - k) + 0.035 * k, 0.192 * (1 - k) + 0.05 * k); this.scene.background.copy(this.scene.fog.color);
+      this.lantern.intensity = k * 45; this.lantern.position.set(me.x, me.grp.position.y + 4, me.z + 1);
     }
     const pitch = 0.95, sh = this.shake > 0 ? (this.shake -= dt) * 0.6 : 0;
     const ct = this.camTarget;
@@ -415,6 +423,8 @@ export class Engine {
     const me = this.me || { x: 90, z: 200 };
     let sx = 0, sz = 0, sw = W, shh = H;
     if (opts.radius) { sw = shh = opts.radius * 2; sx = me.x - opts.radius; sz = me.z - opts.radius; }
+    else if (me.z > this.world.oh) { sx = 370; sz = 452; sw = 380; shh = 380 * h / w; }
+    else shh = this.world.oh;
     const scale = w / sw;
     ctx.fillStyle = "#0b0d0c"; ctx.fillRect(0, 0, w, h);
     ctx.drawImage(src, sx * 2, sz * 2, sw * 2, shh * 2, 0, 0, w, h);
