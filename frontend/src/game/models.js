@@ -161,6 +161,7 @@ const MONSTER_BUILD = {
 export const buildMonster = (type) => MONSTER_BUILD[type]();
 
 const NPC_BUILD = {
+  gilded: () => humanoid({ skin: "#d8b090", shirt: "#6a1a2a", pants: "#2a1a24", sleeve: "#c9a24e", hair: "#e8e0d0", beard: "#e8e0d0", weapon: "sword", weaponColor: "#ffd36b", glow: "#ffcf5a", belt: "#c9a24e", cape: "#7a1a2a", bulk: 1.1 }),
   smith: () => humanoid({ skin: "#c08a6a", shirt: "#5a3a26", pants: "#3a2a1a", beard: "#5a3a1a", hair: "#3a2a1a", weapon: "hammer", belt: "#2a1a0e", bulk: 1.15 }),
   merchant: () => humanoid({ skin: "#d6a888", shirt: "#7a5a2a", robe: "#6a3a2a", hair: "#7a4a2a", sleeve: "#7a5a2a" }),
   healer: () => humanoid({ skin: "#e0b898", robe: "#e8e0cc", shirt: "#e8e0cc", sleeve: "#e8e0cc", hood: "#d8cc9c", weapon: "staff", weaponColor: "#c9b07a", glow: "#ffe08a" }),

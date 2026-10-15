@@ -144,6 +144,22 @@ ITEMS = {
     "ring_vigor": A("Ring of Vigor", "ring", "uncommon", 0, 200, 3, stats={"sta": 3}, desc="Warm to the touch."),
     "ring_focus": A("Ring of Focus", "ring", "uncommon", 0, 200, 3, stats={"int": 2, "wis": 2}),
     "amulet_dawn": A("Amulet of First Dawn", "amulet", "epic", 2, 1500, 12, stats={"str": 3, "sta": 3, "wis": 3, "int": 3, "dex": 3}),
+    # legendary arms (Elderglen - Vaelric)
+    "sunforged_blade": W("Sunforged Greatblade", ["warrior"], "legendary", [62, 88], 1.45, 2800, 50, stats={"str": 18, "sta": 10, "dex": 6}, desc="Quenched in the heart of a dying star.", color="#ffd36b"),
+    "starfall_staff": W("Starfall Staff", ["mage"], "legendary", [34, 50], 1.5, 2800, 50, magic=True, stats={"int": 22, "wis": 14}, desc="Constellations wheel within its crystal.", color="#8ab8ff"),
+    "galeheart_bow": W("Galeheart Longbow", ["ranger"], "legendary", [54, 78], 1.3, 2800, 50, stats={"dex": 20, "str": 6, "sta": 6}, desc="Its string hums with the north wind.", color="#a8f0c8"),
+    "aegis_dawn": A("Aegis of Dawn", "off", "legendary", 28, 1200, 50, cls=["warrior"], stats={"sta": 12, "str": 5}, desc="No blow has ever pierced it."),
+    "codex_eternity": A("Codex of Eternity", "off", "legendary", 6, 1200, 50, cls=["mage"], stats={"int": 12, "wis": 10}, desc="Its pages write themselves."),
+    "quiver_windrider": A("Windrider Quiver", "off", "legendary", 6, 1200, 50, cls=["ranger"], stats={"dex": 12, "str": 4}, desc="Arrows that never miss their mark."),
+    "dragonscale_plate": A("Dragonscale Plate", "chest", "epic", 46, 1600, 50, cls=["warrior"], stats={"sta": 14, "str": 8}, color="#8a3a2a", desc="Scales of the elder wyrm Vhorax."),
+    "archmage_vestments": A("Archmage Vestments", "chest", "epic", 20, 1600, 50, cls=["mage"], stats={"int": 14, "wis": 12, "sta": 4}, color="#3a2a8a", desc="Woven from moonlit silk."),
+    "shadowstalker_garb": A("Shadowstalker Garb", "chest", "epic", 30, 1600, 50, cls=["ranger"], stats={"dex": 14, "sta": 8}, color="#24302a", desc="Drinks in the light around it."),
+    "crown_valor": A("Crown of Valor", "head", "epic", 16, 1000, 50, stats={"sta": 8, "str": 4, "int": 4, "dex": 4}, color="#c9a24e", desc="Worn by the first kings of Titus."),
+    "titan_greaves": A("Titan Greaves", "legs", "epic", 24, 1200, 50, stats={"sta": 10, "str": 4, "dex": 4}, color="#9a9aa6"),
+    "gauntlets_might": A("Gauntlets of Might", "hands", "epic", 12, 700, 50, stats={"str": 6, "dex": 6, "int": 4}, color="#b0a070"),
+    "boots_wind": A("Boots of the Swift Wind", "feet", "epic", 12, 700, 50, stats={"dex": 8, "sta": 4}, color="#7aa0a0"),
+    "ring_ancients": A("Ring of the Ancients", "ring", "legendary", 0, 600, 50, stats={"str": 6, "sta": 6, "wis": 6, "int": 6, "dex": 6}, desc="Older than the world's name."),
+    "amulet_eternity": A("Amulet of Eternity", "amulet", "legendary", 6, 900, 50, stats={"sta": 10, "wis": 8, "int": 8, "str": 6, "dex": 6}, desc="Time slows around its wearer."),
     "cultist_amulet": A("Veiled Sigil", "amulet", "rare", 0, 500, 10, stats={"int": 4, "wis": 2}),
     # consumables
     "minor_hp": dict(name="Minor Healing Draught", type="consumable", rarity="common", heal=45, price=8, stack=20, desc="Restores 45 health."),
@@ -210,6 +226,7 @@ NPCS = {
     "thessaly": dict(name="Thessaly Weaponwright", role="Equipment Merchant", town="elderglen", pos=[990, 199], kind="smith", merchant="elder_arms"),
     "fenn": dict(name="Old Fenn", role="Provisions & Curios", town="elderglen", pos=[1011, 200], kind="merchant", merchant="elder_goods"),
     "orin": dict(name="Druid Orin", role="Healer", town="elderglen", pos=[996, 222], kind="druid", healer=True),
+    "vaelric": dict(name="Vaelric the Gilded", role="Legendary Arms", town="elderglen", pos=[1003, 192], kind="gilded", merchant="elder_legend"),
     "lyra": dict(name="Warden Lyra", role="Warden of Elderglen", town="elderglen", pos=[1008, 220], kind="guard"),
     # ambient townsfolk
     "v1": dict(name="Hob the Farmer", role="Villager", town="semel", pos=[70, 225], kind="villager", ambient=True),
@@ -227,6 +244,10 @@ MERCHANTS = {
     "elder_arms": dict(name="Thessaly's Armory", stock=[("steel_longsword", 3), ("longbow", 3), ("ember_staff", 3), ("iron_shield", 4), ("iron_helm", 4),
                                                         ("chainmail", 3), ("mystic_robe", 3), ("iron_greaves", 3), ("wolf_boots", 4), ("ring_vigor", 2),
                                                         ("ring_focus", 2)]),
+    "elder_legend": dict(name="Vaelric's Legendary Arms", stock=[("sunforged_blade", -1), ("starfall_staff", -1), ("galeheart_bow", -1), ("aegis_dawn", -1),
+                                                               ("codex_eternity", -1), ("quiver_windrider", -1), ("dragonscale_plate", -1), ("archmage_vestments", -1),
+                                                               ("shadowstalker_garb", -1), ("crown_valor", -1), ("titan_greaves", -1), ("gauntlets_might", -1),
+                                                               ("boots_wind", -1), ("ring_ancients", -1), ("amulet_eternity", -1)]),
     "elder_goods": dict(name="Fenn's Provisions", stock=[("minor_hp", -1), ("hp_potion", -1), ("minor_mp", -1), ("mp_potion", -1), ("bread", -1)]),
 }
 SELL_RATIO = 0.4
