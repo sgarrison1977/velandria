@@ -461,3 +461,5 @@ def random_gear(mlvl, rnd):
     pool = [k for k, it in ITEMS.items() if it["type"] in ("weapon", "armor") and it["price"] > 0 and it["rarity"] != "legendary" and k not in QUEST_ONLY
             and mlvl - 15 <= it.get("lvl", 1) <= mlvl + 3]
     return rnd.choice(pool) if pool else None
+
+ACTIONS += [f"item:{k}" for k, it in ITEMS.items() if it["type"] == "consumable"]

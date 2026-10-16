@@ -87,7 +87,7 @@ export function SettingsPanel({ data, net, engine }) {
     return () => window.removeEventListener("keydown", h, true);
   }, [capture]); // eslint-disable-line
   if (!me) return null;
-  const label = (k) => ACTION_LABEL[k] || data.abilities[k.slice(8)]?.name;
+  const label = (k) => ACTION_LABEL[k] || (k.startsWith("item:") ? data.items[k.slice(5)]?.name : data.abilities[k.slice(8)]?.name);
   const actions = data.actions.filter((a) => !a.startsWith("ability:") || data.abilities[a.slice(8)].cls.includes(me.cls));
   const dirty = JSON.stringify(binds) !== JSON.stringify(me.binds);
   return (
@@ -108,9 +108,23 @@ export function SettingsPanel({ data, net, engine }) {
             );
           })}
         </div>
+        <h4 className="bind-head">Items <small>— uses the first one in your bag</small></h4>
+        <div className="binds spells" data-testid="item-bind-list">
+          {actions.filter((a) => a.startsWith("item:")).map((a) => {
+            const id = a.slice(5), it = data.items[id], have = me.inventory.filter((x) => x.item === id).reduce((t, x) => t + x.qty, 0);
+            return (
+              <div key={a} className="bind-row spell" data-testid={`item-row-${id}`}>
+                <ItemIcon id={id} item={it} size={30} />
+                <span><b>{it.name}</b><small> {have} in bag</small><em>{it.desc}</em></span>
+                <button type="button" className={`keycap ${capture === a ? "capturing" : ""}`} data-testid={`bind-item-${id}`} onClick={() => setState({ capture: a })}>{capture === a ? "Press a key…" : keyLabel(binds[a]) || "—"}</button>
+                {binds[a] && <button type="button" className="keycap clear" data-testid={`unbind-item-${id}`} title="Clear hotkey" onClick={() => setBinds({ ...binds, [a]: "" })}>×</button>}
+              </div>
+            );
+          })}
+        </div>
         <h4 className="bind-head">Controls</h4>
         <div className="binds" data-testid="keybind-list">
-          {actions.filter((a) => !a.startsWith("ability:")).map((a) => (
+          {actions.filter((a) => !a.startsWith("ability:") && !a.startsWith("item:")).map((a) => (
             <div key={a} className="bind-row">
               <span>{label(a)}</span>
               <button type="button" className={`keycap ${capture === a ? "capturing" : ""}`} data-testid={`bind-${a.replace(":", "-")}`} onClick={() => setState({ capture: a })}>{capture === a ? "Press a key…" : keyLabel(binds[a])}</button>
