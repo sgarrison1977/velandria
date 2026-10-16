@@ -205,19 +205,100 @@ function jitter(g, amt) {
   return g;
 }
 
+function canvasTex(draw, w = 128, h = 128) {
+  const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+  draw(cv.getContext("2d"), w, h);
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  return t;
+}
+const rnd = (() => { let sd = 1337; return () => (sd = (sd * 16807) % 2147483647) / 2147483647; })();
+function leafTex(hue, sat, needles) {
+  return canvasTex((c, w, h) => {
+    if (needles) {
+      c.strokeStyle = `hsl(${hue},${sat}%,18%)`; c.lineWidth = 3; c.beginPath(); c.moveTo(w / 2, h); c.lineTo(w / 2, 6); c.stroke();
+      for (let i = 0; i < 70; i++) {
+        const y = 8 + rnd() * (h - 14), side = rnd() < 0.5 ? -1 : 1, len = 10 + (y / h) * 26 * rnd() + 8;
+        c.strokeStyle = `hsl(${hue + rnd() * 14 - 7},${sat}%,${14 + rnd() * 22}%)`; c.lineWidth = 1.6;
+        c.beginPath(); c.moveTo(w / 2, y); c.lineTo(w / 2 + side * len, y - len * 0.5); c.stroke();
+      }
+      return;
+    }
+    for (let i = 0; i < 46; i++) {
+      const x = 14 + rnd() * (w - 28), y = 14 + rnd() * (h - 28), r = 7 + rnd() * 9, a = rnd() * Math.PI;
+      c.fillStyle = `hsl(${hue + rnd() * 18 - 9},${sat + rnd() * 10}%,${16 + rnd() * 26}%)`;
+      c.beginPath(); c.ellipse(x, y, r, r * 0.48, a, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = "rgba(0,0,0,0.25)"; c.lineWidth = 0.8; c.beginPath(); c.moveTo(x - Math.cos(a) * r, y - Math.sin(a) * r); c.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); c.stroke();
+    }
+  });
+}
+function barkTex(base, light) {
+  const t = canvasTex((c, w, h) => {
+    c.fillStyle = base; c.fillRect(0, 0, w, h);
+    for (let i = 0; i < 90; i++) {
+      const x = rnd() * w, wd = 1 + rnd() * 3, l = 20 + rnd() * 80, y = rnd() * h;
+      c.fillStyle = rnd() < 0.5 ? "rgba(0,0,0,0.35)" : light; c.fillRect(x, y, wd, l); c.fillRect(x, y - h, wd, l);
+    }
+  }, 64, 128);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2, 1.5);
+  return t;
+}
+function shade(g, lo, hi, y0, y1) {
+  const p = g.attributes.position, cols = new Float32Array(p.count * 3), a = new THREE.Color(lo), b = new THREE.Color(hi), c = new THREE.Color();
+  for (let i = 0; i < p.count; i++) { const k = Math.min(1, Math.max(0, (p.getY(i) - y0) / (y1 - y0))); c.copy(a).lerp(b, k); cols.set([c.r, c.g, c.b], i * 3); }
+  g.setAttribute("color", new THREE.BufferAttribute(cols, 3));
+  return g;
+}
+const clean = (g) => { const n = g.index ? g.toNonIndexed() : g; for (const k of Object.keys(n.attributes)) if (!["position", "normal", "uv"].includes(k)) n.deleteAttribute(k); return n; };
+function cards(blobs, n, size, droop = 0) {
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const [bx, by, bz, br] = blobs[i % blobs.length];
+    const u = rnd() * Math.PI * 2, v = Math.acos(2 * rnd() - 1) * 0.8, r = br * (0.75 + rnd() * 0.35);
+    const x = bx + Math.sin(v) * Math.cos(u) * r, y = by + Math.cos(v) * r * 0.8, z = bz + Math.sin(v) * Math.sin(u) * r;
+    const g = clean(new THREE.PlaneGeometry(size, size));
+    g.rotateX(-Math.PI / 2 + (rnd() - 0.5) * 1.4 + droop); g.rotateY(Math.atan2(x - bx, z - bz) + (rnd() - 0.5) * 0.8); g.translate(x, y, z);
+    out.push(g);
+  }
+  return out;
+}
+function canopy(blobs, n, size, lo, hi, y0, y1) {
+  const core = mergeGeometries(blobs.map(([x, y, z, r]) => clean(tr(new THREE.IcosahedronGeometry(r * 0.78, 1), x, y, z))));
+  const leaves = mergeGeometries(cards(blobs, n, size));
+  return [shade(jitter(core, 0.12), lo, hi, y0, y1), shade(leaves, lo, hi, y0, y1)];
+}
+function pineTiers(tiers, lo, hi) {
+  const core = [], br = [];
+  tiers.forEach(([y, r, hgt]) => {
+    core.push(clean(tr(new THREE.ConeGeometry(r * 0.7, hgt, 8), 0, y, 0)));
+    const k = Math.round(7 + r * 3);
+    for (let i = 0; i < k; i++) {
+      const a = (i / k) * Math.PI * 2 + rnd() * 0.4, g = clean(new THREE.PlaneGeometry(r * 1.05, hgt * 0.95));
+      g.translate(0, -hgt * 0.1, 0); g.rotateX(-0.95 - rnd() * 0.3); g.translate(0, 0, r * 0.45); g.rotateY(a); g.translate(0, y + hgt * 0.15, 0);
+      br.push(g);
+    }
+  });
+  const y0 = tiers[0][0] - tiers[0][2] / 2, y1 = tiers[tiers.length - 1][0] + tiers[tiers.length - 1][2] / 2;
+  return [shade(jitter(mergeGeometries(core), 0.08), lo, hi, y0, y1), shade(mergeGeometries(br), lo, hi, y0, y1)];
+}
 function treeSpecies() {
-  const bark = M("#4a3524"), barkGrey = M("#5a5048"), barkPale = M("#6b5e50");
-  const pineL = windify(M("#24402a"), 0.12, true), oakL = windify(M("#3d5a26"), 0.12, true), elderL = windify(M("#1f4a44", { emissive: "#0b2a2a", emissiveIntensity: 0.35 }), 0.12, true);
-  const roots = (r) => [0, 1, 2, 3].map((i) => tr(new THREE.CylinderGeometry(0.05, r * 0.5, 0.9, 4), Math.cos(i * 1.6) * r, 0.15, Math.sin(i * 1.6) * r, 1, 0, Math.sin(i * 1.6) * 0.9, -Math.cos(i * 1.6) * 0.9));
+  const bt = barkTex("#4a3524", "rgba(140,110,80,0.25)"), btg = barkTex("#5a5048", "rgba(160,150,140,0.25)"), btp = barkTex("#7a6c5c", "rgba(220,210,190,0.3)");
+  const BM = (map) => new THREE.MeshStandardMaterial({ map, roughness: 0.95 });
+  const bark = BM(bt), barkGrey = BM(btg), barkPale = BM(btp);
+  const LM = (tex, o = {}) => windify(new THREE.MeshStandardMaterial({ map: tex, alphaTest: 0.42, side: THREE.DoubleSide, vertexColors: true, roughness: 0.9, ...o }), 0.12, true);
+  const CM = (o = {}) => windify(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: true, ...o }), 0.12, true);
+  const pineL = LM(leafTex(130, 35, true)), oakL = LM(leafTex(95, 45, false)), elderL = LM(leafTex(170, 40, false), { emissive: "#0b2a2a", emissiveIntensity: 0.35 });
+  const pineC = CM(), oakC = CM(), elderC = CM({ emissive: "#0b2a2a", emissiveIntensity: 0.3 });
+  const roots = (r) => [0, 1, 2, 3, 4].map((i) => clean(tr(new THREE.CylinderGeometry(0.04, r * 0.45, 1.0, 5), Math.cos(i * 1.3) * r, 0.12, Math.sin(i * 1.3) * r, 1, 0, Math.sin(i * 1.3) * 1.1, -Math.cos(i * 1.3) * 1.1)));
+  const limb = (x, y, z, l, rad, rx, rz) => clean(tr(new THREE.CylinderGeometry(rad * 0.4, rad, l, 5), x, y, z, 1, 0, rx, rz));
+  const pine = pineTiers([[2.7, 2.1, 2.6], [3.9, 1.75, 2.4], [5.0, 1.35, 2.2], [6.0, 0.9, 1.8], [6.9, 0.5, 1.4]], "#0e2414", "#3c6a3a");
+  const oak = canopy([[0, 3.8, 0, 1.9], [1.4, 3.3, 0.4, 1.4], [-1.2, 3.5, -0.5, 1.4], [0.2, 4.8, 0.5, 1.3], [-0.4, 3.2, 1.2, 1.2], [0.6, 3.4, -1.3, 1.2]], 110, 1.25, "#1e3410", "#7a9a3a", 2, 6);
+  const elder = canopy([[0, 3.6, 0, 2.3], [0, 5.3, 0, 1.8], [0, 6.8, 0, 1.3], [1.2, 4.2, 0.6, 1.3], [-1.1, 4.6, -0.7, 1.3]], 120, 1.3, "#0a2a28", "#3f8a78", 2, 8);
   return [
-    { parts: [[mergeGeometries([tr(new THREE.CylinderGeometry(0.16, 0.32, 3, 6), 0, 1.5, 0), ...roots(0.35)]), bark],
-      [jitter(mergeGeometries([tr(new THREE.ConeGeometry(2.0, 3.0, 7), 0, 3.0, 0), tr(new THREE.ConeGeometry(1.6, 2.6, 7), 0, 4.4, 0, 1, 0.4), tr(new THREE.ConeGeometry(1.1, 2.2, 7), 0, 5.7, 0, 1, 0.8)]), 0.12), pineL]] },
-    { parts: [[mergeGeometries([tr(new THREE.CylinderGeometry(0.24, 0.42, 2.6, 6), 0, 1.3, 0), tr(new THREE.CylinderGeometry(0.08, 0.15, 1.6, 5), 0.5, 2.6, 0, 1, 0, 0, -0.8), ...roots(0.45)]), bark],
-      [jitter(mergeGeometries([tr(new THREE.IcosahedronGeometry(1.9, 1), 0, 3.7, 0), tr(new THREE.IcosahedronGeometry(1.4, 1), 1.3, 3.2, 0.4), tr(new THREE.IcosahedronGeometry(1.3, 1), -1.1, 3.4, -0.5), tr(new THREE.IcosahedronGeometry(1.2, 1), 0.2, 4.6, 0.6)]), 0.18), oakL]] },
-    { parts: [[mergeGeometries([tr(new THREE.CylinderGeometry(0.18, 0.4, 4.4, 6), 0, 2.2, 0), ...roots(0.45)]), barkPale],
-      [jitter(mergeGeometries([tr(new THREE.ConeGeometry(2.4, 3.4, 8), 0, 3.6, 0), tr(new THREE.ConeGeometry(1.9, 3.0, 8), 0, 5.2, 0, 1, 0.3), tr(new THREE.ConeGeometry(1.3, 2.6, 8), 0, 6.8, 0, 1, 0.7), tr(new THREE.ConeGeometry(0.7, 1.8, 6), 0, 8.0, 0)]), 0.15), elderL]] },
-    { parts: [[mergeGeometries([tr(new THREE.CylinderGeometry(0.12, 0.34, 3.6, 5), 0, 1.8, 0), tr(new THREE.CylinderGeometry(0.03, 0.09, 1.8, 4), 0.55, 3.0, 0, 1, 0, 0, -1.0),
-      tr(new THREE.CylinderGeometry(0.03, 0.08, 1.5, 4), -0.45, 2.5, 0.2, 1, 0.5, 0, 0.9), tr(new THREE.CylinderGeometry(0.02, 0.07, 1.2, 4), 0, 3.3, 0.45, 1, 0, 0.9, 0), ...roots(0.4)]), barkGrey]] },
+    { parts: [[mergeGeometries([clean(tr(new THREE.CylinderGeometry(0.14, 0.3, 3.4, 7), 0, 1.7, 0)), ...roots(0.35)]), bark], [pine[0], pineC], [pine[1], pineL]] },
+    { parts: [[mergeGeometries([clean(tr(new THREE.CylinderGeometry(0.22, 0.42, 3, 7), 0, 1.5, 0)), limb(0.55, 2.9, 0, 1.7, 0.16, 0, -0.85), limb(-0.5, 2.8, 0.2, 1.5, 0.14, 0.4, 0.8), limb(0, 3.1, -0.5, 1.4, 0.12, -0.8, 0), ...roots(0.45)]), bark], [oak[0], oakC], [oak[1], oakL]] },
+    { parts: [[mergeGeometries([clean(tr(new THREE.CylinderGeometry(0.16, 0.4, 4.6, 7), 0, 2.3, 0)), ...roots(0.45)]), barkPale], [elder[0], elderC], [elder[1], elderL]] },
+    { parts: [[mergeGeometries([clean(tr(new THREE.CylinderGeometry(0.1, 0.34, 3.8, 6), 0, 1.9, 0)), limb(0.55, 3.0, 0, 1.8, 0.09, 0, -1.0), limb(-0.45, 2.5, 0.2, 1.5, 0.08, 0.5, 0.9),
+      limb(0, 3.3, 0.45, 1.2, 0.07, 0.9, 0), limb(0.9, 3.7, 0.1, 0.8, 0.04, 0, -0.4), limb(-0.8, 3.1, 0.4, 0.7, 0.035, 0.3, 0.5), ...roots(0.4)]), barkGrey]] },
   ];
 }
 
@@ -265,7 +346,7 @@ export function buildVegetation(world, terrain, scene) {
   for (const { key, kind, list } of chunks.values()) {
     const im = new THREE.InstancedMesh(geos[key], mats[key], list.length);
     list.forEach(([m4, c], i) => { im.setMatrixAt(i, m4); im.setColorAt(i, c); });
-    im.castShadow = kind === "tree" || kind === "rock";
+    im.castShadow = (kind === "tree" && !mats[key].alphaTest) || kind === "rock";
     im.receiveShadow = kind !== "grass";
     im.computeBoundingSphere();
     group.add(im);

@@ -4,7 +4,7 @@ import { useStore, togglePanel } from "../../game/store";
 import { Panel, ItemIcon, ItemTip, Hover, AbIcon, inst } from "./ui";
 import { sfx } from "../../game/audio";
 
-const SLOTS = [["head", "Head"], ["amulet", "Amulet"], ["main", "Main hand"], ["chest", "Chest"], ["off", "Off hand"], ["hands", "Hands"], ["legs", "Legs"], ["feet", "Feet"], ...[1, 2, 3, 4, 5, 6].map((i) => [`ring${i}`, `Ring ${i}`])];
+const SLOTS = [["head", "Head"], ["amulet", "Amulet"], ["main", "Main hand"], ["chest", "Chest"], ["off", "Off hand"], ["hands", "Hands"], ["legs", "Legs"], ["belt", "Belt"], ["feet", "Feet"], ...[1, 2, 3, 4, 5, 6].map((i) => [`ring${i}`, `Ring ${i}`])];
 
 export function Equipment({ data, net, me }) {
   return (
