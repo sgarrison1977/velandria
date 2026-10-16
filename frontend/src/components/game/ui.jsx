@@ -30,7 +30,8 @@ export function ItemIcon({ id, item, qty, size = 44, dim, testid, onClick, onCon
   );
 }
 
-const STAT = { str: "Str", sta: "Sta", wis: "Wis", int: "Int", dex: "Dex", hp_regen: "HP Regen /s", mp_regen: "Mana Regen /s", life_steal: "% Life Steal", mana_steal: "% Mana Steal" };
+const STAT = { str: "Strength", sta: "Stamina", wis: "Wisdom", int: "Intelligence", dex: "Dexterity", hp_regen: "HP Regen /s", mp_regen: "Mana Regen /s", life_steal: "% Life Steal", mana_steal: "% Mana Steal",
+  crit: "% Critical Hit Chance", max_hp: "Max Health", max_mp: "Max Mana", armor: "Armor", move_speed: "% Movement Speed" };
 export function ItemTip({ id, item, me, extra }) {
   if (!item) return null;
   const eq = item.slot && me?.equipment?.[item.slot];
@@ -46,7 +47,7 @@ export function ItemTip({ id, item, me, extra }) {
       {item.cls && <div className="tip-meta">{item.cls.join(" / ")}</div>}
       {item.dmg && <div>Damage {item.dmg[0]}–{item.dmg[1]} {item.magic ? "(magic)" : ""} · {item.spd}s{cur?.dmg && diff(item.dmg[0] + item.dmg[1], cur.dmg[0] + cur.dmg[1])}</div>}
       {item.armor > 0 && <div>Armor {item.armor}{cur && diff(item.armor, cur.armor)}</div>}
-      {Object.entries(item.stats || {}).map(([k, v]) => <div key={k} className={STAT[k]?.startsWith("%") || k.endsWith("regen") ? "up prop" : "up"}>+{v}{STAT[k]?.startsWith("%") ? "" : " "}{STAT[k]}</div>)}
+      {Object.entries(item.stats || {}).map(([k, v]) => <div key={k} className={STAT[k]?.startsWith("%") || k.endsWith("regen") || item.props?.[k] ? "up prop" : "up"}>+{v}{STAT[k]?.startsWith("%") ? "" : " "}{STAT[k] || k.replace(/_/g, " ")}</div>)}
       {item.heal && <div className="up">Restores {item.heal} health</div>}{item.full && <div className="up">Restores all {item.full === "hp" ? "health" : "mana"}</div>}
       {item.mana && <div className="up">Restores {item.mana} mana</div>}
       {item.desc && item.type !== "consumable" && <div className="tip-desc">{item.desc}</div>}
