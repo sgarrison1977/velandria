@@ -12,6 +12,7 @@ LINKDEAD_SECS = 15
 PARTY_MAX, PARTY_SHARE_R, PARTY_XP_BONUS = 5, 60.0, 0.15
 SKILL_POINTS_PER_LEVEL = 3
 PORTAL_SECS = 10
+RING_SLOTS = [f"ring{i}" for i in range(1, 7)]
 LOOT_ALL_R = 8.0
 TOWN_NAMES = {"semel": "Titus", "elderglen": "Elderglen", "ironhold": "Ironhold", "sunhollow": "Sunhollow"}
 
@@ -57,6 +58,8 @@ class Player:
         self.chat_times, self.last_save, self.linkdead_at = [], now(), None
         self.dirty, self.regen_acc, self.rewarded = True, 0.0, set()
         self.marks = doc.get("marks") or {}
+        if "ring" in self.equipment:
+            self.equipment["ring1"] = self.equipment.pop("ring")
         if "loot_all" not in self.binds and "KeyF" not in self.binds.values():
             self.binds["loot_all"] = "KeyF"
         if self.cls == "mage":
@@ -1137,6 +1140,8 @@ class Game:
         if p.level < it.get("lvl", 1):
             return f"Requires level {it['lvl']}."
         slot = it["slot"]
+        if slot == "ring":
+            slot = next((r for r in RING_SLOTS if r not in p.equipment), RING_SLOTS[0])
         p.inventory.remove(s)
         old = p.equipment.get(slot)
         p.equipment[slot] = {k: s[k] for k in ("uid", "item", "props", "pname") if s.get(k)}
