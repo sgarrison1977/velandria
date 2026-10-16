@@ -93,7 +93,7 @@ export function SkillsPanel({ data, net }) {
   const list = Object.entries(data.abilities).filter(([, a]) => !a.cls || a.cls === me.cls);
   return (
     <Panel title="Skills & Spells" testid="skills-panel" className="skills-panel" onClose={() => togglePanel("skills", false)}>
-      <div className="char-points" data-testid="skill-points">Skill points: <b>{me.skill_points}</b> <small>· earned one per level</small></div>
+      <div className="char-points" data-testid="skill-points">Skill points: <b>{me.skill_points}</b> <small>· earned three per level</small></div>
       <div className="skill-row base"><AbIcon id="basic" /><div><b>Basic Attack</b><p>Left-click an enemy to auto-attack ({me.range}m, every {me.attack_interval}s).</p></div></div>
       {list.map(([id, a]) => {
         const un = me.abilities.includes(id), can = !un && me.level >= a.level && me.skill_points > 0;

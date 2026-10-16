@@ -6,7 +6,7 @@ import { Engine } from "@/game/engine";
 import { Net } from "@/game/net";
 import { getState, setState, useStore, togglePanel, toast, resetState } from "@/game/store";
 import { sfx } from "@/game/audio";
-import { PlayerFrame, XpBar, TargetFrame, Hotbar, MenuBar, ExitButton, Toasts, Banners, ContextMenu, DialogWindow, InspectWindow } from "@/components/game/HUD";
+import { PlayerFrame, XpBar, TargetFrame, MenuBar, ExitButton, Toasts, Banners, ContextMenu, DialogWindow, InspectWindow } from "@/components/game/HUD";
 import { InventoryPanel, CharacterPanel, SkillsPanel, QuestPanel } from "@/components/game/Panels";
 import { MerchantWindow, SettingsPanel } from "@/components/game/Merchant";
 import { Minimap, WorldMap, Chat } from "@/components/game/Maps";
@@ -105,7 +105,7 @@ export default function GamePage() {
         <TargetFrame data={data} />
         <Minimap engine={e} />
         <Chat net={n} />
-        <div className="bottom"><Hotbar data={data} net={n} engine={e} /><XpBar data={data} /></div>
+        <div className="bottom"><XpBar data={data} /></div>
         <MenuBar onLogout={logout} />
         <ExitButton onLogout={logout} />
         <Toasts /><Banners />

@@ -236,3 +236,9 @@ input { font-family: inherit; }
 .exit-btn:hover { background: #2a2016; border-color: var(--gold); }
 .exit-modal { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 60; pointer-events: auto; width: 320px; background: #0d0a08f5; border: 1px solid var(--gold); padding: 20px 22px; display: flex; flex-direction: column; gap: 10px; text-align: center; }
 .exit-modal h3 { margin: 0; color: var(--gold); font-family: var(--serif, serif); font-size: 20px; } .exit-modal p { margin: 0 0 6px; color: var(--muted); font-size: 13px; }
+
+.bind-head { margin: 10px 0 6px; color: var(--gold); font-family: var(--serif, serif); font-size: 14px; font-weight: 400; } .bind-head small { color: var(--muted); font-size: 11px; }
+.binds.spells { grid-template-columns: 1fr; display: grid; gap: 4px; }
+.bind-row.spell { display: flex; align-items: center; gap: 8px; } .bind-row.spell > span { flex: 1; display: flex; flex-direction: column; line-height: 1.2; }
+.bind-row.spell em { font-style: normal; font-size: 11px; color: var(--muted); } .bind-row.spell small { font-size: 11px; color: #8ab8ff; } .bind-row.spell.locked { opacity: 0.55; }
+.keycap.clear { min-width: 24px; padding: 0 6px; color: #ff8a7a; }

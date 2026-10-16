@@ -208,7 +208,38 @@ export function buildPlayer(cls, eqStr, items) {
   look.shieldColor = off === "iron_shield" ? "#8a8f96" : "#6a4a2a";
   const rig = humanoid(look);
   rig.eqStr = eqStr;
+  addGearGlow(rig, items[main]?.rarity, (eqStr || "").split("|")[4]);
   return rig;
+}
+
+const GLOW = { legendary: "#ffa83a", epic: "#c070ff" };
+function addGearGlow(rig, mainRarity, counts) {
+  const [nl, ne] = (counts || "0,0").split(",").map(Number);
+  rig.shimmer = [];
+  if (GLOW[mainRarity] && rig.mainMesh) rig.mainMesh.traverse((o) => {
+    if (!o.isMesh) return;
+    o.material = o.material.clone(); o.material.emissive = new THREE.Color(GLOW[mainRarity]); o.material.emissiveIntensity = 0.9; rig.shimmer.push(o.material);
+  });
+  if (!nl && !ne) return;
+  const col = nl ? GLOW.legendary : GLOW.epic, n = 10 + nl * 8 + ne * 4, pos = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) { const a = i * 2.4, y = 0.15 + (i / n) * 2.0, r = 0.55 + Math.sin(i * 1.7) * 0.12; pos[i * 3] = Math.cos(a) * r; pos[i * 3 + 1] = y; pos[i * 3 + 2] = Math.sin(a) * r; }
+  const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  const aura = new THREE.Points(geo, new THREE.PointsMaterial({ color: col, size: 0.17, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending }));
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.45, 0.75, 28), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.3, depthWrite: false, blending: THREE.AdditiveBlending }));
+  ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04;
+  rig.aura = new THREE.Group(); rig.aura.add(aura, ring); rig.root.add(rig.aura);
+  rig.auraStrength = Math.min(1, 0.4 + nl * 0.2 + ne * 0.08);
+}
+
+export function animateGlow(rig, t) {
+  const k = 0.5 + 0.5 * Math.sin(t * 3.2);
+  for (const m of rig.shimmer) m.emissiveIntensity = 0.5 + k * 1.3;
+  if (rig.aura) {
+    rig.aura.rotation.y = t * 1.3;
+    rig.aura.children[0].material.opacity = (0.45 + 0.4 * Math.sin(t * 5)) * rig.auraStrength + 0.15;
+    rig.aura.children[0].position.y = Math.sin(t * 1.6) * 0.12;
+    rig.aura.children[1].material.opacity = 0.25 + 0.3 * k * rig.auraStrength;
+  }
 }
 
 export function buildLoot(itemId, item) {

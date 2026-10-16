@@ -10,6 +10,7 @@ rnd = random.Random()
 VIEW_R2 = 85 ** 2
 LINKDEAD_SECS = 15
 PARTY_MAX, PARTY_SHARE_R, PARTY_XP_BONUS = 5, 60.0, 0.15
+SKILL_POINTS_PER_LEVEL = 3
 TOWN_NAMES = {"semel": "Titus", "elderglen": "Elderglen", "ironhold": "Ironhold", "sunhollow": "Sunhollow"}
 
 
@@ -228,6 +229,8 @@ class Game:
         for o in self.players.values():
             if (o.x - p.x) ** 2 + (o.z - p.z) ** 2 < VIEW_R2:
                 eq = "|".join(o.equipment[s]["item"] if s in o.equipment else "" for s in ("main", "off", "head", "chest"))
+                rar = [ITEMS[e["item"]]["rarity"] for e in o.equipment.values()]
+                eq += f"|{rar.count('legendary')},{rar.count('epic')}"
                 ps.append([o.id, o.name, o.level, o.cls, round(o.x, 2), round(o.z, 2), round(o.rot, 2), 1 if o.moving else 0,
                            round(o.hp), o.max_hp, eq, 1 if o.dead_until else 0, 1 if o.linkdead_at else 0])
         for m in self.monsters.values():
@@ -533,7 +536,7 @@ class Game:
         while p.level < MAX_LEVEL and p.xp >= XP_TABLE[p.level + 1]:
             p.level += 1
             p.attr_points += 1
-            p.skill_points += 1
+            p.skill_points += SKILL_POINTS_PER_LEVEL
             levels += 1
         if levels:
             p.recalc()

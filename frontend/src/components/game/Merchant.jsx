@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Coins } from "lucide-react";
 import { useStore, setState, togglePanel } from "../../game/store";
-import { Panel, ItemIcon, ItemTip, Hover, RARITY_COLOR } from "./ui";
+import { Panel, ItemIcon, ItemTip, Hover, RARITY_COLOR, AbIcon } from "./ui";
 import { keyLabel } from "./HUD";
 import { audioCfg, setAudio, sfx } from "../../game/audio";
 
@@ -94,16 +94,28 @@ export function SettingsPanel({ data, net, engine }) {
     <Panel title="Settings" testid="settings-panel" className="settings" onClose={() => { setState({ capture: null }); togglePanel("settings", false); }}>
       <div className="tabs">{[["keys", "Key Bindings"], ["audio", "Audio"], ["gfx", "Graphics"]].map(([k, l]) => <button type="button" key={k} data-testid={`settings-tab-${k}`} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>{l}</button>)}</div>
       {tab === "keys" && <div>
-        <div className="binds" data-testid="keybind-list">
-          {actions.map((a) => {
-            const isAb = a.startsWith("ability:"), locked = isAb && !me.abilities.includes(a.slice(8));
+        <h4 className="bind-head">Spells & Skills <small>— click a key box, then press the hotkey you want</small></h4>
+        <div className="binds spells" data-testid="spell-bind-list">
+          {actions.filter((a) => a.startsWith("ability:")).map((a) => {
+            const id = a.slice(8), ab = data.abilities[id], locked = !me.abilities.includes(id);
             return (
-              <div key={a} className="bind-row">
-                <span>{label(a)}{locked && <small className="down"> (locked)</small>}</span>
-                <button type="button" className={`keycap ${capture === a ? "capturing" : ""}`} data-testid={`bind-${a.replace(":", "-")}`} onClick={() => setState({ capture: a })}>{capture === a ? "Press a key…" : keyLabel(binds[a])}</button>
+              <div key={a} className={`bind-row spell ${locked ? "locked" : ""}`} data-testid={`spell-row-${id}`}>
+                <AbIcon id={id} size={18} />
+                <span><b>{ab.name}</b>{locked ? <small className="down"> locked · Lv {ab.level}</small> : <small> {ab.cost} mana</small>}<em>{ab.desc}</em></span>
+                <button type="button" className={`keycap ${capture === a ? "capturing" : ""}`} data-testid={`bind-${a.replace(":", "-")}`} onClick={() => setState({ capture: a })}>{capture === a ? "Press a key…" : keyLabel(binds[a]) || "—"}</button>
+                {binds[a] && <button type="button" className="keycap clear" data-testid={`unbind-${id}`} title="Clear hotkey" onClick={() => setBinds({ ...binds, [a]: "" })}>×</button>}
               </div>
             );
           })}
+        </div>
+        <h4 className="bind-head">Controls</h4>
+        <div className="binds" data-testid="keybind-list">
+          {actions.filter((a) => !a.startsWith("ability:")).map((a) => (
+            <div key={a} className="bind-row">
+              <span>{label(a)}</span>
+              <button type="button" className={`keycap ${capture === a ? "capturing" : ""}`} data-testid={`bind-${a.replace(":", "-")}`} onClick={() => setState({ capture: a })}>{capture === a ? "Press a key…" : keyLabel(binds[a])}</button>
+            </div>
+          ))}
         </div>
         {msg && <div className="bind-msg" data-testid="bind-conflict-msg">{msg}</div>}
         <div className="row">

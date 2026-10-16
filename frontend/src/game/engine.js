@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { Terrain, buildVegetation, buildWater, windUniform, cutUniform } from "./world3d";
 import { buildStructures, animateStructures } from "./structures";
-import { buildMonster, buildNpc, buildPlayer, buildLoot, proxy, animateRig, RARITY } from "./models";
+import { buildMonster, buildNpc, buildPlayer, buildLoot, proxy, animateGlow, animateRig, RARITY } from "./models";
 import { getState, setState } from "./store";
 import { sfx } from "./audio";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
@@ -348,7 +348,7 @@ export class Engine {
       if (Math.hypot(dx, dz) > 8) { e.x = e.tx; e.z = e.tz; } else { e.x += dx * k; e.z += dz * k; }
       let dr = e.trot - e.rot; dr = Math.atan2(Math.sin(dr), Math.cos(dr)); e.rot += dr * Math.min(1, dt * 12);
       e.grp.position.set(e.x, this.groundY(e.x, e.z), e.z);
-      if (e.rig.body) { e.rig.root.rotation.y = e.rot; animateRig(e.rig, e.anim, dt, t); }
+      if (e.rig.body) { e.rig.root.rotation.y = e.rot; animateRig(e.rig, e.anim, dt, t); if (e.rig.shimmer) animateGlow(e.rig, t); }
       else { e.rig.root.rotation.y = t * 1.2; e.rig.root.position.y = 0.05 + Math.sin(t * 2.5 + e.x) * 0.05; }
     }
     const me = this.entities.get(this.meId);
