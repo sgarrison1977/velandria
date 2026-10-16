@@ -129,7 +129,7 @@ export function Banners() {
     <>
       {show && <div className="region-banner" data-testid="region-banner" key={show}>{show}</div>}
       {conn !== "online" && <div className="conn-banner" data-testid="connection-status">{{ connecting: "Connecting to the world…", reconnecting: "Connection lost — reconnecting…", replaced: "This character was opened in another session.", denied: "Session expired. Please log in again." }[conn]}</div>}
-      {lv && <div className="levelup" data-testid="levelup-banner"><small>Level Up</small><b>{lv}</b><em>+1 attribute point · +3 skill points</em></div>}
+      {lv && <div className="levelup" data-testid="levelup-banner"><small>Level Up</small><b>{lv}</b><em>+3 attribute points · +3 skill points</em></div>}
       <div className="hud-meta"><span data-testid="region-name">{region}</span> · {fps} fps</div>
     </>
   );

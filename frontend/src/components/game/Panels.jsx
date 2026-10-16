@@ -68,7 +68,7 @@ export function CharacterPanel({ data, net }) {
   return (
     <Panel title="Character" testid="character-panel" className="char-panel" onClose={() => togglePanel("character", false)}>
       <div className="char-head"><b>{me.name}</b><span>Level {me.level} {data.classes[me.cls].name}</span></div>
-      <div className="char-points" data-testid="attr-points">Unspent attribute points: <b>{me.attr_points}</b></div>
+      <div className="char-points" data-testid="attr-points">Unspent attribute points: <b>{me.attr_points}</b> <small>· earned three per level</small></div>
       {ATTRS.map(([k, label]) => (
         <div className="attr-row" key={k}>
           <Hover tip={<div className="tip"><div className="tip-desc">{data.attr_info[k]}</div><div className="tip-meta">Base {me.attrs[k]} · gear +{me.tot[k] - me.attrs[k]}</div></div>}>

@@ -11,6 +11,7 @@ VIEW_R2 = 85 ** 2
 LINKDEAD_SECS = 15
 PARTY_MAX, PARTY_SHARE_R, PARTY_XP_BONUS = 5, 60.0, 0.15
 SKILL_POINTS_PER_LEVEL = 3
+ATTR_POINTS_PER_LEVEL = 3
 PORTAL_SECS = 10
 RING_SLOTS = [f"ring{i}" for i in range(1, 7)]
 LOOT_ALL_R = 8.0
@@ -567,7 +568,7 @@ class Game:
         levels = 0
         while p.level < MAX_LEVEL and p.xp >= XP_TABLE[p.level + 1]:
             p.level += 1
-            p.attr_points += 1
+            p.attr_points += ATTR_POINTS_PER_LEVEL
             p.skill_points += SKILL_POINTS_PER_LEVEL
             levels += 1
         if levels:
