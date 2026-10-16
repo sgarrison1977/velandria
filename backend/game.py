@@ -555,7 +555,7 @@ class Game:
             props, pname = (None, None) if item == "gold" else roll_props(item, m.d["level"], rnd, force=qty == -1)
             qty = max(1, qty)
             self.loot[lid] = dict(id=lid, item=item, qty=qty, props=props, pname=pname, x=round(lx, 2), z=round(lz, 2), owner=killer.id,
-                                  party=getattr(killer, "party", None), owner_until=t + LOOT_OWNER_SECS, expires=t + LOOT_EXPIRE_SECS)
+                                  party=getattr(killer, "party", None), owner_until=t + LOOT_OWNER_SECS, expires=t + (8 if m.type.startswith("pit_") else LOOT_EXPIRE_SECS))
         for o in sharers:
             for qid, q in o.quests.items():
                 qd = QUESTS[qid]
