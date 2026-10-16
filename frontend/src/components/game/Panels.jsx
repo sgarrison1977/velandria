@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Plus, Lock, Check } from "lucide-react";
 import { useStore, togglePanel } from "../../game/store";
-import { Panel, ItemIcon, ItemTip, Hover, AbIcon, inst } from "./ui";
+import { Panel, ItemIcon, ItemTip, Hover, AbIcon, inst, cantUse } from "./ui";
 import { sfx } from "../../game/audio";
 
 const SLOTS = [["head", "Head"], ["amulet", "Amulet"], ["main", "Main hand"], ["chest", "Chest"], ["off", "Off hand"], ["hands", "Hands"], ["legs", "Legs"], ["belt", "Belt"], ["feet", "Boots"], ...[1, 2, 3, 4, 5, 6].map((i) => [`ring${i}`, `Ring ${i}`])];
@@ -14,7 +14,7 @@ export function Equipment({ data, net, me }) {
         const drop = (ev) => { ev.preventDefault(); ev.currentTarget.classList.remove("drop-hot"); const uid = ev.dataTransfer.getData("text/sx-uid"); if (uid) { sfx("click"); net.send({ t: "equip", uid, slot }); } };
         return (
           <div key={slot} className="equip-slot" data-testid={`equip-drop-${slot}`} onDragOver={(ev) => { ev.preventDefault(); ev.currentTarget.classList.add("drop-hot"); }} onDragLeave={(ev) => ev.currentTarget.classList.remove("drop-hot")} onDrop={drop}>
-            {e ? <Hover tip={<ItemTip id={e.item} item={inst(it, e)} extra={<div className="tip-meta">Click to unequip</div>} />}>
+            {e ? <Hover tip={<ItemTip id={e.item} item={inst(it, e)} equipped extra={<div className="tip-meta">Click to unequip</div>} />}>
               <ItemIcon id={e.item} item={it} testid={`equip-slot-${slot}`} onClick={() => { sfx("click"); net.send({ t: "unequip", slot }); }} />
             </Hover> : <div className="item-icon empty" data-testid={`equip-slot-${slot}`} />}
             <em>{label}</em>
@@ -31,7 +31,7 @@ export function InventoryGrid({ data, me, onSlot, onRight, sellMode }) {
     <div className="inv-grid" data-testid="inventory-grid">
       {cells.map((s, i) => s ? (
         <Hover key={s.uid} tip={<ItemTip id={s.item} item={inst(data.items[s.item], s)} me={me} extra={sellMode ? <div className="tip-meta gold-t">Sells for {Math.max(1, Math.floor(data.items[s.item].price * data.sell_ratio))}g each</div> : <div className="tip-meta">Right-click to {data.items[s.item].type === "consumable" ? "use" : "equip"}{data.items[s.item].slot === "ring" ? " · drag onto a ring slot to choose it" : ""}</div>} />}>
-          <ItemIcon id={s.item} item={data.items[s.item]} qty={s.qty} testid={`inv-slot-${i}`} dragUid={data.items[s.item].slot ? s.uid : undefined} onClick={() => onSlot(s)} onContextMenu={(e) => { e.preventDefault(); onRight && onRight(s); }} />
+          <ItemIcon id={s.item} item={data.items[s.item]} qty={s.qty} testid={`inv-slot-${i}`} locked={cantUse(data.items[s.item], me)} dragUid={data.items[s.item].slot ? s.uid : undefined} onClick={() => onSlot(s)} onContextMenu={(e) => { e.preventDefault(); onRight && onRight(s); }} />
         </Hover>
       ) : <div key={`e${i}`} className="item-icon empty" data-testid={`inv-slot-${i}`} />)}
     </div>

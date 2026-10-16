@@ -17,11 +17,11 @@ export function iconFor(id, it) {
 const ITEM_ART = {"leather_belt":"belt_leather","studded_belt":"belt_studded","hunters_sash":"belt_leather","sorcerers_cord":"belt_studded","warlord_girdle":"belt_ornate","titan_girdle":"belt_ornate","gold":"gold","rusty_sword":"rusty_sword","iron_sword":"iron_sword","spider_fang_blade":"fang_blade","steel_longsword":"iron_sword","orc_cleaver":"cleaver","troll_maul":"maul","dawnblade":"golden_blade","oak_staff":"oak_staff","ember_staff":"ember_staff","cultist_staff":"dark_staff","hunting_bow":"hunting_bow","longbow":"longbow","bandit_bow":"longbow","wooden_shield":"wooden_shield","iron_shield":"iron_shield","spell_tome":"tome","quiver":"quiver","leather_cap":"leather_cap","iron_helm":"iron_helm","padded_tunic":"tunic","chainmail":"chainmail","mystic_robe":"robe","bandit_leathers":"leathers","leather_pants":"pants","iron_greaves":"greaves","leather_gloves":"gloves","troll_hide_gloves":"gloves","leather_boots":"boots","wolf_boots":"boots","ring_vigor":"ring_gold","ring_focus":"ring_green","amulet_dawn":"amulet_sun","vampiric_blade":"blood_blade","soulreaver_blade":"dark_blade","doom_blade":"dark_blade","wraith_staff":"void_staff","void_staff":"void_staff","abyss_staff":"dark_staff","bloodthorn_bow":"blood_bow","stormcaller_bow":"storm_bow","heartseeker_bow":"blood_bow","wraithweave_robe":"wraith_robe","golemstone_plate":"plate","broodsilk_cloak":"cloak","dreadknight_helm":"dread_helm","fiendhide_boots":"magic_boots","ring_vampire":"ring_red","dire_fang":"fang","brood_silk":"silk","wraith_essence":"essence","golem_core":"core","dread_shard":"shard","fiend_horn":"horn","crown_hollow":"dark_crown","warden_signet":"ring_green","grove_mantle":"green_mantle","heartwood_crown":"wood_crown","tidecaller_boots":"magic_boots","drowned_moon_cloak":"cloak","sunhollow_seal":"ring_legend","eye_of_sunmere":"amulet_blue","sunforged_blade":"golden_blade","starfall_staff":"star_staff","galeheart_bow":"storm_bow","aegis_dawn":"golden_shield","codex_eternity":"codex","quiver_windrider":"wind_quiver","dragonscale_plate":"plate","archmage_vestments":"robe","shadowstalker_garb":"leathers","crown_valor":"gold_crown","titan_greaves":"greaves","gauntlets_might":"gauntlets","boots_wind":"magic_boots","ring_ancients":"ring_legend","amulet_eternity":"amulet_blue","cultist_amulet":"amulet_dark","minor_hp":"hp_small","hp_potion":"hp_large","minor_mp":"mp_small","mp_potion":"mp_large","bread":"bread","spider_silk":"silk","imp_horn":"horn","wolf_pelt":"pelt","goblin_ear":"ear","bone_dust":"bone_dust","bandit_insignia":"insignia","venom_sac":"venom","orc_tusk":"tusk","cultist_sigil":"sigil","troll_hide":"hide","sealed_letter":"letter"};
 const artFor = (id, it) => ITEM_ART[id] || (it?.type === "weapon" ? (/staff/.test(id) ? "oak_staff" : /bow/.test(id) ? "longbow" : "iron_sword") : it?.slot === "ring" ? "ring_gold" : it?.slot === "amulet" ? "amulet_sun" : null);
 
-export function ItemIcon({ id, item, qty, size = 44, dim, testid, onClick, onContextMenu, title, dragUid }) {
+export function ItemIcon({ id, item, qty, size = 44, dim, testid, onClick, onContextMenu, title, dragUid, locked }) {
   const I = iconFor(id, item);
   const col = RARITY[item?.rarity] || "#888";
   return (
-    <button type="button" data-testid={testid} onClick={onClick} onContextMenu={onContextMenu} className={`item-icon ${dim ? "dim" : ""}`} title={title}
+    <button type="button" data-testid={testid} onClick={onClick} onContextMenu={onContextMenu} className={`item-icon ${dim ? "dim" : ""} ${locked ? "locked" : ""}`} title={title}
       draggable={!!dragUid} onDragStart={dragUid ? (e) => { e.dataTransfer.setData("text/sx-uid", dragUid); e.dataTransfer.effectAllowed = "move"; } : undefined}
       style={{ width: size, height: size, borderColor: col, boxShadow: item?.rarity && item.rarity !== "common" ? `inset 0 0 12px ${col}55` : undefined }}>
       {artFor(id, item) ? <img src={`/items/${artFor(id, item)}.webp`} alt="" draggable={false} className="item-art" /> : <I size={size * 0.5} color={col} strokeWidth={1.6} />}
@@ -32,9 +32,25 @@ export function ItemIcon({ id, item, qty, size = 44, dim, testid, onClick, onCon
 
 const STAT = { str: "Strength", sta: "Stamina", wis: "Wisdom", int: "Intelligence", dex: "Dexterity", hp_regen: "HP Regen /s", mp_regen: "Mana Regen /s", life_steal: "% Life Steal", mana_steal: "% Mana Steal",
   crit: "% Critical Hit Chance", max_hp: "Max Health", max_mp: "Max Mana", armor: "Armor", move_speed: "% Movement Speed" };
-export function ItemTip({ id, item, me, extra }) {
+export const cantUse = (it, me) => !!(it && me && it.slot && ((it.lvl || 1) > me.level || (it.cls && !it.cls.includes(me.cls))));
+function Compare({ item, cur }) {
+  const keys = [...new Set([...Object.keys(item.stats || {}), ...Object.keys(cur?.stats || {})])];
+  const rows = [];
+  if (item.dmg || cur?.dmg) rows.push(["Avg damage", ((item.dmg?.[0] || 0) + (item.dmg?.[1] || 0)) / 2 - ((cur?.dmg?.[0] || 0) + (cur?.dmg?.[1] || 0)) / 2]);
+  rows.push(["Armor", (item.armor || 0) - (cur?.armor || 0)]);
+  keys.forEach((k) => rows.push([STAT[k] || k, (item.stats?.[k] || 0) - (cur?.stats?.[k] || 0)]));
+  const shown = rows.filter(([, d]) => d);
+  return (
+    <div className="tip-compare" data-testid="tip-compare">
+      <div className="tip-meta">{cur ? `If swapped with ${cur.name}:` : "Slot is empty — equipping gives:"}</div>
+      {shown.length ? shown.map(([n, d]) => <div key={n} className={d > 0 ? "up" : "down"}>{d > 0 ? "▲ +" : "▼ "}{Math.round(d * 10) / 10} {n.replace(/^% /, "% ")}</div>) : <div className="tip-meta">No stat change</div>}
+    </div>
+  );
+}
+export function ItemTip({ id, item, me, extra, equipped }) {
   if (!item) return null;
-  const eq = item.slot && me?.equipment?.[item.slot];
+  const rslot = item.slot === "ring" ? ["ring1", "ring2", "ring3", "ring4", "ring5", "ring6"].find((r) => !me?.equipment?.[r]) || "ring1" : item.slot;
+  const eq = rslot && me?.equipment?.[rslot];
   const cur = eq && inst(window.__SX_ITEMS?.[eq.item], eq);
   const diff = (a, b) => { const d = (a || 0) - (b || 0); return d ? <span className={d > 0 ? "up" : "down"}> ({d > 0 ? "+" : ""}{d})</span> : null; };
   return (
@@ -45,13 +61,13 @@ export function ItemTip({ id, item, me, extra }) {
       {item.lvl > 1 && <div className={`tip-meta ${me && me.level < item.lvl ? "down" : ""}`} data-testid="tip-req-level">Requires level {item.lvl}{me && me.level < item.lvl ? ` — you are level ${me.level}` : ""}</div>}
       {item.cls && me && !item.cls.includes(me.cls) && <div className="tip-meta down">Your class cannot use this</div>}
       {item.cls && <div className="tip-meta">{item.cls.join(" / ")}</div>}
-      {item.dmg && <div>Damage {item.dmg[0]}–{item.dmg[1]} {item.magic ? "(magic)" : ""} · {item.spd}s{cur?.dmg && diff(item.dmg[0] + item.dmg[1], cur.dmg[0] + cur.dmg[1])}</div>}
-      {item.armor > 0 && <div>Armor {item.armor}{cur && diff(item.armor, cur.armor)}</div>}
+      {item.dmg && <div>Damage {item.dmg[0]}–{item.dmg[1]} {item.magic ? "(magic)" : ""} · {item.spd}s</div>}
+      {item.armor > 0 && <div>Armor {item.armor}</div>}
       {Object.entries(item.stats || {}).map(([k, v]) => <div key={k} className={STAT[k]?.startsWith("%") || k.endsWith("regen") || item.props?.[k] ? "up prop" : "up"}>+{v}{STAT[k]?.startsWith("%") ? "" : " "}{STAT[k] || k.replace(/_/g, " ")}</div>)}
       {item.heal && <div className="up">Restores {item.heal} health</div>}{item.full && <div className="up">Restores all {item.full === "hp" ? "health" : "mana"}</div>}
       {item.mana && <div className="up">Restores {item.mana} mana</div>}
       {item.desc && item.type !== "consumable" && <div className="tip-desc">{item.desc}</div>}
-      {cur && cur !== item && <div className="tip-meta">Equipped: {cur.name}</div>}
+      {!equipped && me && item.slot && <Compare item={item} cur={cur} />}
       {extra}
     </div>
   );

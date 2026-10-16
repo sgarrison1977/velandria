@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Coins } from "lucide-react";
 import { useStore, setState, togglePanel } from "../../game/store";
-import { Panel, ItemIcon, ItemTip, Hover, RARITY_COLOR, AbIcon, inst } from "./ui";
+import { Panel, ItemIcon, ItemTip, Hover, RARITY_COLOR, AbIcon, inst, cantUse } from "./ui";
 import { keyLabel } from "./HUD";
 import { audioCfg, setAudio, sfx } from "../../game/audio";
 
@@ -21,7 +21,7 @@ export function MerchantWindow({ data, net }) {
               const it = data.items[s.item], q = qty[s.item] || 1, afford = me.gold >= s.price * q, out = s.qty === 0;
               return (
                 <div key={s.item} className="mrow" data-testid={`merchant-item-${s.item}`}>
-                  <Hover tip={<ItemTip id={s.item} item={it} me={me} />}><ItemIcon id={s.item} item={it} size={38} /></Hover>
+                  <Hover tip={<ItemTip id={s.item} item={it} me={me} />}><ItemIcon id={s.item} item={it} size={38} locked={cantUse(it, me)} /></Hover>
                   <div className="mrow-info"><b style={{ color: RARITY_COLOR[it.rarity] }}>{it.name}</b>
                     <small>{it.dmg ? `${it.dmg[0]}–${it.dmg[1]} dmg` : it.armor ? `${it.armor} armor` : it.full ? `full ${it.full}` : it.heal ? `+${it.heal} hp` : it.mana ? `+${it.mana} mp` : it.type}{it.lvl > 1 ? ` · lv ${it.lvl}` : ""} · {s.qty === -1 ? "plenty" : `${s.qty} left`}</small></div>
                   {it.stack > 1 && <input type="number" min={1} max={20} value={q} data-testid={`merchant-qty-${s.item}`} onChange={(e) => setQty({ ...qty, [s.item]: Math.max(1, Math.min(20, +e.target.value || 1)) })} />}
@@ -40,7 +40,7 @@ export function MerchantWindow({ data, net }) {
               const it = data.items[s.item], price = it.price > 0 && it.type !== "quest" ? Math.max(1, Math.floor(it.price * data.sell_ratio)) : 0;
               return (
                 <div key={s.uid} className="mrow" data-testid={`sell-row-${s.item}`}>
-                  <Hover tip={<ItemTip id={s.item} item={inst(it, s)} me={me} />}><ItemIcon id={s.item} item={it} qty={s.qty} size={38} /></Hover>
+                  <Hover tip={<ItemTip id={s.item} item={inst(it, s)} me={me} />}><ItemIcon id={s.item} item={it} qty={s.qty} size={38} locked={cantUse(it, me)} /></Hover>
                   <div className="mrow-info"><b style={{ color: RARITY_COLOR[it.rarity] }}>{it.name}</b><small>{it.desc || it.type}</small></div>
                   <span className="price">{price ? `${price}g` : "—"}</span>
                   <button type="button" className="btn ghost" disabled={!price} data-testid={`sell-btn-${s.uid}`} onClick={() => net.send({ t: "sell", npc: m.npc, uid: s.uid, qty: 1 })}>Sell</button>
