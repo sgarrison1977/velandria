@@ -217,3 +217,16 @@ input { font-family: inherit; }
 }
 
 .hov-tip .prop { color: #ff9ad0; }
+
+.cm-party span, .cm-party b.pt { color: #7affa0; }
+.party-frame { position: absolute; left: 16px; top: 108px; width: 210px; background: #0d0a08e6; border: 1px solid #5a4630; border-radius: 4px; padding: 8px 10px; pointer-events: auto; font-size: 13px; }
+.party-head { display: flex; justify-content: space-between; align-items: center; color: var(--gold); font-family: var(--serif, serif); margin-bottom: 6px; }
+.party-leave, .party-kick { background: none; border: 1px solid #5a4630; color: #c8b89a; border-radius: 3px; padding: 1px 4px; cursor: pointer; display: inline-flex; }
+.party-leave:hover, .party-kick:hover { color: #ff7a6a; border-color: #ff7a6a; }
+.party-kick { margin-left: auto; }
+.party-mem { margin-bottom: 6px; } .party-mem.dead { opacity: 0.45; }
+.party-name { display: flex; align-items: center; gap: 5px; } .party-name b { color: #7affa0; } .party-name small { color: var(--muted); font-size: 11px; }
+.party-hp { height: 5px; background: #2a1a14; border-radius: 2px; overflow: hidden; margin-top: 2px; } .party-hp i { display: block; height: 100%; background: linear-gradient(90deg, #a8281e, #e0473a); transition: width 0.3s; }
+.party-tip { font-size: 10px; color: var(--muted); }
+.party-invite { position: absolute; left: 50%; top: 120px; transform: translateX(-50%); background: #0d0a08f2; border: 1px solid var(--gold); border-radius: 4px; padding: 14px 18px; pointer-events: auto; text-align: center; z-index: 40; }
+.party-invite p { margin: 0 0 10px; } .party-invite div { display: flex; gap: 10px; justify-content: center; }

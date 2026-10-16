@@ -182,7 +182,15 @@ const NPC_BUILD = {
   villager: () => humanoid({ skin: "#d0a080", shirt: ["#6a5a3a", "#5a6a4a", "#7a4a3a"][Math.floor(Math.random() * 3)], pants: "#4a3a2a", hair: "#4a2a1a" }),
   child: () => humanoid({ scale: 0.6, skin: "#e0b090", shirt: "#4a6a8a", hair: "#9a6a2a", headScale: 1.2 }),
 };
-export const buildNpc = (kind) => (NPC_BUILD[kind] || NPC_BUILD.villager)();
+function waystone() {
+  const root = new THREE.Group(), st = M("#5a5862", { roughness: 0.8 }), rune = M("#9ad8ff", { emissive: "#5ab8ff", emissiveIntensity: 2.2 });
+  mesh(new THREE.CylinderGeometry(1.2, 1.4, 0.4, 8), st, 0, 0.2, 0, root);
+  const m = mesh(new THREE.CylinderGeometry(0.35, 0.55, 3, 6), st, 0, 1.9, 0, root); m.castShadow = true;
+  mesh(new THREE.OctahedronGeometry(0.4, 0), rune, 0, 3.8, 0, root);
+  for (let i = 0; i < 3; i++) mesh(B(0.08, 0.5, 0.05), rune, Math.sin(i * 2.1) * 0.46, 1.3 + i * 0.7, Math.cos(i * 2.1) * 0.46, root).rotation.y = i * 2.1;
+  return { root, kind: "prop", height: 3.6 };
+}
+export const buildNpc = (kind) => kind === "waystone" ? waystone() : (NPC_BUILD[kind] || NPC_BUILD.villager)();
 
 const CLASS_LOOK = {
   warrior: { skin: "#c8946e", shirt: "#6a6e74", pants: "#3a3028", hair: "#3a2414", pauldrons: "#80868e", belt: "#3a2414" },

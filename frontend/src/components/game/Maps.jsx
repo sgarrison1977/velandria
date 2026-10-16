@@ -58,11 +58,12 @@ export function Chat({ net }) {
             <time>{fmt(m.ts)}</time>
             {m.kind === "world" && <><b className={`cls-${m.cls}`}>{m.name}</b><small>[{m.lvl}]</small>: </>}
             {m.kind === "whisper" && <b className="wh">{m.name} → {m.to}: </b>}
+            {m.kind === "party" && <b className="pt">[Party] {m.name}: </b>}
             <span>{m.text}</span>
           </div>
         ))}
       </div>
-      <input ref={inp} data-testid="chat-input" maxLength={200} value={text} placeholder={conn === "online" ? "Press Enter to chat · /w Name to whisper · Esc to cancel" : "Disconnected"}
+      <input ref={inp} data-testid="chat-input" maxLength={200} value={text} placeholder={conn === "online" ? "Press Enter to chat · /w Name whisper · /p party · Esc to cancel" : "Disconnected"}
         onFocus={() => setOpen(true)} onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => { e.stopPropagation(); if (e.key === "Enter") send(); if (e.key === "Escape") { setText(""); setOpen(false); inp.current.blur(); } }} />
     </div>

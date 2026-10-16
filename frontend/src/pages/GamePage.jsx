@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { PartyFrame, PartyInvite } from "../components/game/Party";
 import { useNavigate, useParams } from "react-router-dom";
 import { http } from "@/lib/api";
 import { Engine } from "@/game/engine";
@@ -51,6 +52,8 @@ export default function GamePage() {
           case "equip": sfx("open"); break;
           case "levelup": setState({ levelup: m.lv }); setTimeout(() => setState({ levelup: null }), 3500); break;
           case "inspect": setState({ inspect: m.d }); break;
+          case "party": e.party = m.id ? m : null; setState({ party: m.id ? m : null }); break;
+          case "party_invite": setState({ partyInvite: m }); sfx("open"); break;
           default:
         }
       };
@@ -106,6 +109,8 @@ export default function GamePage() {
         <MenuBar onLogout={logout} />
         <Toasts /><Banners />
         <ContextMenu net={n} />
+        <PartyFrame net={n} data={data} />
+        <PartyInvite net={n} />
         <DialogWindow net={n} data={data} />
         <InspectWindow data={data} />
         <MerchantWindow net={n} data={data} />

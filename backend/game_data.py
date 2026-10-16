@@ -301,12 +301,16 @@ NPCS = {
     "durgan": dict(name="Durgan Ironbeard", role="Master Armorer", town="ironhold", pos=[1248, 190], kind="smith", merchant="iron_arms"),
     "brikka": dict(name="Brikka Stonehand", role="Provisions", town="ironhold", pos=[1272, 190], kind="merchant", merchant="iron_goods"),
     "maelis": dict(name="Sister Maelis", role="Healer", town="ironhold", pos=[1254, 211], kind="healer", healer=True),
-    "thane": dict(name="Thane Borik", role="Lord of Ironhold", town="ironhold", pos=[1268, 211], kind="guard"),
+    "thane": dict(name="Thane Borik", role="Lord of Ironhold", town="ironhold", pos=[1268, 211], kind="guard", quests=["q_steppe", "q_fangs", "q_crags", "q_crag_heart"]),
     "soren": dict(name="Old Captain Soren", role="Provisions & Tackle", town="sunhollow", pos=[1458, 292], kind="merchant", merchant="sun_goods"),
     "lysandra": dict(name="Lysandra the Enchanter", role="Rings & Talismans", town="sunhollow", pos=[1482, 292], kind="elder", merchant="sun_curios"),
     "fael": dict(name="Druid Fael", role="Healer", town="sunhollow", pos=[1462, 310], kind="druid", healer=True),
     "v6": dict(name="Grimli", role="Ironhold Miner", town="ironhold", pos=[1240, 205], kind="villager", ambient=True),
     "v7": dict(name="Nessa", role="Sunhollow Fisher", town="sunhollow", pos=[1490, 310], kind="villager", ambient=True),
+    "ws_titus": dict(name="Titus Waystone", role="Waystone · Fast Travel", town="semel", pos=[90, 189], kind="waystone", waystone=True),
+    "ws_elder": dict(name="Elderglen Waystone", role="Waystone · Fast Travel", town="elderglen", pos=[1012, 212], kind="waystone", waystone=True),
+    "ws_iron": dict(name="Ironhold Waystone", role="Waystone · Fast Travel", town="ironhold", pos=[1261, 213], kind="waystone", waystone=True),
+    "ws_sun": dict(name="Sunhollow Waystone", role="Waystone · Fast Travel", town="sunhollow", pos=[1479, 311], kind="waystone", waystone=True),
     # ambient townsfolk
     "v1": dict(name="Hob the Farmer", role="Villager", town="semel", pos=[70, 225], kind="villager", ambient=True),
     "v2": dict(name="Ella", role="Villager", town="semel", pos=[112, 178], kind="villager", ambient=True),
@@ -338,7 +342,20 @@ MERCHANTS = {
 SELL_RATIO = 0.4
 RESTOCK_SECS = 300
 
+WAYSTONE_COST = (25, 0.08)  # base gold + gold per meter travelled
 QUESTS = {
+    "q_steppe": dict(name="Wolves of the Ashen Steppe", giver="thane", turnin="thane", kind="kill", target="dire_wolf", count=10,
+                     reward=dict(xp=12000, gold=1500, items=[("hp_potion", 10)]),
+                     text="Dire wolves prowl the Ashen Steppe north of Ironhold and drag off our miners. Slay ten of the beasts."),
+    "q_fangs": dict(name="Fangs for the Forge", giver="thane", turnin="thane", kind="kill_collect", target="dire_wolf", count=8, collect="dire_fang", collect_count=6,
+                    requires="q_steppe", reward=dict(xp=18000, gold=2500, items=[("vampiric_blade", 1)]),
+                    text="Durgan swears dire fangs make the finest blade-steel. Hunt eight more wolves and bring me six fangs."),
+    "q_crags": dict(name="Stone That Walks", giver="thane", turnin="thane", kind="kill", target="stone_golem", count=8,
+                    requires="q_fangs", reward=dict(xp=35000, gold=5000, items=[("golemstone_plate", 1)]),
+                    text="Golems have woken in the Emberfall Crags and block our old mine roads. Shatter eight of them."),
+    "q_crag_heart": dict(name="The Heart of Emberfall", giver="thane", turnin="thane", kind="kill_collect", target="stone_golem", count=6, collect="golem_core", collect_count=4,
+                         requires="q_crags", reward=dict(xp=60000, gold=10000, items=[("ring_ancients", 1), ("amulet_eternity", 1)]),
+                         text="Something binds those golems. Destroy six more and bring me four of their cores. Ironhold will remember you."),
     "q_spiders": dict(name="Silk in the Fields", giver="toman", turnin="toman", kind="kill", target="giant_spider", count=6,
                       reward=dict(xp=150, gold=30, items=[("leather_boots", 1)]),
                       text="Giant spiders have crept into the north fields. Slay six of them, and return to me."),

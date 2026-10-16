@@ -2,13 +2,14 @@
 import asyncio, time, math, random, uuid, json, logging, re
 from datetime import datetime, timezone
 from game_data import (ITEMS, MONSTERS, ABILITIES, CLASSES, NPCS, MERCHANTS, QUESTS, XP_TABLE, MAX_LEVEL, INV_SLOTS, TICK, COMBAT,
-                       PLAYER_SPEED, PICKUP_RANGE, NPC_RANGE, LOOT_OWNER_SECS, LOOT_EXPIRE_SECS, ACTIONS, RESTOCK_SECS, sell_price, default_binds, EXTRA_ROLLS, BONUS_LOOT)
+                       PLAYER_SPEED, PICKUP_RANGE, NPC_RANGE, LOOT_OWNER_SECS, LOOT_EXPIRE_SECS, ACTIONS, RESTOCK_SECS, sell_price, default_binds, EXTRA_ROLLS, BONUS_LOOT, WAYSTONE_COST)
 from world import PORTALS, World, in_safe, SAFE_ZONES
 
 log = logging.getLogger("game")
 rnd = random.Random()
 VIEW_R2 = 85 ** 2
 LINKDEAD_SECS = 15
+PARTY_MAX, PARTY_SHARE_R, PARTY_XP_BONUS = 5, 60.0, 0.15
 TOWN_NAMES = {"semel": "Titus", "elderglen": "Elderglen", "ironhold": "Ironhold", "sunhollow": "Sunhollow"}
 
 
@@ -122,6 +123,7 @@ class Game:
         self.players = {}
         self.monsters = {}
         self.loot = {}
+        self.parties, self.invites, self.party_acc = {}, {}, 0.0
         self.stock = {k: {i: q for i, q in v["stock"]} for k, v in MERCHANTS.items()}
         self.last_restock = now()
         n = 0
@@ -168,6 +170,7 @@ class Game:
 
     async def remove_player(self, p):
         if self.players.get(p.id) is p:
+            self.party_leave(p)
             del self.players[p.id]
             await self.save(p)
             for m in self.monsters.values():
@@ -206,6 +209,11 @@ class Game:
             self.tick_player(p, dt, t)
         for m in self.monsters.values():
             self.tick_monster(m, dt, t)
+        self.party_acc += dt
+        if self.party_acc >= 1.0:
+            self.party_acc = 0.0
+            for pid in list(self.parties):
+                self.party_send(pid)
         for lid in [k for k, l in self.loot.items() if t > l["expires"]]:
             del self.loot[lid]
         for p in self.players.values():
@@ -482,9 +490,12 @@ class Game:
         killer.rewarded.add(kill_key)
         if len(killer.rewarded) > 200:
             killer.rewarded = set(list(killer.rewarded)[-100:])
-        lvl_diff = killer.level - m.d["level"]
-        xp = m.d["xp"] if lvl_diff <= 4 else max(1, round(m.d["xp"] * max(0.1, 1 - (lvl_diff - 4) * 0.15)))
-        self.give_xp(killer, xp)
+        sharers = [o for o in self.party_members(killer) if o is killer or (not o.dead_until and math.hypot(o.x - m.x, o.z - m.z) < PARTY_SHARE_R)]
+        n = len(sharers)
+        for o in sharers:
+            ld = o.level - m.d["level"]
+            base = m.d["xp"] if ld <= 4 else max(1, round(m.d["xp"] * max(0.1, 1 - (ld - 4) * 0.15)))
+            self.give_xp(o, max(1, round(base * (1 + PARTY_XP_BONUS * (n - 1)) / n)))
         drops = [("gold", rnd.randint(*m.d["gold"]))]
         rolls = 1 + max([n for lv, n in EXTRA_ROLLS if m.d["level"] >= lv] or [0])
         for _ in range(rolls):
@@ -504,13 +515,14 @@ class Game:
                 lx, lz = m.x, m.z
             lid = "l" + uid()
             self.loot[lid] = dict(id=lid, item=item, qty=qty, x=round(lx, 2), z=round(lz, 2), owner=killer.id,
-                                  owner_until=t + LOOT_OWNER_SECS, expires=t + LOOT_EXPIRE_SECS)
-        for qid, q in killer.quests.items():
-            qd = QUESTS[qid]
-            if q["s"] == "active" and qd["kind"] in ("kill", "kill_collect") and qd["target"] == m.type and q["k"] < qd["count"]:
-                q["k"] += 1
-                killer.send({"t": "sys", "msg": f"[{qd['name']}] {MONSTERS[m.type]['name']} slain: {q['k']}/{qd['count']}", "kind": "quest"})
-                killer.dirty = True
+                                  party=getattr(killer, "party", None), owner_until=t + LOOT_OWNER_SECS, expires=t + LOOT_EXPIRE_SECS)
+        for o in sharers:
+            for qid, q in o.quests.items():
+                qd = QUESTS[qid]
+                if q["s"] == "active" and qd["kind"] in ("kill", "kill_collect") and qd["target"] == m.type and q["k"] < qd["count"]:
+                    q["k"] += 1
+                    o.send({"t": "sys", "msg": f"[{qd['name']}] {MONSTERS[m.type]['name']} slain: {q['k']}/{qd['count']}", "kind": "quest"})
+                    o.dirty = True
 
     def give_xp(self, p, xp):
         if p.level >= MAX_LEVEL:
@@ -708,7 +720,7 @@ class Game:
             return p.send({"t": "err", "msg": "That item is gone."})
         if math.hypot(l["x"] - p.x, l["z"] - p.z) > PICKUP_RANGE + 0.3:
             return p.send({"t": "err", "msg": "Too far away."})
-        if l["owner"] and l["owner"] != p.id and now() < l["owner_until"]:
+        if l["owner"] and l["owner"] != p.id and now() < l["owner_until"] and not (l.get("party") and l["party"] == getattr(p, "party", None)):
             return p.send({"t": "err", "msg": "That loot belongs to another adventurer for now."})
         if not self.add_item(p, l["item"], l["qty"]):
             return p.send({"t": "err", "msg": "Your inventory is full."})
@@ -744,13 +756,19 @@ class Game:
                           "healer": "Rest a moment. The light will mend you.", "druid": "The grove's breath will restore you.",
                           "elder": "Titus has endured, but the woods grow restless.", "guard": "Keep your blade sharp out there.",
                           "villager": "Fine day, isn't it? Mind the spiders past the north gate.", "child": "Are you a real adventurer?!"}.get(n["kind"], "Greetings.")
+        if n.get("waystone"):
+            text = "The runes flare at your touch. Where would you go?"
+            for z in SAFE_ZONES:
+                if z["town"] != n["town"]:
+                    opts.append(dict(id=f"travel:{z['town']}", label=f"Travel to {TOWN_NAMES[z['town']]} ({self.travel_cost(n, z)} gold)"))
         if n.get("merchant"):
             opts.append(dict(id="trade", label="Trade"))
         if n.get("healer"):
             opts.append(dict(id="heal", label="Heal me"))
         for qid in n.get("quests", []):
             q = p.quests.get(qid)
-            if not q:
+            req = QUESTS[qid].get("requires")
+            if not q and (not req or p.quests.get(req, {}).get("s") == "done"):
                 opts.append(dict(id=f"accept:{qid}", label=f"Quest: {QUESTS[qid]['name']}", text=QUESTS[qid]["text"]))
         for qid, qd in QUESTS.items():
             if qd["turnin"] == npc_id and self.quest_ready(p, qid):
@@ -760,6 +778,93 @@ class Game:
         if npc_id == "lyra" and p.quests.get("q_letter", {}).get("s") == "done":
             text = "Thank you for the letter. Elderglen stands with Titus."
         p.send({"t": "dialog", "npc": npc_id, "text": text, "opts": opts})
+
+    def travel_cost(self, n, z):
+        return round(WAYSTONE_COST[0] + math.hypot(n["pos"][0] - z["x"], n["pos"][1] - z["z"]) * WAYSTONE_COST[1])
+
+    # ------------- party
+    def party_members(self, p):
+        pt = self.parties.get(getattr(p, "party", None))
+        return [self.players[i] for i in pt["members"] if i in self.players] if pt else [p]
+
+    def party_send(self, pid):
+        pt = self.parties.get(pid)
+        if not pt:
+            return
+        mem = [self.players[i] for i in pt["members"] if i in self.players]
+        view = {"t": "party", "id": pid, "leader": pt["leader"], "members": [dict(id=o.id, name=o.name, level=o.level, cls=o.cls, hp=round(o.hp), max_hp=o.max_hp,
+                                                                                    x=round(o.x, 1), z=round(o.z, 1), dead=bool(o.dead_until)) for o in mem]}
+        for o in mem:
+            o.send(view)
+
+    def party_leave(self, p, note="You left the party."):
+        pid = getattr(p, "party", None)
+        pt = self.parties.get(pid)
+        p.party = None
+        p.send({"t": "party", "id": None, "members": []})
+        if not pt:
+            return
+        p.send({"t": "sys", "msg": note})
+        pt["members"].discard(p.id)
+        if len(pt["members"]) <= 1:
+            for i in pt["members"]:
+                o = self.players.get(i)
+                if o:
+                    o.party = None
+                    o.send({"t": "party", "id": None, "members": []})
+                    o.send({"t": "sys", "msg": "Your party has disbanded."})
+            del self.parties[pid]
+            return
+        if pt["leader"] == p.id:
+            pt["leader"] = next(iter(pt["members"]))
+        for o in self.party_members(self.players[pt["leader"]]):
+            o.send({"t": "sys", "msg": f"{p.name} left the party."})
+        self.party_send(pid)
+
+    def party_cmd(self, p, msg):
+        t, pid = msg["t"], getattr(p, "party", None)
+        if t == "party_invite":
+            o = self.players.get(msg.get("id"))
+            if not o or o is p:
+                return "That player is not available."
+            if getattr(o, "party", None):
+                return f"{o.name} is already in a party."
+            if pid and self.parties[pid]["leader"] != p.id:
+                return "Only the party leader can invite."
+            if pid and len(self.parties[pid]["members"]) >= PARTY_MAX:
+                return "Your party is full."
+            self.invites[o.id] = (p.id, now() + 60)
+            o.send({"t": "party_invite", "from": p.name, "fid": p.id, "lvl": p.level})
+            return p.send({"t": "sys", "msg": f"Party invitation sent to {o.name}."})
+        if t in ("party_accept", "party_decline"):
+            inv = self.invites.pop(p.id, None)
+            inviter = self.players.get(inv[0]) if inv and now() < inv[1] else None
+            if not inviter:
+                return "That invitation has expired."
+            if t == "party_decline":
+                return inviter.send({"t": "sys", "msg": f"{p.name} declined your invitation."})
+            if pid:
+                return "You are already in a party."
+            ipid = getattr(inviter, "party", None)
+            if not ipid:
+                ipid = uid()
+                self.parties[ipid] = dict(leader=inviter.id, members={inviter.id})
+                inviter.party = ipid
+            pt = self.parties[ipid]
+            if len(pt["members"]) >= PARTY_MAX:
+                return "That party is full."
+            pt["members"].add(p.id)
+            p.party = ipid
+            for o in self.party_members(p):
+                o.send({"t": "sys", "msg": f"{p.name} joined the party.", "kind": "good"})
+            return self.party_send(ipid)
+        if t == "party_leave":
+            return self.party_leave(p)
+        if t == "party_kick":
+            o = self.players.get(msg.get("id"))
+            if not pid or self.parties[pid]["leader"] != p.id or not o or getattr(o, "party", None) != pid or o is p:
+                return "You cannot remove that player."
+            return self.party_leave(o, "You were removed from the party.")
 
     def npc_action(self, p, npc_id, action):
         n = self.near_npc(p, npc_id)
@@ -771,9 +876,25 @@ class Game:
             p.hp, p.mp, p.dots, p.dirty = p.max_hp, p.max_mp, [], True
             self.fx(p.x, p.z, {"t": "fx", "k": "heal", "tgt": p.id, "v": 0})
             return p.send({"t": "sys", "msg": f"{n['name']} restores you fully."})
+        if action.startswith("travel:") and n.get("waystone"):
+            z = next((z for z in SAFE_ZONES if z["town"] == action[7:] and z["town"] != n["town"]), None)
+            if not z:
+                return "Unknown destination."
+            cost = self.travel_cost(n, z)
+            if p.gold < cost:
+                return f"You need {cost} gold to travel there."
+            p.gold -= cost
+            self.fx(p.x, p.z, {"t": "fx", "k": "heal", "tgt": p.id, "v": 0})
+            p.x, p.z = z["x"] + rnd.uniform(-4, 4), z["z"] + rnd.uniform(5, 8)
+            p.path, p.target, p.pending, p.queued, p.dirty = [], None, None, None, True
+            for mm in self.monsters.values():
+                if mm.target == p.id:
+                    mm.target = None
+            return p.send({"t": "trade", "msg": f"The waystone carries you to {TOWN_NAMES[z['town']]} (-{cost} gold)."})
         if action.startswith("accept:"):
             qid = action[7:]
-            if qid not in n.get("quests", []) or qid in p.quests:
+            req = QUESTS.get(qid, {}).get("requires")
+            if qid not in n.get("quests", []) or qid in p.quests or (req and p.quests.get(req, {}).get("s") != "done"):
                 return "Cannot accept that quest."
             qd = QUESTS[qid]
             if qd["kind"] == "deliver" and not self.add_item(p, qd["item"], 1):
@@ -923,6 +1044,13 @@ class Game:
             return p.send({"t": "err", "msg": "You are sending messages too quickly."})
         p.chat_times.append(t)
         ts = datetime.now(timezone.utc).isoformat()
+        if text.startswith("/p "):
+            if not getattr(p, "party", None):
+                return p.send({"t": "err", "msg": "You are not in a party."})
+            m = dict(kind="party", name=p.name, lvl=p.level, text=text[3:], ts=ts)
+            for o in self.party_members(p):
+                o.send({"t": "chat", "m": m})
+            return
         if text.startswith("/w "):
             parts = text.split(" ", 2)
             if len(parts) < 3:
@@ -962,6 +1090,8 @@ class Game:
                 p.dirty = True
                 await self.save(p)
                 p.send({"t": "sys", "msg": "Key bindings saved."})
+        elif t in ("party_invite", "party_accept", "party_decline", "party_leave", "party_kick"):
+            err = self.party_cmd(p, msg)
         elif t == "inspect":
             o = self.players.get(msg.get("id"))
             if o:

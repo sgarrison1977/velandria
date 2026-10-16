@@ -501,6 +501,13 @@ export class Engine {
       const ent = (this.world.portals || []).find((p) => p.z < this.world.oh);
       if (ent) { const [ex, ez] = P(ent.x, ent.z); ctx.setLineDash([4, 4]); ctx.strokeStyle = "rgba(176,144,255,0.6)"; ctx.beginPath(); ctx.moveTo(ex, ez + 8); ctx.lineTo(ix + iw * 0.5, iy - 20); ctx.stroke(); ctx.setLineDash([]); }
     }
+    for (const pm of this.party?.members || []) {
+      if (pm.id === this.meId) continue;
+      const ent = this.entities.get(pm.id), x = ent ? ent.x : pm.x, z = ent ? ent.z : pm.z;
+      const [px, pz] = P(x, z), inView = px > 4 && pz > 4 && px < w - 4 && pz < h - 4 && (!opts.radius || Math.hypot(px - w / 2, pz - h / 2) < w / 2 - 6);
+      if (inView) { ctx.fillStyle = "#5aff8a"; ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(px, pz, 4, 0, 6.28); ctx.fill(); ctx.stroke(); if (!opts.radius) { ctx.font = "600 11px 'Alegreya Sans', sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = "#5aff8a"; ctx.fillText(pm.name, px, pz - 7); } }
+      else if (opts.radius) { const a = Math.atan2(pz - h / 2, px - w / 2), R = w / 2 - 8; ctx.fillStyle = "#5aff8a"; ctx.beginPath(); ctx.arc(w / 2 + Math.cos(a) * R, h / 2 + Math.sin(a) * R, 3.5, 0, 6.28); ctx.fill(); }
+    }
     const wp = this.waypoint;
     if (wp) {
       const ins = !opts.radius && this._inset && wp.z > this.world.oh && me.z <= this.world.oh;
