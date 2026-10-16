@@ -89,7 +89,7 @@ ABILITIES = {
     "pergere_trans": dict(name="Pergere Trans", cls=CASTERS, level=8, cost=15, cd=0, range=12, kind="blink",
                           desc="Teleport up to 12m to the spot under your cursor."),
     "creare_porta": dict(name="Creare Porta", cls=ALL_CLS, level=10, cost=30, cd=0, range=8, kind="portal",
-                         desc="Open a portal to one of your marks (type mark0 – mark9 in chat to set). Lasts 60 seconds."),
+                         desc="Open a portal to one of your marks (type mark0 – mark9 in chat to set). Lasts 10 seconds."),
 }
 
 ACTIONS = ["attack_nearest", "stop", "inventory", "character", "skills", "map", "quests", "chat", "menu"] + [f"ability:{a}" for a in ABILITIES]

@@ -11,6 +11,7 @@ VIEW_R2 = 85 ** 2
 LINKDEAD_SECS = 15
 PARTY_MAX, PARTY_SHARE_R, PARTY_XP_BONUS = 5, 60.0, 0.15
 SKILL_POINTS_PER_LEVEL = 3
+PORTAL_SECS = 10
 TOWN_NAMES = {"semel": "Titus", "elderglen": "Elderglen", "ironhold": "Ironhold", "sunhollow": "Sunhollow"}
 
 
@@ -782,8 +783,8 @@ class Game:
                 del self.gates[gid]
             gid = "g" + uid()
             self.gates[gid] = dict(id=gid, x=round(center[0], 2), z=round(center[1], 2), to=list(dest), owner=p.id, name=p.name,
-                                   ready=t + 1.0, expires=t + 60)
-            p.send({"t": "sys", "msg": "A portal tears open. It will close in 60 seconds.", "kind": "quest"})
+                                   ready=t + 1.0, expires=t + PORTAL_SECS)
+            p.send({"t": "sys", "msg": f"A portal tears open. It will close in {PORTAL_SECS} seconds.", "kind": "quest"})
         p.dirty = True
         return None
 
