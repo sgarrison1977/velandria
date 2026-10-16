@@ -197,6 +197,7 @@ export class Engine {
     if (ab === "quickstep") this.aura(src, c, 5);
     if (ab === "minor_heal" || ab === "minor_mederi") this.burst(src, c, 20, 2);
     if (ab === "minor_sanatio") { this.burst(src, c, 16, 1.5); this.aura(src, c, 2); }
+    if (ab === "attack_run" && !tgt) { this.shock(src.x, src.z, c, 1.8); if (src.id === this.meId) this.shake = 0.08; }
     if ((ab === "double_stab" || ab === "attack_run") && tgt) { this.shock(tgt.x, tgt.z, c, 1.4); if (src.id === this.meId) this.shake = 0.15; }
     if (ab === "spin_attack") { this.shock(src.x, src.z, c, 5); this.shock(src.x, src.z, "#fff0d0", 3); }
     if ((ab === "multi_shot" || ab === "arrow_barrage") && tgt) this.projectile(src, tgt, c, true, 1);

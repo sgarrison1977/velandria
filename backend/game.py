@@ -661,12 +661,14 @@ class Game:
             m = self.monsters.get(target_id) or (self.aim_at(p, ab, pt) if pt and k != "melee" else None)
             if not m and pt and k in ("spell", "ranged", "dot"):
                 return self.cast_miss(p, ab_id, pt)
+            if not m and pt and k == "dash":
+                return self.dash_to(p, ab_id, pt)
             m = m or self.monsters.get(p.target)
             if not m or m.dead_until:
                 return "You need a target."
             if dist(p, m) > ab["range"] + m.d["radius"]:
                 if k == "dash":
-                    return "Too far to charge."
+                    return self.dash_to(p, ab_id, pt or (m.x, m.z))
                 if k != "melee":
                     return self.cast_miss(p, ab_id, pt or (m.x, m.z))
                 p.target, p.queued, p.pending = m.id, ab_id, None
@@ -677,6 +679,27 @@ class Game:
         if k in ("aoe_self", "multi") and in_safe(p.x, p.z):
             return "You cannot fight from within a safe square."
         return self.do_cast(p, ab_id, None)
+
+    def dash_to(self, p, ab_id, pt):
+        ab = ABILITIES[ab_id]
+        dx, dz = pt[0] - p.x, pt[1] - p.z
+        d = math.hypot(dx, dz)
+        if d < 0.6:
+            return None
+        ux, uz = dx / d, dz / d
+        nx, nz = p.x, p.z
+        for i in range(1, int(min(d, ab["range"]) / 0.4) + 1):
+            x, z = p.x + ux * 0.4 * i, p.z + uz * 0.4 * i
+            if not self.world.walkable(x, z):
+                break
+            nx, nz = x, z
+        if (nx, nz) == (p.x, p.z):
+            return "No clear path to run."
+        fx0 = [round(p.x, 2), round(p.z, 2)]
+        p.mp -= ab["cost"]
+        p.x, p.z, p.rot, p.path, p.dirty = nx, nz, math.atan2(ux, uz), [], True
+        self.fx(p.x, p.z, {"t": "fx", "k": "cast", "src": p.id, "ab": ab_id, "tgt": None, "fx0": fx0, "x": round(nx, 2), "z": round(nz, 2)})
+        return None
 
     def cast_miss(self, p, ab_id, pt):
         ab = ABILITIES[ab_id]

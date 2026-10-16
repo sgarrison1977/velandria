@@ -60,7 +60,7 @@ ABILITIES = {
     "double_stab": dict(name="Double Stab", cls=["warrior"], level=2, cost=8, cd=0, range=2.6, kind="melee", hits=2, gap=0.15, mult=1.05, flat=2,
                         desc="Stab your target twice in a flash, each for 105% weapon damage +2."),
     "attack_run": dict(name="Attack Run", cls=["warrior", "ranger"], level=3, cost=12, cd=0, range=16, kind="dash", mult=1.6, flat=4,
-                       desc="Rush up to 16m to your target and strike for 160% weapon damage +4."),
+                       desc="Rush up to 16m to your target and strike for 160% weapon damage +4. With no enemy under the pointer, sprint toward the pointer instead."),
     "multi_shot": dict(name="Multi Shot", cls=["ranger"], level=3, cost=20, cd=0, range=16, kind="multi", count=10, mult=1.1, flat=3,
                        desc="Arrows fly in all directions, hitting up to 10 enemies within 16m for 110% weapon damage +3."),
     "arrow_barrage": dict(name="Arrow Barrage", cls=["ranger"], level=3, cost=18, cd=0, range=16, kind="ranged", hits=10, gap=0.08, mult=0.45, flat=1,
