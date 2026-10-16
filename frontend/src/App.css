@@ -210,6 +210,7 @@ input { font-family: inherit; }
 .ctx-note { font-size: 12px; color: var(--muted); padding: 6px 12px; max-width: 220px; }
 
 @media (max-width: 900px) {
+  .exit-btn { right: 160px; }
   .title-screen { flex-direction: column; padding: 40px 20px; } .auth-card { width: 100%; } .class-pick { grid-template-columns: 1fr; }
   .chat { max-width: 60vw; } .pframe-main { width: 190px; } .minimap { transform: scale(.7); transform-origin: top right; } .tframe { top: 90px; width: 240px; }
   .inv-panel, .char-panel, .skills-panel, .quest-panel, .inspect { left: 8px; right: 8px; width: auto; top: 90px; }
@@ -230,3 +231,8 @@ input { font-family: inherit; }
 .party-tip { font-size: 10px; color: var(--muted); }
 .party-invite { position: absolute; left: 50%; top: 120px; transform: translateX(-50%); background: #0d0a08f2; border: 1px solid var(--gold); border-radius: 4px; padding: 14px 18px; pointer-events: auto; text-align: center; z-index: 40; }
 .party-invite p { margin: 0 0 10px; } .party-invite div { display: flex; gap: 10px; justify-content: center; }
+
+.exit-btn { position: absolute; right: 228px; top: 16px; z-index: 30; pointer-events: auto; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: #120e0bdd; border: 1px solid var(--edge2); color: #e6c46a; font-family: var(--serif, serif); cursor: pointer; transition: background-color .15s, border-color .15s; }
+.exit-btn:hover { background: #2a2016; border-color: var(--gold); }
+.exit-modal { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 60; pointer-events: auto; width: 320px; background: #0d0a08f5; border: 1px solid var(--gold); padding: 20px 22px; display: flex; flex-direction: column; gap: 10px; text-align: center; }
+.exit-modal h3 { margin: 0; color: var(--gold); font-family: var(--serif, serif); font-size: 20px; } .exit-modal p { margin: 0 0 6px; color: var(--muted); font-size: 13px; }

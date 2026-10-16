@@ -95,8 +95,24 @@ export function MenuBar({ onLogout }) {
           <I size={18} />{(k === "character" && me.attr_points > 0) || (k === "skills" && me.skill_points > 0) ? <span className="pip" /> : null}
         </button>
       ))}
-      <button type="button" className="mbtn" data-testid="logout-btn" title="Log out" onClick={onLogout}><LogOut size={18} /></button>
+      <button type="button" className="mbtn" data-testid="logout-btn" title="Exit game" onClick={() => setState({ exitMenu: true })}><LogOut size={18} /></button>
     </div>
+  );
+}
+
+export function ExitButton({ onLogout }) {
+  const open = useStore((s) => s.exitMenu);
+  return (
+    <>
+      <button type="button" className="exit-btn" data-testid="exit-game-btn" onMouseDown={(e) => e.stopPropagation()} onClick={() => setState({ exitMenu: true })}><LogOut size={14} /> Exit</button>
+      {open && <div className="exit-modal" data-testid="exit-menu" onMouseDown={(e) => e.stopPropagation()}>
+        <h3>Leave Eryndovar?</h3>
+        <p>Your character, items and progress are saved automatically.</p>
+        <button type="button" className="btn" data-testid="exit-to-characters-btn" onClick={() => onLogout(false)}>Character Select</button>
+        <button type="button" className="btn" data-testid="exit-to-main-btn" onClick={() => onLogout(true)}>Main Screen (log out)</button>
+        <button type="button" className="btn ghost" data-testid="exit-cancel-btn" onClick={() => setState({ exitMenu: false })}>Return to game</button>
+      </div>}
+    </>
   );
 }
 

@@ -26,12 +26,12 @@ export default function AuthPage() {
     <div className="title-screen" data-testid="auth-page">
       <div className="title-bg" style={{ backgroundImage: `linear-gradient(90deg, #0a0806ee 0%, #0a080677 55%, #0a0806dd 100%), url(${process.env.PUBLIC_URL}/title-bg.jpg)` }} />
       <div className="title-left">
-        <h1 className="logo" data-testid="game-title">Suminex</h1>
+        <h1 className="logo" data-testid="game-title">Eryndovar</h1>
         <p className="tagline">A persistent world of shadowed forests, ancient ruins and the long road between Titus and Elderglen.</p>
         <ul className="lore">
-          <li>Real-time combat against ten kinds of foes</li>
+          <li>Real-time combat, the Hollow Deep dungeon and its boss</li>
           <li>Warrior, Mage or Ranger — up to level 100</li>
-          <li>Shared world, live chat, merchants and loot</li>
+          <li>Four towns, parties, waystones, merchants and legendary loot</li>
         </ul>
         {online !== null && <div className="online" data-testid="online-count"><i /> {online} adventurer{online === 1 ? "" : "s"} in the world</div>}
       </div>

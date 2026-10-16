@@ -6,7 +6,7 @@ import { Engine } from "@/game/engine";
 import { Net } from "@/game/net";
 import { getState, setState, useStore, togglePanel, toast, resetState } from "@/game/store";
 import { sfx } from "@/game/audio";
-import { PlayerFrame, XpBar, TargetFrame, Hotbar, MenuBar, Toasts, Banners, ContextMenu, DialogWindow, InspectWindow } from "@/components/game/HUD";
+import { PlayerFrame, XpBar, TargetFrame, Hotbar, MenuBar, ExitButton, Toasts, Banners, ContextMenu, DialogWindow, InspectWindow } from "@/components/game/HUD";
 import { InventoryPanel, CharacterPanel, SkillsPanel, QuestPanel } from "@/components/game/Panels";
 import { MerchantWindow, SettingsPanel } from "@/components/game/Merchant";
 import { Minimap, WorldMap, Chat } from "@/components/game/Maps";
@@ -85,21 +85,21 @@ export default function GamePage() {
       else if (action === "stop") n.send({ t: "stop" });
       else if (action === "chat") setState((s) => ({ chatFocus: (s.chatFocus || 0) + 1 }));
       else if (action === "menu") {
-        const anyOpen = Object.values(st.panels).some(Boolean) || st.dialog || st.merchant || st.inspect || st.ctx;
-        if (anyOpen) setState({ panels: {}, dialog: null, merchant: null, inspect: null, ctx: null }); else togglePanel("settings", true);
+        const anyOpen = Object.values(st.panels).some(Boolean) || st.dialog || st.merchant || st.inspect || st.ctx || st.exitMenu;
+        if (anyOpen) setState({ panels: {}, dialog: null, merchant: null, inspect: null, ctx: null, exitMenu: false }); else togglePanel("settings", true);
       } else { sfx("open"); togglePanel(action); }
     };
     window.addEventListener("keydown", down);
     return () => window.removeEventListener("keydown", down);
   }, [data]);
 
-  const logout = () => { net.current?.send({ t: "logout" }); setTimeout(() => nav("/characters"), 250); };
+  const logout = (toMain) => { net.current?.send({ t: "logout" }); setTimeout(() => { if (toMain === true) localStorage.removeItem("sx_token"); nav(toMain === true ? "/" : "/characters"); }, 250); };
   const e = eng.current, n = net.current;
   return (
     <div className="game" data-testid="game-root">
       <canvas ref={canvas} className="game-canvas" data-testid="game-canvas" />
       <div ref={overlay} className="overlay" />
-      {!ready && <div className="loading" data-testid="loading-screen"><h1 className="logo">Suminex</h1><div className="spinner" /><p>{step}</p></div>}
+      {!ready && <div className="loading" data-testid="loading-screen"><h1 className="logo">Eryndovar</h1><div className="spinner" /><p>{step}</p></div>}
       {ready && data && <div className="hud">
         <PlayerFrame data={data} />
         <TargetFrame data={data} />
@@ -107,6 +107,7 @@ export default function GamePage() {
         <Chat net={n} />
         <div className="bottom"><Hotbar data={data} net={n} engine={e} /><XpBar data={data} /></div>
         <MenuBar onLogout={logout} />
+        <ExitButton onLogout={logout} />
         <Toasts /><Banners />
         <ContextMenu net={n} />
         <PartyFrame net={n} data={data} />
