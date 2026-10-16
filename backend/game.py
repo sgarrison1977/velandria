@@ -749,6 +749,8 @@ class Game:
                 elif math.hypot(mm.x - cx, mm.z - cz) > ab["radius"] + mm.d["radius"]:
                     continue
                 if "base" in ab:
+                    if ab.get("rot"):
+                        self.fx(mm.x, mm.z, {"t": "fx", "k": "rot", "tgt": mm.id})
                     self.damage_monster(mm, self.spell_dmg(p, ab), p, "magic")
                     if ab.get("rot") and not mm.dead_until:
                         mm.dots.append(dict(dmg=4 + p.tot["int"] * ab["rot"], n=5, next=t + 1, src=p.id))

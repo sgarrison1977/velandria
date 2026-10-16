@@ -153,6 +153,7 @@ export class Engine {
       case "heal": if (tgt) { this.burst(tgt, "#7aff9a", 14, 1.4); if (f.v) this.number(tgt, `+${f.v}`, "#7aff9a"); if (near(tgt)) sfx("heal"); } break;
       case "levelup": if (src) { this.pillar(src); sfx("levelup"); } break;
       case "slam": if (src) { this.shock(src.x, src.z, "#b060ff", f.r); this.shock(src.x, src.z, "#ff6a3a", f.r * 0.6); src.anim.atk = 1; if (near(src)) { sfx("heavy"); this.shake = 0.4; } } break;
+      case "rot": if (tgt) this.rotCloud(tgt); break;
       case "cast": if (src) this.castFx(src, tgt || (f.x != null ? { x: f.x, z: f.z, height: 0 } : null), f.ab); break;
       default:
     }
@@ -199,10 +200,22 @@ export class Engine {
     if (ab === "radius" && tgt) this.beam(src, tgt, c);
     if (ab === "venenum" && tgt) this.projectile(src, tgt, c, false, 0.7, () => this.burst(tgt, c, 10, 1));
     if (ab === "flamma_ventus" && tgt) this.cone(src, tgt, c);
-    if (ab === "tabes_viscera") { this.shock(src.x, src.z, c, 9); this.shock(src.x, src.z, "#4a6a1a", 6); }
+    if (ab === "tabes_viscera") this.aura(src, "#c01818", 2);
     if (["teuri", "velocitas", "robur", "contra_visus"].includes(ab)) { this.aura(src, c, 3); this.burst(src, c, 14, 2); }
     if (ab === "pergere_trans") { this.burst(src, c, 18, 2); this.shock(src.x, src.z, c, 2); }
     if (ab === "creare_porta" && tgt) this.shock(tgt.x, tgt.z, c, 2.5);
+  }
+  rotCloud(e) {
+    const top = () => this.groundY(e.x, e.z) + (e.height || 1.5) + 0.6;
+    for (let i = 0; i < 9; i++) {
+      const s = sprite(i % 3 ? "#b01010" : "#5a0606", 0.9 + Math.random() * 0.6), ox = (Math.random() - 0.5) * 1.1, oz = (Math.random() - 0.5) * 1.1, oy = Math.random() * 0.35, ph = Math.random() * 6;
+      s.material.blending = THREE.NormalBlending;
+      this.addFx(s, 2.2, (t) => { s.position.set(e.x + ox + Math.sin(t * 5 + ph) * 0.12, top() + oy, e.z + oz); s.material.opacity = Math.min(1, t * 6) * (1 - t) * 0.9; s.scale.setScalar((0.8 + t * 0.8) * (1.2 + Math.sin(t * 9 + ph) * 0.1)); });
+    }
+    for (let i = 0; i < 14; i++) {
+      const d = sprite("#d01c1c", 0.18), ox = (Math.random() - 0.5) * 0.9, oz = (Math.random() - 0.5) * 0.9, dl = Math.random() * 1.4;
+      this.addFx(d, 2.2, (t) => { const k = Math.max(0, (t * 2.2 - dl) / 0.8); d.visible = k > 0 && k < 1; d.position.set(e.x + ox, top() - k * ((e.height || 1.5) + 0.6), e.z + oz); d.material.opacity = 1 - k; });
+    }
   }
   beam(src, tgt, color) {
     const a = new THREE.Vector3(src.x, this.groundY(src.x, src.z) + 1.3, src.z), b = new THREE.Vector3(tgt.x, this.groundY(tgt.x, tgt.z) + (tgt.height || 1) * 0.55, tgt.z);

@@ -77,7 +77,7 @@ ABILITIES = {
     "flamma_ventus": dict(name="Flamma Ventus", cls=["warlock"], level=5, cost=22, cd=0, range=10, kind="cone", angle=0.7, base=14, scale=1.3,
                           desc="Flame wind: scorch every enemy in a 10m cone for 14 + 130% Intelligence."),
     "tabes_viscera": dict(name="Tabes Viscera", cls=["warlock"], level=6, cost=30, cd=0, kind="aoe_self", radius=9.0, base=10, scale=1.0, rot=0.3,
-                          desc="Rot flesh: every enemy within 9m takes 10 + 100% Intelligence, then rots for 5 seconds."),
+                          desc="A blood-red cloud bursts above every enemy within 9m, rotting their flesh for 10 + 100% Intelligence, then more over 5 seconds."),
     "teuri": dict(name="Teuri", cls=ALL_CLS, level=5, cost=15, cd=0, kind="buff", buff="armor", value=10, per_level=0.8, dur=CHARGE_SECS, charge=True,
                   desc="Charge spell: +10 armor (+0.8 per level) for 5 minutes."),
     "velocitas": dict(name="Velocitas", cls=ALL_CLS, level=5, cost=12, cd=0, kind="buff", buff="speed", value=0.4, dur=CHARGE_SECS, charge=True,
