@@ -26,7 +26,7 @@ export default function AuthPage() {
     <div className="title-screen" data-testid="auth-page">
       <div className="title-bg" style={{ backgroundImage: `linear-gradient(90deg, #0a0806ee 0%, #0a080677 55%, #0a0806dd 100%), url(${process.env.PUBLIC_URL}/title-bg.jpg)` }} />
       <div className="title-left">
-        <h1 className="logo" data-testid="game-title">Titus Realms</h1>
+        <h1 className="logo" data-testid="game-title">Realms of Velanthra</h1>
         <p className="tagline">A persistent world of shadowed forests, ancient ruins and the long road between Titus and Elderglen.</p>
         <ul className="lore">
           <li>Real-time combat, the Hollow Deep dungeon and its boss</li>

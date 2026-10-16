@@ -1,4 +1,4 @@
-# Titus Realms (formerly Suminex / Eryndovar) — PRD
+# Realms of Velanthra (formerly Suminex / Eryndovar) — PRD
 
 ## Original problem statement
 Build SUMINEX: a fully playable browser-based real-time multiplayer dark-fantasy MMORPG (Xenimus-inspired feel, original assets). Angled top-down 3D (Three.js), persistent accounts/characters, live multiplayer, real combat, 10 enemy types, loot, inventory/equipment, merchants, leveling to 100 (L2=200, L3=1000 cumulative XP), attributes (Str/Sta/Wis/Int/Dex), 6+ abilities, keybinds, world chat, safe zones (server enforced), two towns (Titus — formerly Semel — and Elderglen) linked by a long forest road, minimap/world map, quests, audio.
