@@ -462,6 +462,26 @@ export class Engine {
         ctx.font = "11px 'Alegreya Sans', sans-serif"; ctx.fillStyle = "#b8a888"; ctx.fillText(r.lvl === "-" ? "" : `Lv ${r.lvl}`, px, pz + 13); ctx.font = "600 13px 'IM Fell English SC', serif";
       }
     }
+    for (const pt of this.world.portals || []) {
+      const [px, pz] = P(pt.x, pt.z); if (px < -10 || pz < -10 || px > w + 10 || pz > h + 10) continue;
+      const r = opts.radius ? 5 : 6;
+      ctx.fillStyle = "rgba(120,70,255,0.35)"; ctx.beginPath(); ctx.arc(px, pz, r + 3, 0, 6.28); ctx.fill();
+      ctx.strokeStyle = "#b090ff"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(px, pz, r, 0, 6.28); ctx.stroke();
+      ctx.fillStyle = "#e0d0ff"; ctx.beginPath(); ctx.arc(px, pz, 2, 0, 6.28); ctx.fill();
+      if (!opts.radius) { ctx.font = "600 13px 'IM Fell English SC', serif"; ctx.textAlign = "center"; ctx.fillStyle = "#000"; ctx.fillText(pt.z < this.world.oh ? "Hollow Deep (Dungeon)" : pt.name, px + 1, pz - r - 5); ctx.fillStyle = "#c8b0ff"; ctx.fillText(pt.z < this.world.oh ? "Hollow Deep (Dungeon)" : pt.name, px, pz - r - 6); }
+    }
+    if (!opts.radius && me.z <= this.world.oh) {
+      const iw = Math.round(w * 0.3), ih = Math.round(iw * 138 / 380), ix = 10, iy = h - ih - 10;
+      ctx.fillStyle = "rgba(8,6,14,0.92)"; ctx.fillRect(ix - 4, iy - 20, iw + 8, ih + 24);
+      ctx.strokeStyle = "#8a6aff"; ctx.lineWidth = 1.5; ctx.strokeRect(ix - 4, iy - 20, iw + 8, ih + 24);
+      ctx.drawImage(src, 370 * 2, 452 * 2, 380 * 2, 138 * 2, ix, iy, iw, ih);
+      ctx.font = "600 12px 'IM Fell English SC', serif"; ctx.textAlign = "left"; ctx.fillStyle = "#c8b0ff"; ctx.fillText("The Hollow Deep — beneath the cave", ix, iy - 6);
+      const isc = iw / 380, IP = (x, z) => [ix + (x - 370) * isc, iy + (z - 452) * isc];
+      ctx.textAlign = "center"; ctx.font = "10px 'Alegreya Sans', sans-serif";
+      for (const r of this.world.regions) if (r.z > this.world.oh) { const [px, pz] = IP(r.x, r.z); ctx.fillStyle = r.lvl.includes("Boss") ? "#ff7a5a" : "#e8dcc0"; ctx.fillText(`${r.name.replace("Throne of the ", "")} (${r.lvl})`, px, pz + 3); }
+      const ent = (this.world.portals || []).find((p) => p.z < this.world.oh);
+      if (ent) { const [ex, ez] = P(ent.x, ent.z); ctx.setLineDash([4, 4]); ctx.strokeStyle = "rgba(176,144,255,0.6)"; ctx.beginPath(); ctx.moveTo(ex, ez + 8); ctx.lineTo(ix + iw * 0.5, iy - 20); ctx.stroke(); ctx.setLineDash([]); }
+    }
     const [mx, mz] = P(me.x, me.z);
     ctx.save(); ctx.translate(mx, mz); ctx.rotate(-(this.entities.get(this.meId)?.rot || 0) + Math.PI);
     ctx.fillStyle = "#fff"; ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(4.5, 5); ctx.lineTo(-4.5, 5); ctx.closePath(); ctx.stroke(); ctx.fill(); ctx.restore();
