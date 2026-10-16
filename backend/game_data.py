@@ -425,9 +425,26 @@ def item_public():
     return ITEMS
 
 
+LOOK_OPTS = dict(
+    skin=["#f0c8a8", "#e0b090", "#d0a080", "#c8946e", "#b07a58", "#8a5a3e", "#6a4430", "#4a2e20"],
+    hair=["#141414", "#3a2414", "#6a4a2a", "#9a6a3a", "#c8a060", "#e8d8a8", "#cfcfcf", "#8a2a1a", "#c85a2a", "#3a4a6a"],
+    hairStyle=["short", "long", "tail", "mohawk", "bald"],
+    beardStyle=["none", "stubble", "full"],
+    face=["classic", "angular", "round", "narrow"],
+    eyes=["#3a4a5a", "#5a3a20", "#2a5a3a", "#4a6a9a", "#7a7a7a", "#8a1010"],
+)
+
+
+def clean_look(look):
+    if not isinstance(look, dict):
+        return None
+    out = {k: v for k, v in look.items() if k in LOOK_OPTS and v in LOOK_OPTS[k]}
+    return out if len(out) == len(LOOK_OPTS) else None
+
+
 def public_data():
     return dict(items=ITEMS, monsters={k: {kk: vv for kk, vv in v.items() if kk != "loot"} | {"drops": [i for i, _ in v["loot"]]} for k, v in MONSTERS.items()},
-                abilities=ABILITIES, classes=CLASSES, xp_table=XP_TABLE, npcs=NPCS, quests=QUESTS, attr_info=ATTR_INFO,
+                look_opts=LOOK_OPTS, abilities=ABILITIES, classes=CLASSES, xp_table=XP_TABLE, npcs=NPCS, quests=QUESTS, attr_info=ATTR_INFO,
                 actions=ACTIONS, max_level=MAX_LEVEL, inv_slots=INV_SLOTS, sell_ratio=SELL_RATIO,
                 merchants={k: dict(name=v["name"]) for k, v in MERCHANTS.items()})
 

@@ -75,9 +75,18 @@ const CLASS_LOOK = {
 const helmStyle = (id) => /cap/.test(id) ? "cap" : /crown_/.test(id) ? "crown" : /heartwood|circlet/.test(id) ? "circlet" : /dread|great/.test(id) ? "great" : /hood|cowl/.test(id) ? "hood" : "nasal";
 const chestStyle = (id) => /robe|vestment/.test(id) ? "robe" : /plate/.test(id) ? "plate" : /chain|mail/.test(id) ? "mail" : /cloak|mantle/.test(id) ? "cloak" : /leather|garb|hide/.test(id) ? "leather" : "tunic";
 
+const LOOK_KEYS = ["skin", "hair", "hairStyle", "beardStyle", "face", "eyes"];
+export const parseLook = (str) => { const v = (str || "").split(","); return v.length === 6 && v[0] ? Object.fromEntries(LOOK_KEYS.map((k, i) => [k, v[i]])) : null; };
+export const lookStr = (l) => (l ? LOOK_KEYS.map((k) => l[k]).join(",") : "");
+function applyLook(look, l) {
+  if (!l) return;
+  look.skin = l.skin; look.hair = l.hair; look.hairStyle = l.hairStyle === "mohawk" ? "bald" : l.hairStyle; look.mohawk = l.hairStyle === "mohawk" ? l.hair : null;
+  look.beard = l.beardStyle === "none" ? null : l.hair; look.beardStyle = l.beardStyle; look.head = l.face === "classic" ? "human" : l.face; look.iris = l.eyes;
+}
 export function buildPlayer(cls, eqStr, items) {
-  const [main, off, head, chest, counts, feet, legs, hands, belt] = (eqStr || "").split("|");
+  const [main, off, head, chest, counts, feet, legs, hands, belt, lk] = (eqStr || "").split("|");
   const look = { ...(CLASS_LOOK[cls] || CLASS_LOOK.warrior) };
+  applyLook(look, parseLook(lk));
   const col = (id, d) => items[id]?.color || d;
   if (chest) {
     const st = chestStyle(chest), c = col(chest, "#6b5a45");
@@ -153,4 +162,4 @@ export function proxy(radius, height, data) {
   return m;
 }
 
-export { animateRig } from "./rig/anim";
+export { animateRig, setInvis, SHIMMER } from "./rig/anim";

@@ -47,22 +47,23 @@ export const pelvisGeo = (w = 1) => G("pelvis" + w, () => {
 });
 
 // sculpted head of radius ~0.12 centered at origin, face toward +z
+const FACE = { human: [0.84, 1.08, 0.28, 0.12, 1, 0.04], angular: [0.86, 1.07, 0.15, 0.2, 1.7, 0.06], round: [0.9, 1.0, 0.16, 0.05, 0.6, 0.02], narrow: [0.78, 1.14, 0.34, 0.15, 1, 0.05], brute: [0.84, 1.08, 0.12, 0.19, 2, 0.04] };
 export const headGeo = (kind = "human") => G("head" + kind, () => {
   const g = new THREE.SphereGeometry(0.12, 34, 26);
-  const brute = kind === "brute", skull = kind === "skull", gob = kind === "goblin";
+  const skull = kind === "skull", gob = kind === "goblin", [fx, fy, jaw, chin, brow, chinTip] = FACE[kind] || FACE.human;
   return sculpt(g, (v) => {
     const x = v.x / 0.12, y = v.y / 0.12, z = v.z / 0.12;
-    let sx = 0.84, sy = 1.08, sz = 1.0;
-    if (y < 0) { const j = Math.min(1, -y); sx *= 1 - j * (brute ? 0.12 : 0.28); if (z > 0) sz *= 1 + j * 0.12 * (brute ? 1.6 : 1); else sz *= 1 - j * 0.32; }
+    let sx = fx, sy = fy, sz = 1.0;
+    if (y < 0) { const j = Math.min(1, -y); sx *= 1 - j * jaw; if (z > 0) sz *= 1 + j * chin; else sz *= 1 - j * 0.32; }
     if (y > 0.3 && z < 0) sz *= 1.08;
     v.set(x * sx, y * sy, z * sz);
     if (z > 0.55) {
-      v.z += gauss(y, 0.3, 0.12) * 0.06 * (brute || skull ? 2 : 1);
+      v.z += gauss(y, 0.3, 0.12) * 0.06 * (skull ? 2 : brow);
       v.z -= gauss(Math.abs(x), 0.36, 0.14) * gauss(y, 0.12, 0.12) * (skull ? 0.3 : 0.09);
       v.x += Math.sign(x) * gauss(Math.abs(x), 0.6, 0.15) * gauss(y, -0.05, 0.15) * 0.05;
       if (gob) v.z += gauss(y, -0.3, 0.3) * 0.12;
     }
-    if (y < -0.55 && z > 0.2) v.z += 0.04;
+    if (y < -0.55 && z > 0.2) v.z += chinTip;
     v.multiplyScalar(0.12);
   });
 });

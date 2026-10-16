@@ -1,6 +1,20 @@
 import * as THREE from "three";
 
 const lerp = (a, b, k) => a + (b - a) * k;
+export const SHIMMER = new THREE.ShaderMaterial({
+  uniforms: { uTime: { value: 0 } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  vertexShader: "varying vec3 vN; varying vec3 vV; varying float vY; void main(){ vec4 mv = modelViewMatrix * vec4(position,1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); vY = (modelMatrix * vec4(position,1.0)).y; gl_Position = projectionMatrix * mv; }",
+  fragmentShader: "uniform float uTime; varying vec3 vN; varying vec3 vV; varying float vY; void main(){ float f = pow(1.0 - abs(dot(vN, vV)), 2.2); float band = 0.5 + 0.5 * sin(vY * 14.0 - uTime * 4.0); float a = f * (0.55 + 0.45 * band) + 0.04 + 0.03 * sin(uTime * 3.0); gl_FragColor = vec4(vec3(0.55, 0.8, 1.0) * a, a); }",
+});
+export function setInvis(rig, on) {
+  if (!!rig.invisOn === on) return;
+  rig.invisOn = on;
+  rig.root.traverse((o) => {
+    if (!o.isMesh || o.material?.isMeshBasicMaterial) return;
+    if (on) { o.userData.base = o.userData.m && o.material === HURT ? o.userData.m : o.material; o.material = SHIMMER; o.castShadow = false; }
+    else if (o.userData.base) { o.material = o.userData.base; o.castShadow = true; }
+  });
+}
 const HURT = new THREE.MeshStandardMaterial({ color: "#ff6a5a", emissive: "#ff2a1a", emissiveIntensity: 0.9 });
 
 function humanoidAnim(rig, a, dt, t, moving) {
@@ -90,7 +104,7 @@ export function animateRig(rig, a, dt, t) {
     if (rig.tail) rig.tail.rotation.y = Math.sin(t * (moving ? 10 : 3)) * 0.4;
   }
   void sw;
-  const flash = a.hurt > 0;
+  const flash = a.hurt > 0 && !rig.invisOn;
   if (flash !== a.flashOn) {
     a.flashOn = flash;
     rig.root.traverse((o) => { if (o.isMesh && o.material && !o.material.isMeshBasicMaterial && !o.material.isPointsMaterial) { if (flash) { o.userData.m = o.material; o.material = HURT; } else if (o.userData.m) o.material = o.userData.m; } });

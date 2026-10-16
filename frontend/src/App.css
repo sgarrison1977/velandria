@@ -287,3 +287,19 @@ input { font-family: inherit; }
 .vault { border: 1px solid var(--edge2); background: #0b0907aa; padding: 8px 10px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 6px; }
 .vault-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 13px; }
 .vault-row.quick { justify-content: flex-end; }
+.look-editor { display: grid; grid-template-columns: 300px 1fr; gap: 18px; margin: 14px 0; background: #0f0c09cc; border: 1px solid var(--edge2); padding: 14px; }
+.look-preview { position: relative; height: 380px; background: radial-gradient(ellipse at 50% 70%, #3a2e1e 0%, #120e0b 70%); border: 1px solid var(--edge2); }
+.look-preview canvas { width: 100%; height: 100%; display: block; cursor: grab; }
+.look-zoom { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); font-size: 12px; padding: 4px 10px; }
+.look-picker { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+.look-row { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.look-row label { font-family: var(--serif); color: var(--gold); font-size: 14px; letter-spacing: .04em; }
+.look-opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.look-swatch { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #2a2016; cursor: pointer; transition: transform .12s, border-color .12s; }
+.look-swatch:hover { transform: scale(1.12); } .look-swatch.on { border-color: var(--gold); box-shadow: 0 0 10px #c99a2e88; }
+.look-chip { background: #15110d; border: 1px solid var(--edge2); color: var(--text); padding: 5px 12px; font-size: 13px; text-transform: capitalize; cursor: pointer; transition: border-color .12s, background-color .12s; }
+.look-chip:hover { border-color: var(--edge); } .look-chip.on { border-color: var(--gold); background: #2a1f14; color: var(--gold); }
+.look-modal { position: fixed; inset: 0; background: #000b; display: grid; place-items: center; z-index: 50; padding: 20px; }
+.look-modal-box { width: min(860px, 100%); max-height: 92vh; overflow: auto; background: #120e0b; border: 1px solid var(--edge); padding: 18px 22px; }
+.row.end { justify-content: flex-end; }
+@media (max-width: 700px) { .look-editor { grid-template-columns: 1fr; } .look-preview { height: 300px; } }

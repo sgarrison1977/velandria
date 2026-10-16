@@ -77,7 +77,7 @@ function headParts(head, o, skinM, hc) {
     mesh(box(0.075, 0.016, 0.01), mat("bone", "#efe8d8"), 0, hc - 0.062, 0.1, head);
     mesh(cone(0.012, 0.03, 3), mat("plain", "#050403"), 0, hc - 0.025, 0.112, head, Math.PI, 0, 0);
   } else {
-    const hk = kind === "goblin" ? "goblin" : kind === "brute" ? "brute" : "human";
+    const hk = ["goblin", "brute", "angular", "round", "narrow"].includes(kind) ? kind : "human";
     mesh(headGeo(hk), skinM, 0, hc, 0, head);
     const eyeM = o.eyes ? glowMat(o.eyes, 2.6) : mat("plain", o.iris || "#3a4a5a", { roughness: 0.15 });
     for (const sd of [-1, 1]) {

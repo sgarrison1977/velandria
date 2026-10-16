@@ -52,6 +52,7 @@ class Player:
         for k in ("account_id", "name", "cls", "level", "xp", "gold", "attrs", "attr_points", "skill_points", "abilities", "inventory",
                   "equipment", "quests", "binds", "x", "z", "hp", "mp"):
             setattr(self, k, doc[k])
+        self.look = doc.get("look") or {}
         self.ws, self.queue = ws, asyncio.Queue(maxsize=400)
         self.path, self.target, self.pending, self.queued = [], None, None, None
         self.last_attack, self.cds, self.buffs, self.dots = 0, {}, {}, []
@@ -252,9 +253,9 @@ class Game:
             if (o.x - p.x) ** 2 + (o.z - p.z) ** 2 < VIEW_R2:
                 eq = "|".join(o.equipment[s]["item"] if s in o.equipment else "" for s in ("main", "off", "head", "chest"))
                 rar = [ITEMS[e["item"]]["rarity"] for e in o.equipment.values()]
-                eq += f"|{rar.count('legendary')},{rar.count('epic')}|" + "|".join(o.equipment[s]["item"] if s in o.equipment else "" for s in ("feet", "legs", "hands", "belt"))
+                eq += f"|{rar.count('legendary')},{rar.count('epic')}|" + "|".join(o.equipment[s]["item"] if s in o.equipment else "" for s in ("feet", "legs", "hands", "belt")) + "|" + ",".join(o.look.get(k, "") for k in ("skin", "hair", "hairStyle", "beardStyle", "face", "eyes"))
                 ps.append([o.id, o.name, o.level, o.cls, round(o.x, 2), round(o.z, 2), round(o.rot, 2), 1 if o.moving else 0,
-                           round(o.hp), o.max_hp, eq, 1 if o.dead_until else 0, 1 if o.linkdead_at else 0])
+                           round(o.hp), o.max_hp, eq, 1 if o.dead_until else 0, 1 if o.linkdead_at else 0, 1 if "invis" in o.buffs else 0])
         for m in self.monsters.values():
             if (m.x - p.x) ** 2 + (m.z - p.z) ** 2 < VIEW_R2 and not (m.dead_until and now() - m.died_at > 4):
                 ms.append([m.id, m.type, round(m.x, 2), round(m.z, 2), round(m.rot, 2), 2 if m.dead_until else (1 if m.moving else 0),

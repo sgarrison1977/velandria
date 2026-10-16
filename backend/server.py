@@ -12,7 +12,7 @@ from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field
 from game import Game, new_character_doc
-from game_data import public_data, CLASSES
+from game_data import public_data, CLASSES, clean_look
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("server")
@@ -65,10 +65,15 @@ class AuthIn(BaseModel):
 class CharIn(BaseModel):
     name: str
     cls: str
+    look: dict | None = None
+
+
+class LookIn(BaseModel):
+    look: dict
 
 
 def public_char(c):
-    return {k: c[k] for k in ("id", "name", "cls", "level", "xp", "gold", "equipment")}
+    return {k: c[k] for k in ("id", "name", "cls", "level", "xp", "gold", "equipment")} | {"look": c.get("look")}
 
 
 @api.get("/")
@@ -127,11 +132,28 @@ async def create_char(body: CharIn, u=Depends(current_user)):
     if await db.characters.find_one({"name_lower": name.lower()}):
         raise HTTPException(400, "That name is already taken")
     doc = new_character_doc(u["id"], name[0].upper() + name[1:], body.cls)
+    if body.look is not None:
+        doc["look"] = clean_look(body.look)
+        if not doc["look"]:
+            raise HTTPException(400, "Invalid appearance")
     try:
         await db.characters.insert_one(dict(doc))
     except Exception:
         raise HTTPException(400, "That name is already taken")
     return public_char(doc)
+
+
+@api.put("/characters/{cid}/look")
+async def set_look(cid: str, body: LookIn, u=Depends(current_user)):
+    look = clean_look(body.look)
+    if not look:
+        raise HTTPException(400, "Invalid appearance")
+    if cid in game.players:
+        raise HTTPException(400, "Leave the world before changing your appearance")
+    r = await db.characters.update_one({"id": cid, "account_id": u["id"]}, {"$set": {"look": look}})
+    if not r.matched_count:
+        raise HTTPException(404, "Character not found")
+    return {"ok": True, "look": look}
 
 
 @api.delete("/characters/{cid}")

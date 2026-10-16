@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { Terrain, buildVegetation, buildWater, windUniform, cutUniform } from "./world3d";
 import { buildStructures, animateStructures } from "./structures";
-import { buildMonster, buildNpc, buildPlayer, buildLoot, proxy, animateGlow, animateRig, RARITY } from "./models";
+import { buildMonster, buildNpc, buildPlayer, buildLoot, proxy, animateGlow, animateRig, setInvis, SHIMMER, RARITY } from "./models";
 import { getState, setState } from "./store";
 import { sfx } from "./audio";
 import { setEnv } from "./rig/tex";
@@ -96,12 +96,12 @@ export class Engine {
   }
   onSnapshot(s) {
     const seen = new Set();
-    for (const [id, name, lv, cls, x, z, rot, mv, hp, mhp, eq, dead, ld] of s.p) {
+    for (const [id, name, lv, cls, x, z, rot, mv, hp, mhp, eq, dead, ld, inv] of s.p) {
       seen.add(id);
       let e = this.entities.get(id);
       if (e && e.eq !== eq) { this.removeEntity(e); e = null; }
       if (!e) e = this.addEntity(id, "player", { name, level: lv, cls, x, z, rot, eq });
-      Object.assign(e, { tx: x, tz: z, trot: rot, level: lv, hp, max: mhp, linkdead: ld });
+      Object.assign(e, { tx: x, tz: z, trot: rot, level: lv, hp, max: mhp, linkdead: ld }); setInvis(e.rig, !!inv);
       e.anim.moving = !!mv; e.anim.dead = !!dead;
     }
     for (const [id, type, x, z, rot, st, hp, mhp, aggro] of s.m) {
@@ -417,7 +417,7 @@ export class Engine {
       let dr = e.trot - e.rot; dr = Math.atan2(Math.sin(dr), Math.cos(dr)); e.rot += dr * Math.min(1, dt * 12);
       e.grp.position.set(e.x, this.groundY(e.x, e.z), e.z);
       if (e.rig.gate) { const f = Math.max(0.02, Math.min(1, (e.endAt - performance.now() / 1000) / (e.total || 10))); e.rig.timer.scale.setScalar(f); e.rig.timer.material.color.set(f < 0.3 ? "#ff5a5a" : "#e0c8ff"); e.rig.gate.rotation.y = this.yaw || 0; e.rig.disc.rotation.z = t * 2; e.rig.disc.material.opacity = 0.4 + 0.2 * Math.sin(t * 4); continue; }
-      if (e.rig.body) { e.rig.root.rotation.y = e.rot; animateRig(e.rig, e.anim, dt, t); if (e.rig.shimmer) animateGlow(e.rig, t); }
+      if (e.rig.body) { if (e.rig.invisOn) SHIMMER.uniforms.uTime.value = t; e.rig.root.rotation.y = e.rot; animateRig(e.rig, e.anim, dt, t); if (e.rig.shimmer) animateGlow(e.rig, t); }
       else if (e.kind === "npc") { if (e.rig.kind === "prop" && e.npcKind !== "trunk") e.rig.root.rotation.y = t * 0.3; }
       else { e.rig.root.rotation.y = t * 1.2; e.rig.root.position.y = 0.05 + Math.sin(t * 2.5 + e.x) * 0.05; }
     }
