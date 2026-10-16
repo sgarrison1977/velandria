@@ -3,6 +3,7 @@ import math
 
 MAX_LEVEL = 100
 INV_SLOTS = 30
+STORAGE_SLOTS = 100
 TICK = 0.1
 PLAYER_SPEED = 5.0
 PICKUP_RANGE = 1.8
@@ -331,6 +332,10 @@ NPCS = {
     "fael": dict(name="Druid Fael", role="Healer", town="sunhollow", pos=[1462, 310], kind="druid", healer=True),
     "v6": dict(name="Grimli", role="Ironhold Miner", town="ironhold", pos=[1240, 205], kind="villager", ambient=True),
     "v7": dict(name="Nessa", role="Sunhollow Fisher", town="sunhollow", pos=[1490, 310], kind="villager", ambient=True),
+    "trunk_titus": dict(name="Titus Storage Trunk", role="Account Storage", town="semel", pos=[97, 189], kind="trunk", storage=True),
+    "trunk_elder": dict(name="Elderglen Storage Trunk", role="Account Storage", town="elderglen", pos=[1006, 224], kind="trunk", storage=True),
+    "trunk_iron": dict(name="Ironhold Storage Trunk", role="Account Storage", town="ironhold", pos=[1254, 214], kind="trunk", storage=True),
+    "trunk_sun": dict(name="Sunhollow Storage Trunk", role="Account Storage", town="sunhollow", pos=[1466, 312], kind="trunk", storage=True),
     "ws_titus": dict(name="Titus Waystone", role="Waystone · Fast Travel", town="semel", pos=[90, 189], kind="waystone", waystone=True),
     "ws_elder": dict(name="Elderglen Waystone", role="Waystone · Fast Travel", town="elderglen", pos=[1012, 212], kind="waystone", waystone=True),
     "ws_iron": dict(name="Ironhold Waystone", role="Waystone · Fast Travel", town="ironhold", pos=[1261, 213], kind="waystone", waystone=True),

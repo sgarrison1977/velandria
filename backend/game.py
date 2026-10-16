@@ -1,7 +1,7 @@
 """Authoritative real-time game simulation for Suminex."""
 import asyncio, time, math, random, uuid, json, logging, re
 from datetime import datetime, timezone
-from game_data import (ITEMS, MONSTERS, ABILITIES, CLASSES, NPCS, MERCHANTS, QUESTS, XP_TABLE, MAX_LEVEL, INV_SLOTS, TICK, COMBAT,
+from game_data import (STORAGE_SLOTS, ITEMS, MONSTERS, ABILITIES, CLASSES, NPCS, MERCHANTS, QUESTS, XP_TABLE, MAX_LEVEL, INV_SLOTS, TICK, COMBAT,
                        PLAYER_SPEED, PICKUP_RANGE, NPC_RANGE, LOOT_OWNER_SECS, LOOT_EXPIRE_SECS, ACTIONS, RESTOCK_SECS, sell_price, default_binds, EXTRA_ROLLS, BONUS_LOOT, WAYSTONE_COST, roll_props, random_gear, RANDOM_GEAR_CHANCE)
 from world import PORTALS, World, in_safe, SAFE_ZONES
 
@@ -142,6 +142,7 @@ class Game:
         self.monsters = {}
         self.loot = {}
         self.parties, self.invites, self.party_acc = {}, {}, 0.0
+        self.storages, self.storage_lock = {}, asyncio.Lock()
         self.sched, self.gates = [], {}
         self.stock = {k: {i: q for i, q in v["stock"]} for k, v in MERCHANTS.items()}
         self.last_restock = now()
@@ -949,6 +950,9 @@ class Game:
                           "healer": "Rest a moment. The light will mend you.", "druid": "The grove's breath will restore you.",
                           "elder": "Titus has endured, but the woods grow restless.", "guard": "Keep your blade sharp out there.",
                           "villager": "Fine day, isn't it? Mind the spiders past the north gate.", "child": "Are you a real adventurer?!"}.get(n["kind"], "Greetings.")
+        if n.get("storage"):
+            text = "A heavy iron-bound trunk. Everything inside is shared by all characters on your account."
+            opts.append(dict(id="storage", label="Open storage"))
         if n.get("waystone"):
             text = "The runes flare at your touch. Where would you go?"
             for z in SAFE_ZONES:
@@ -971,6 +975,42 @@ class Game:
         if npc_id == "lyra" and p.quests.get("q_letter", {}).get("s") == "done":
             text = "Thank you for the letter. Elderglen stands with Titus."
         p.send({"t": "dialog", "npc": npc_id, "text": text, "opts": opts})
+
+    async def storage_cmd(self, p, msg):
+        n = self.near_npc(p, msg.get("npc"))
+        if not n or not n.get("storage"):
+            return "You must stand by a storage trunk."
+        async with self.storage_lock:
+            acc = p.account_id
+            if acc not in self.storages:
+                doc = await self.db.storage.find_one({"account_id": acc}, {"_id": 0})
+                self.storages[acc] = (doc or {}).get("items", [])
+            st, t = self.storages[acc], msg["t"]
+            if t in ("storage_put", "storage_take"):
+                src, dst, cap = (p.inventory, st, STORAGE_SLOTS) if t == "storage_put" else (st, p.inventory, INV_SLOTS)
+                s = next((x for x in src if x["uid"] == msg.get("uid")), None)
+                if not s:
+                    return "Item not found."
+                qty = max(1, min(int(msg.get("qty") or s["qty"]), s["qty"]))
+                it = ITEMS[s["item"]]
+                tgt = None if s.get("props") or it["stack"] <= 1 else next((x for x in dst if x["item"] == s["item"] and not x.get("props") and x["qty"] + qty <= it["stack"]), None)
+                if not tgt and len(dst) >= cap:
+                    return "Storage is full." if t == "storage_put" else "Your inventory is full."
+                if tgt:
+                    tgt["qty"] += qty
+                else:
+                    dst.append(dict(s, qty=qty) if qty == s["qty"] else dict(s, uid=uid(), qty=qty))
+                if qty == s["qty"]:
+                    src.remove(s)
+                else:
+                    s["qty"] -= qty
+                p.dirty = True
+                await self.db.storage.update_one({"account_id": acc}, {"$set": {"items": st}}, upsert=True)
+                await self.save(p)
+            view = {"t": "storage", "npc": n["id"] if "id" in n else msg.get("npc"), "name": n["name"], "items": st, "cap": STORAGE_SLOTS}
+            for o in self.players.values():
+                if o.account_id == acc:
+                    o.send(dict(view, sync=o is not p))
 
     def travel_cost(self, n, z):
         return round(WAYSTONE_COST[0] + math.hypot(n["pos"][0] - z["x"], n["pos"][1] - z["z"]) * WAYSTONE_COST[1])
@@ -1374,8 +1414,12 @@ class Game:
                 if msg.get("action") in (None, "talk"):
                     p.pending, p.target = ("npc", nid), None
                     p.path = []
+                elif msg["action"] == "storage":
+                    err = await self.storage_cmd(p, {"t": "storage_open", "npc": nid})
                 else:
                     err = self.npc_action(p, nid, msg["action"])
+        elif t in ("storage_open", "storage_put", "storage_take"):
+            err = await self.storage_cmd(p, msg)
         elif t == "buy":
             err = self.buy(p, msg.get("npc"), msg.get("item"), msg.get("qty", 1))
         elif t == "sell":

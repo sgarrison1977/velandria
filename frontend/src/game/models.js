@@ -190,7 +190,15 @@ function waystone() {
   for (let i = 0; i < 3; i++) mesh(B(0.08, 0.5, 0.05), rune, Math.sin(i * 2.1) * 0.46, 1.3 + i * 0.7, Math.cos(i * 2.1) * 0.46, root).rotation.y = i * 2.1;
   return { root, kind: "prop", height: 3.6 };
 }
-export const buildNpc = (kind) => kind === "waystone" ? waystone() : (NPC_BUILD[kind] || NPC_BUILD.villager)();
+function trunk() {
+  const root = new THREE.Group(), wood = M("#5a3a20", { roughness: 0.9 }), iron = M("#3a3a40", { metalness: 0.6, roughness: 0.5 }), gold = M("#c9a24e", { metalness: 0.8, roughness: 0.3 });
+  const body = mesh(B(1.6, 0.8, 0.95), wood, 0, 0.4, 0, root); body.castShadow = true;
+  const lid = mesh(new THREE.CylinderGeometry(0.48, 0.48, 1.6, 12, 1, false, 0, Math.PI), wood, 0, 0.8, 0, root); lid.rotation.z = Math.PI / 2; lid.castShadow = true;
+  for (const x of [-0.6, 0, 0.6]) { mesh(B(0.1, 0.84, 1.0), iron, x, 0.4, 0, root); const band = mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.1, 12, 1, false, 0, Math.PI), iron, x, 0.8, 0, root); band.rotation.z = Math.PI / 2; }
+  mesh(B(0.22, 0.26, 0.06), gold, 0, 0.72, 0.5, root);
+  return { root, kind: "prop", height: 1.6 };
+}
+export const buildNpc = (kind) => kind === "trunk" ? trunk() : kind === "waystone" ? waystone() : (NPC_BUILD[kind] || NPC_BUILD.villager)();
 
 const CLASS_LOOK = {
   warrior: { skin: "#c8946e", shirt: "#6a6e74", pants: "#3a3028", hair: "#3a2414", pauldrons: "#80868e", belt: "#3a2414" },

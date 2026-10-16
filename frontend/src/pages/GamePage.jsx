@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { PartyFrame, PartyInvite } from "../components/game/Party";
 import { BuffBar, MarkPicker } from "../components/game/Spells";
+import { StorageWindow } from "../components/game/Storage";
 import { useNavigate, useParams } from "react-router-dom";
 import { http } from "@/lib/api";
 import { Engine } from "@/game/engine";
@@ -48,6 +49,7 @@ export default function GamePage() {
           case "err": toast(m.msg, "error"); sfx("error"); break;
           case "dialog": setState({ dialog: m, merchant: null }); sfx("open"); break;
           case "merchant": setState({ merchant: m, dialog: null }); break;
+          case "storage": if (!m.sync || getState().storage) setState({ storage: m, dialog: null }); break;
           case "trade": toast(m.msg, "good"); sfx("coin"); break;
           case "pickup": toast(`Picked up ${m.qty > 1 ? m.qty + "× " : ""}${m.name || d.data.items[m.item]?.name}`, "good"); sfx(m.item === "gold" ? "coin" : "loot"); break;
           case "equip": sfx("open"); break;
@@ -89,9 +91,9 @@ export default function GamePage() {
       else if (action.startsWith("item:")) { const it = action.slice(5), s = st.me.inventory.find((x) => x.item === it); if (s) n.send({ t: "use", uid: s.uid }); else toast(`You have no ${data.items[it].name} left.`, "error"); }
       else if (action === "chat") setState((s) => ({ chatFocus: (s.chatFocus || 0) + 1 }));
       else if (action === "menu") {
-        const anyOpen = Object.values(st.panels).some(Boolean) || st.dialog || st.merchant || st.inspect || st.ctx || st.exitMenu || st.markPick || st.placing;
+        const anyOpen = Object.values(st.panels).some(Boolean) || st.dialog || st.merchant || st.inspect || st.ctx || st.exitMenu || st.markPick || st.placing || st.storage;
         if (eng.current) eng.current.placing = null;
-        if (anyOpen) setState({ panels: {}, dialog: null, merchant: null, inspect: null, ctx: null, exitMenu: false, markPick: false, placing: null }); else togglePanel("settings", true);
+        if (anyOpen) setState({ panels: {}, dialog: null, merchant: null, inspect: null, ctx: null, exitMenu: false, markPick: false, placing: null, storage: null }); else togglePanel("settings", true);
       } else { sfx("open"); togglePanel(action); }
     };
     window.addEventListener("keydown", down);
@@ -122,6 +124,7 @@ export default function GamePage() {
         <DialogWindow net={n} data={data} />
         <InspectWindow data={data} />
         <MerchantWindow net={n} data={data} />
+        <StorageWindow net={n} data={data} />
         {panels.inventory && <InventoryPanel data={data} net={n} />}
         {panels.character && <CharacterPanel data={data} net={n} />}
         {panels.skills && <SkillsPanel data={data} net={n} />}
