@@ -663,6 +663,8 @@ class Game:
             if dist(p, m) > ab["range"] + m.d["radius"]:
                 if k == "dash":
                     return "Too far to charge."
+                if k != "melee":
+                    return self.cast_miss(p, ab_id, pt or (m.x, m.z))
                 p.target, p.queued, p.pending = m.id, ab_id, None
                 return None
             if k == "dash" and not self.world.los(p.x, p.z, m.x, m.z):
@@ -740,7 +742,7 @@ class Game:
             nx, nz = m.x - (m.x - p.x) / d * back, m.z - (m.z - p.z) / d * back
             if d > back and self.world.walkable(nx, nz):
                 p.x, p.z = nx, nz
-            p.path, p.target = [], m.id
+            p.path = []
         p.mp -= ab["cost"]
         cfx = {"t": "fx", "k": "cast", "src": p.id, "ab": ab_id, "tgt": m.id if m else None}
         if center:
