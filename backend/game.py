@@ -12,6 +12,7 @@ LINKDEAD_SECS = 15
 PARTY_MAX, PARTY_SHARE_R, PARTY_XP_BONUS = 5, 60.0, 0.15
 SKILL_POINTS_PER_LEVEL = 3
 PORTAL_SECS = 10
+LOOT_ALL_R = 8.0
 TOWN_NAMES = {"semel": "Titus", "elderglen": "Elderglen", "ironhold": "Ironhold", "sunhollow": "Sunhollow"}
 
 
@@ -56,6 +57,8 @@ class Player:
         self.chat_times, self.last_save, self.linkdead_at = [], now(), None
         self.dirty, self.regen_acc, self.rewarded = True, 0.0, set()
         self.marks = doc.get("marks") or {}
+        if "loot_all" not in self.binds and "KeyF" not in self.binds.values():
+            self.binds["loot_all"] = "KeyF"
         if self.cls == "mage":
             self.cls = "wizard"
         self.recalc()
@@ -855,6 +858,28 @@ class Game:
         del self.loot[lid]
         p.send({"t": "pickup", "item": l["item"], "qty": l["qty"], "name": l.get("pname")})
 
+    def loot_all(self, p):
+        t, got, full, owned = now(), {}, False, 0
+        for lid, l in sorted(self.loot.items(), key=lambda kv: math.hypot(kv[1]["x"] - p.x, kv[1]["z"] - p.z)):
+            if math.hypot(l["x"] - p.x, l["z"] - p.z) > LOOT_ALL_R:
+                continue
+            if l["owner"] and l["owner"] != p.id and t < l["owner_until"] and not (l.get("party") and l["party"] == getattr(p, "party", None)):
+                owned += 1
+                continue
+            if not self.add_item(p, l["item"], l["qty"], l.get("props"), l.get("pname")):
+                full = True
+                continue
+            del self.loot[lid]
+            name = "gold" if l["item"] == "gold" else (l.get("pname") or ITEMS[l["item"]]["name"])
+            got[name] = got.get(name, 0) + l["qty"]
+        if got:
+            p.send({"t": "pickup", "item": "gold" if list(got) == ["gold"] else "loot_all", "qty": 1,
+                    "name": ", ".join(f"{q}× {n}" if q > 1 else n for n, q in got.items())})
+        if full:
+            p.send({"t": "err", "msg": "Your inventory is full. Some items were left on the ground."})
+        elif not got:
+            p.send({"t": "err", "msg": "Some loot nearby belongs to another adventurer." if owned else "There is no loot nearby."})
+
     # ------------- npcs / quests / merchants
     def near_npc(self, p, npc_id, flag=None):
         n = NPCS.get(npc_id)
@@ -1292,6 +1317,8 @@ class Game:
             pt = msg.get("pt")
             pt = (float(pt[0]), float(pt[1])) if isinstance(pt, list) and len(pt) == 2 and all(isinstance(v, (int, float)) for v in pt) else None
             err = self.cast(p, msg.get("ab"), msg.get("id"), pt, msg.get("mark"))
+        elif t == "loot_all":
+            self.loot_all(p)
         elif t == "pickup":
             if msg.get("id") in self.loot:
                 p.pending, p.target = ("loot", msg["id"]), None

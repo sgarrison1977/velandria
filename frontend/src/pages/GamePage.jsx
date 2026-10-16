@@ -49,7 +49,7 @@ export default function GamePage() {
           case "dialog": setState({ dialog: m, merchant: null }); sfx("open"); break;
           case "merchant": setState({ merchant: m, dialog: null }); break;
           case "trade": toast(m.msg, "good"); sfx("coin"); break;
-          case "pickup": toast(`Picked up ${m.qty > 1 ? m.qty + "× " : ""}${m.name || d.data.items[m.item].name}`, "good"); sfx(m.item === "gold" ? "coin" : "loot"); break;
+          case "pickup": toast(`Picked up ${m.qty > 1 ? m.qty + "× " : ""}${m.name || d.data.items[m.item]?.name}`, "good"); sfx(m.item === "gold" ? "coin" : "loot"); break;
           case "equip": sfx("open"); break;
           case "levelup": setState({ levelup: m.lv }); setTimeout(() => setState({ levelup: null }), 3500); break;
           case "inspect": setState({ inspect: m.d }); break;
@@ -85,6 +85,7 @@ export default function GamePage() {
         n.send({ t: "cast", ab, id, pt: gp ? [gp.x, gp.z] : undefined }); }
       else if (action === "attack_nearest") { const hov = eng.current?.hover; if (hov?.kind === "monster" && !hov.anim.dead) n.send({ t: "target", id: hov.id }); else n.send({ t: "attack_nearest" }); }
       else if (action === "stop") n.send({ t: "stop" });
+      else if (action === "loot_all") n.send({ t: "loot_all" });
       else if (action === "chat") setState((s) => ({ chatFocus: (s.chatFocus || 0) + 1 }));
       else if (action === "menu") {
         const anyOpen = Object.values(st.panels).some(Boolean) || st.dialog || st.merchant || st.inspect || st.ctx || st.exitMenu || st.markPick || st.placing;

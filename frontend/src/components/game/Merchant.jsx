@@ -55,9 +55,9 @@ export function MerchantWindow({ data, net }) {
   );
 }
 
-const ACTION_LABEL = { attack_nearest: "Attack nearest enemy", stop: "Stop Action (ends Contra Visus)", inventory: "Inventory", character: "Character stats", skills: "Skills & spells", map: "World map", quests: "Quest journal", chat: "Open chat", menu: "Menu / close windows" };
+const ACTION_LABEL = { attack_nearest: "Attack nearest enemy", stop: "Stop Action (ends Contra Visus)", loot_all: "Pick up all nearby loot", inventory: "Inventory", character: "Character stats", skills: "Skills & spells", map: "World map", quests: "Quest journal", chat: "Open chat", menu: "Menu / close windows" };
 export function defaultBinds(data, cls) {
-  const b = { attack_nearest: "Space", stop: "KeyS", inventory: "KeyI", character: "KeyC", skills: "KeyK", map: "KeyM", quests: "KeyL", chat: "Enter", menu: "Escape" };
+  const b = { attack_nearest: "Space", stop: "KeyS", loot_all: "KeyF", inventory: "KeyI", character: "KeyC", skills: "KeyK", map: "KeyM", quests: "KeyL", chat: "Enter", menu: "Escape" };
   const abil = Object.keys(data.abilities).filter((k) => data.abilities[k].cls.includes(cls));
   abil.forEach((a, i) => { b[`ability:${a}`] = i < 10 ? `Digit${(i + 1) % 10}` : ""; });
   return b;
