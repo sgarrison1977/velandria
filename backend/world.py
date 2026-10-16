@@ -256,7 +256,6 @@ class World:
     def _town_props(self):
         P = self.props
         P.append(dict(kind="fountain", x=SEMEL[0], z=SEMEL[1])); self._disc(SEMEL[0], SEMEL[1], 2.8)
-        P.append(dict(kind="elder_tree", x=ELDER[0], z=ELDER[1])); self._disc(ELDER[0], ELDER[1], 3.4)
         P.append(dict(kind="fountain", x=IRON[0], z=IRON[1])); self._disc(IRON[0], IRON[1], 2.8)
         P.append(dict(kind="moonwell", x=SUNH[0], z=SUNH[1])); self._disc(SUNH[0], SUNH[1], 1.6)
         for (x, z, k) in [(1246, 186, "anvil"), (1274, 186, "stall"), (1456, 288, "stall"), (1484, 288, "stall"), (1494, 312, "barrels"), (1252, 214, "barrels")]:

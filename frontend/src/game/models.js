@@ -1,264 +1,104 @@
 import * as THREE from "three";
+import { humanoid } from "./rig/body";
+import { spider, wolf } from "./rig/beasts";
+import { weaponMesh, weaponKind, mesh as gmesh } from "./rig/gear";
+import { mat } from "./rig/tex";
 
-const cache = {};
-const M = (color, o = {}) => {
-  const k = color + JSON.stringify(o);
-  if (!cache[k]) cache[k] = new THREE.MeshStandardMaterial({ color, roughness: 0.62, metalness: 0.05, flatShading: false, ...o });
-  return cache[k];
-};
-const mesh = (geo, mat, x = 0, y = 0, z = 0, parent) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; parent && parent.add(m); return m; };
+export { humanoid };
+const M = (c, o = {}) => mat("plain", c, o);
 const B = (w, h, d) => new THREE.BoxGeometry(w, h, d);
-const cap = (r, l) => new THREE.CapsuleGeometry(r, l, 4, 10);
-const grp = (x = 0, y = 0, z = 0, parent) => { const g = new THREE.Group(); g.position.set(x, y, z); parent && parent.add(g); return g; };
+const mesh = (geo, m, x, y, z, p) => gmesh(geo, m, x, y, z, p);
 export const RARITY = { common: "#c9c3b4", uncommon: "#5fd35a", rare: "#4f9bff", epic: "#b45cff", legendary: "#ffb22e" };
 
-function weaponMesh(kind, color = "#9aa0a6", glow) {
-  const g = new THREE.Group(), steel = M(color, { metalness: 0.6, roughness: 0.35 }), wood = M("#4a3020"), dark = M("#2a2420");
-  if (kind === "sword" || kind === "dagger") {
-    const L = kind === "sword" ? 0.85 : 0.4;
-    mesh(B(0.07, L, 0.02), steel, 0, L / 2 + 0.12, 0, g); mesh(B(0.26, 0.05, 0.06), dark, 0, 0.12, 0, g); mesh(B(0.04, 0.16, 0.04), wood, 0, 0.03, 0, g);
-    g.rotation.x = Math.PI / 2;
-  } else if (kind === "axe") {
-    mesh(B(0.05, 1.0, 0.05), wood, 0, 0.35, 0, g); mesh(B(0.04, 0.32, 0.34), steel, 0, 0.75, 0.15, g); g.rotation.x = Math.PI / 2;
-  } else if (kind === "club") {
-    mesh(new THREE.CylinderGeometry(0.16, 0.06, 1.1, 6), M(color), 0, 0.45, 0, g); g.rotation.x = Math.PI / 2.2;
-  } else if (kind === "hammer") {
-    mesh(B(0.05, 0.6, 0.05), wood, 0, 0.2, 0, g); mesh(B(0.24, 0.14, 0.14), dark, 0, 0.5, 0, g); g.rotation.x = Math.PI / 2;
-  } else if (kind === "spear") {
-    mesh(B(0.04, 2.0, 0.04), wood, 0, 0.3, 0, g); mesh(new THREE.ConeGeometry(0.06, 0.3, 4), steel, 0, 1.4, 0, g);
-  } else if (kind === "staff") {
-    mesh(new THREE.CylinderGeometry(0.03, 0.04, 1.7, 5), M(color), 0, 0.35, 0, g);
-    const orb = mesh(new THREE.IcosahedronGeometry(0.1, 1), M(glow || "#7fd0ff", { emissive: glow || "#7fd0ff", emissiveIntensity: 2.2 }), 0, 1.25, 0, g); orb.name = "orb";
-  } else if (kind === "bow") {
-    const arc = mesh(new THREE.TorusGeometry(0.55, 0.025, 4, 12, Math.PI), M(color === "#9aa0a6" ? "#6a4628" : color), 0, 0, 0, g);
-    arc.rotation.z = -Math.PI / 2; mesh(B(0.01, 1.1, 0.01), M("#ddd"), -0.02, 0, 0, g);
-    g.rotation.y = Math.PI / 2;
-  }
-  return g;
-}
-const weaponKind = (id) => !id ? null : /staff/.test(id) ? "staff" : /bow/.test(id) ? "bow" : /maul|cleaver/.test(id) ? (id.includes("maul") ? "club" : "axe") : "sword";
-
-export function humanoid(o) {
-  const s = (o.scale || 1) * 1.22, bulk = o.bulk || 1, thin = o.thin ? 0.55 : 1;
-  const root = new THREE.Group(), body = grp(0, 0, 0, root);
-  const skin = M(o.skin || "#c9a084", { roughness: 0.55 });
-  const rig = { root, body, s };
-  const fab = (c) => M(c, { roughness: 0.92 }), leather = M(o.boots || "#2a1f16", { roughness: 0.7 });
-  const bone = M("#d8d2bc", { roughness: 0.8 });
-  const taper = (r1, r2, l, mat, x, y, z, par, seg = 12) => mesh(new THREE.CylinderGeometry(r1, r2, l, seg), mat, x, y, z, par);
-  const ball = (r, mat, x, y, z, par) => mesh(new THREE.SphereGeometry(r, 12, 10), mat, x, y, z, par);
-  const lathe = (pts, mat, y, par, sx = 1, sz = 0.66) => { const m = mesh(new THREE.LatheGeometry(pts.map(([r, h]) => new THREE.Vector2(r, h)), 18), mat, 0, y, 0, par); m.scale.set(sx, 1, sz); return m; };
-  const pantsM = o.thin ? bone : fab(o.pants || "#3a3028"), shirtM = o.thin ? bone : fab(o.shirt || "#5a4a3a"), sleeveM = o.thin ? bone : (o.sleeve ? fab(o.sleeve) : shirtM);
-  const leg = (side) => {
-    const hip = grp(side * 0.11 * bulk, 0.88, 0, body);
-    taper(0.1 * bulk * thin, 0.075 * bulk * thin, 0.42, pantsM, 0, -0.21, 0, hip);
-    const knee = grp(0, -0.44, 0, hip);
-    ball(0.072 * bulk * thin, pantsM, 0, 0, 0.005, knee);
-    if (o.thin) taper(0.035, 0.03, 0.36, bone, 0, -0.19, 0, knee);
-    else { taper(0.072 * bulk, 0.05 * bulk, 0.2, pantsM, 0, -0.1, -0.01, knee); taper(0.068 * bulk, 0.062 * bulk, 0.24, leather, 0, -0.27, 0, knee); taper(0.074 * bulk, 0.074 * bulk, 0.035, M("#1a120c"), 0, -0.155, 0, knee); }
-    const foot = mesh(cap(0.06 * bulk, 0.14), o.thin ? bone : leather, 0, -0.395, 0.055, knee); foot.rotation.x = Math.PI / 2; foot.scale.set(1.05, 1, 0.7);
-    if (!o.thin) mesh(B(0.12 * bulk, 0.02, 0.26), M("#140e0a"), 0, -0.43, 0.05, knee);
-    return { hip, knee };
-  };
-  rig.legL = leg(-1); rig.legR = leg(1);
-  const torso = grp(0, 0.88, 0, body); rig.torso = torso;
-  if (o.hunch) torso.rotation.x = 0.35;
-  if (o.thin) {
-    taper(0.03, 0.03, 0.6, bone, 0, 0.32, -0.04, torso);
-    for (let i = 0; i < 5; i++) { const r = mesh(new THREE.TorusGeometry(0.13 - Math.abs(i - 1.5) * 0.012, 0.016, 5, 14, Math.PI * 1.6), bone, 0, 0.22 + i * 0.075, 0, torso); r.rotation.set(Math.PI / 2, 0, Math.PI * 0.7); r.scale.set(1.25, 0.85, 1); }
-    mesh(B(0.28, 0.08, 0.12), bone, 0, 0.02, 0, torso);
-  } else {
-    lathe([[0.001, -0.02], [0.17, -0.02], [0.19, 0.06], [0.175, 0.2], [0.2, 0.36], [0.235, 0.5], [0.22, 0.6], [0.12, 0.66], [0.001, 0.67]], shirtM, 0, torso, 1.1 * bulk, 0.66 * bulk);
-    if (!o.robe) lathe([[0.2, 0.06], [0.215, -0.05], [0.25, -0.2], [0.24, -0.21]], shirtM, 0, torso, 1.05 * bulk, 0.75 * bulk).material.side = THREE.DoubleSide;
-    const collar = mesh(new THREE.TorusGeometry(0.085, 0.022, 6, 16), sleeveM, 0, 0.64, 0, torso); collar.rotation.x = Math.PI / 2;
-    for (const sd of [-1, 1]) { const st = mesh(B(0.035, 0.62, 0.01), M("#2a1d12", { roughness: 0.7 }), sd * 0.07, 0.33, 0.145 * bulk, torso); st.rotation.z = sd * 0.42; }
-    mesh(B(0.09, 0.1, 0.05), M("#3a2818", { roughness: 0.7 }), 0.15 * bulk, 0.02, 0.12 * bulk, torso);
-  }
-  taper(0.055, 0.065, 0.12, skin, 0, 0.7, 0, torso);
-  mesh(new THREE.CylinderGeometry(0.2 * bulk, 0.205 * bulk, 0.07, 18), M(o.belt || "#2a1d12", { roughness: 0.65 }), 0, 0.05, 0, torso).scale.set(1.08, 1, 0.74);
-  mesh(B(0.07, 0.06, 0.02), M("#c9a24e", { metalness: 0.8, roughness: 0.3 }), 0, 0.05, 0.15 * bulk, torso);
-  if (o.robe) { const r = mesh(new THREE.CylinderGeometry(0.22 * bulk, 0.4 * bulk, 0.92, 16, 1, true), fab(o.robe), 0, -0.42, 0, torso); r.material.side = THREE.DoubleSide; r.scale.z = 0.8; r.name = "robe"; }
-  if (o.pauldrons) for (const sd of [-1, 1]) { const pd = mesh(new THREE.SphereGeometry(0.15 * bulk, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), M(o.pauldrons, { metalness: 0.6, roughness: 0.35 }), sd * 0.27 * bulk, 0.58, 0, torso); pd.rotation.z = -sd * 0.35; pd.scale.set(1, 0.8, 1.1); }
-  if (o.cape) { const c = mesh(new THREE.CylinderGeometry(0.2 * bulk, 0.34 * bulk, 1.05, 14, 1, true, Math.PI * 0.6, Math.PI * 0.8), fab(o.cape), 0, 0.12, -0.02, torso); c.material.side = THREE.DoubleSide; c.scale.z = 0.7; c.rotation.x = 0.08; c.name = "cape"; }
-  const head = grp(0, 0.74, 0, torso); rig.head = head;
-  const hs = o.headScale || 1;
-  if (o.head === "skull") {
-    ball(0.14 * hs, bone, 0, 0.13, 0, head).scale.set(0.9, 1.05, 1.05);
-    ball(0.085, bone, 0, 0.04, 0.05, head).scale.set(1, 0.7, 1.1);
-    for (const sd of [-1, 1]) ball(0.035, M("#000"), sd * 0.05, 0.14, 0.12, head);
-  } else {
-    ball(0.135 * hs, skin, 0, 0.14, 0, head).scale.set(0.88, 1.06, 1.0);
-    ball(0.1 * hs, skin, 0, 0.07, 0.035, head).scale.set(1, 0.85, 1.05);
-    const nose = mesh(new THREE.ConeGeometry(0.022, 0.06, 6), skin, 0, 0.11, 0.135 * hs, head); nose.rotation.x = 0.35;
-    mesh(B(0.05, 0.012, 0.01), M("#8a4a40"), 0, 0.055, 0.128 * hs, head);
-    for (const sd of [-1, 1]) {
-      ball(0.02, M("#f2ede4", { roughness: 0.3 }), sd * 0.045, 0.145, 0.11 * hs, head).scale.set(1.2, 0.8, 0.6);
-      ball(0.011, M(o.eyes || "#2a3a4a", o.eyes ? { emissive: o.eyes, emissiveIntensity: 2 } : { roughness: 0.2 }), sd * 0.045, 0.145, 0.122 * hs, head);
-      mesh(B(0.05, 0.012, 0.015), M(o.hair || o.beard || "#3a2a1a"), sd * 0.046, 0.175, 0.118 * hs, head).rotation.z = -sd * 0.12;
-      if (!o.ears) ball(0.028, skin, sd * 0.12 * hs, 0.125, 0, head).scale.set(0.45, 1, 0.8);
-    }
-  }
-  if (o.hair) { const hm = M(o.hair, { roughness: 0.95 }); mesh(new THREE.SphereGeometry(0.145 * hs, 18, 12, 0, Math.PI * 2, 0, Math.PI / 1.85), hm, 0, 0.155, -0.012, head).scale.set(0.95, 1.05, 1.06); ball(0.11, hm, 0, 0.1, -0.06, head).scale.set(1.15, 1.1, 0.8); }
-  if (o.mohawk) mesh(B(0.05, 0.14, 0.28), M(o.mohawk), 0, 0.3, 0, head);
-  if (o.beard) { const bm = M(o.beard, { roughness: 0.95 }); ball(0.09, bm, 0, 0.03, 0.075, head).scale.set(1.15, 1.1, 0.8); mesh(new THREE.ConeGeometry(0.07, 0.12, 8), bm, 0, -0.04, 0.09, head).rotation.x = Math.PI; }
-  if (o.helm) { const hm = M(o.helm, { metalness: 0.65, roughness: 0.32 }); mesh(new THREE.SphereGeometry(0.165, 16, 10, 0, Math.PI * 2, 0, Math.PI / 1.75), hm, 0, 0.14, 0, head); mesh(B(0.03, 0.12, 0.04), hm, 0, 0.11, 0.16, head); const rim = mesh(new THREE.TorusGeometry(0.16, 0.014, 6, 20), hm, 0, 0.13, 0, head); rim.rotation.x = Math.PI / 2; }
-  if (o.hood) { const hd = mesh(new THREE.SphereGeometry(0.18, 16, 10, 0, Math.PI * 2, 0, Math.PI / 1.5), fab(o.hood), 0, 0.14, -0.02, head); hd.scale.set(1, 1.12, 1.08); const tip = mesh(new THREE.ConeGeometry(0.1, 0.22, 10), fab(o.hood), 0, 0.3, -0.1, head); tip.rotation.x = -0.6; }
-  if (o.hat) { mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.025, 20), M(o.hat), 0, 0.24, 0, head); const c = mesh(new THREE.ConeGeometry(0.16, 0.52, 14), M(o.hat), 0, 0.5, -0.04, head); c.rotation.x = -0.28; }
-  if (o.horns) for (const sd of [-1, 1]) { const h = mesh(new THREE.ConeGeometry(0.035, 0.22, 8), M(o.horns), sd * 0.1, 0.3, 0, head); h.rotation.z = -sd * 0.5; }
-  if (o.ears) for (const sd of [-1, 1]) { const e = mesh(new THREE.ConeGeometry(0.045, 0.24, 6), skin, sd * 0.18, 0.15, 0, head); e.rotation.z = -sd * 1.3; }
-  if (o.tusks) for (const sd of [-1, 1]) mesh(new THREE.ConeGeometry(0.022, 0.1, 6), M("#e8e0c0"), sd * 0.05, 0.05, 0.13, head);
-  if (o.antlers) for (const sd of [-1, 1]) { const a = mesh(B(0.03, 0.35, 0.03), M("#8a7a5a"), sd * 0.12, 0.38, 0, head); a.rotation.z = -sd * 0.6; }
-  const arm = (side) => {
-    const sh = grp(side * 0.28 * bulk, 0.57, 0, torso);
-    if (!o.thin) ball(0.085 * bulk, sleeveM, 0, -0.01, 0, sh).scale.set(1, 0.9, 1);
-    taper(0.07 * bulk * thin, 0.055 * bulk * thin, 0.3, sleeveM, 0, -0.16, 0, sh);
-    const el = grp(0, -0.32, 0, sh);
-    ball(0.055 * bulk * thin, o.thin ? bone : (o.sleeve ? sleeveM : skin), 0, 0, 0, el);
-    taper(0.056 * bulk * thin, 0.04 * bulk * thin, 0.26, o.thin ? bone : (o.sleeve ? sleeveM : skin), 0, -0.13, 0, el);
-    if (!o.thin && !o.sleeve) taper(0.05 * bulk, 0.05 * bulk, 0.07, leather, 0, -0.22, 0, el);
-    const hm = o.thin ? bone : skin;
-    mesh(B(0.07, 0.08, 0.035), hm, 0, -0.3, 0.01, el);
-    mesh(B(0.065, 0.05, 0.03), hm, 0, -0.355, 0.02, el).rotation.x = 0.5;
-    mesh(cap(0.013, 0.035), hm, side * -0.035, -0.29, 0.03, el).rotation.z = side * 0.6;
-    const hand = grp(0, -0.3, 0.02, el);
-    return { sh, el, hand };
-  };
-  rig.armL = arm(-1); rig.armR = arm(1);
-  if (o.wings) for (const sd of [-1, 1]) { const w = mesh(new THREE.ConeGeometry(0.35, 0.7, 3), M(o.wings), sd * 0.3, 0.45, -0.2, torso); w.rotation.set(0.3, 0, sd * 1.9); w.scale.z = 0.1; w.name = sd > 0 ? "wingR" : "wingL"; (rig.wings = rig.wings || []).push(w); }
-  if (o.tail) { const t = mesh(B(0.04, 0.04, 0.6), M(o.tail), 0, 0.05, -0.35, torso); t.rotation.x = -0.4; }
-  rig.equip = (main, off) => {
-    for (const k of ["mainMesh", "offMesh"]) if (rig[k]) { rig[k].parent.remove(rig[k]); rig[k] = null; }
-    if (main) { rig.mainMesh = typeof main === "string" ? weaponMesh(main, o.weaponColor, o.glow) : main; rig.armR.hand.add(rig.mainMesh); rig.weaponKind = typeof main === "string" ? main : rig.weaponKind; }
-    if (off === "shield") { const sh = mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.05, 10), M(o.shieldColor || "#6a4a2a", { metalness: 0.2 }), -0.08, 0.15, 0, rig.armL.el); sh.rotation.z = Math.PI / 2; rig.offMesh = sh; }
-    if (off === "tome") { rig.offMesh = mesh(B(0.18, 0.24, 0.06), M("#4a2a5a"), 0, -0.05, 0.06, rig.armL.hand); }
-    if (off === "quiver") { rig.offMesh = mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.6, 6), M("#5a3a20"), 0.12, 0.35, -0.18, torso); rig.offMesh.rotation.z = 0.4; }
-  };
-  rig.equip(o.weapon, o.off);
-  body.scale.setScalar(s);
-  rig.kind = "humanoid";
-  rig.height = 1.9 * s;
-  return rig;
-}
-
-function spider(o) {
-  const s = o.scale || 1, root = new THREE.Group(), body = grp(0, 0.45, 0, root);
-  const rig = { root, body, s, kind: "spider", legs: [] };
-  mesh(new THREE.IcosahedronGeometry(0.32, 1), M(o.body), 0, 0, 0.25, body);
-  const abd = mesh(new THREE.IcosahedronGeometry(0.5, 1), M(o.abd), 0, 0.12, -0.45, body); abd.scale.set(1, 0.8, 1.2);
-  mesh(new THREE.IcosahedronGeometry(0.2, 0), M(o.mark, { emissive: o.glow ? o.mark : "#000", emissiveIntensity: o.glow ? 1.2 : 0 }), 0, 0.48, -0.5, body).scale.set(1, 0.3, 1.4);
-  for (let i = 0; i < 4; i++) for (const sd of [-1, 1]) mesh(B(0.04, 0.04, 0.02), M("#ff3a2a", { emissive: "#ff2010", emissiveIntensity: 1.5 }), sd * 0.05 * (1 + i * 0.4), 0.12 + (i % 2) * 0.04, 0.52, body);
-  for (const sd of [-1, 1]) { const f = mesh(new THREE.ConeGeometry(0.04, 0.2, 4), M("#1a1410"), sd * 0.08, -0.12, 0.55, body); f.rotation.x = Math.PI; }
-  for (let i = 0; i < 4; i++) for (const sd of [-1, 1]) {
-    const hip = grp(sd * 0.22, 0, 0.35 - i * 0.18, body);
-    hip.rotation.y = sd > 0 ? -(0.9 - i * 0.55) : Math.PI + (0.9 - i * 0.55);
-    const up = grp(0, 0, 0, hip); up.rotation.z = 0.7;
-    mesh(B(0.6, 0.07, 0.07), M(o.body), 0.3, 0, 0, up);
-    const kn = grp(0.6, 0, 0, up); kn.rotation.z = -1.9;
-    mesh(B(0.7, 0.05, 0.05), M(o.leg || o.body), 0.35, 0, 0, kn);
-    rig.legs.push({ up, kn, ph: i * 1.6 + (sd > 0 ? Math.PI : 0) });
-  }
-  root.scale.setScalar(s);
-  rig.height = 1.0 * s;
-  return rig;
-}
-
-function wolf(o) {
-  const root = new THREE.Group(), body = grp(0, 0.72, 0, root);
-  const fur = M(o.color), dark = M(o.dark || "#3a3834");
-  const rig = { root, body, s: 1, kind: "quad", legs: [] };
-  const torso = mesh(B(0.42, 0.42, 1.15), fur, 0, 0, 0, body);
-  mesh(B(0.46, 0.2, 0.5), dark, 0, 0.2, 0.25, body);
-  const neck = grp(0, 0.12, 0.55, body); rig.head = neck;
-  mesh(B(0.3, 0.3, 0.34), fur, 0, 0.1, 0.12, neck);
-  mesh(B(0.16, 0.14, 0.3), fur, 0, 0.02, 0.38, neck);
-  mesh(B(0.06, 0.05, 0.05), M("#111"), 0, 0.08, 0.54, neck);
-  for (const sd of [-1, 1]) { mesh(new THREE.ConeGeometry(0.06, 0.16, 4), dark, sd * 0.1, 0.32, 0.05, neck); mesh(B(0.04, 0.04, 0.02), M("#ffd23a", { emissive: "#ffb000", emissiveIntensity: 1.5 }), sd * 0.08, 0.16, 0.29, neck); }
-  const tail = mesh(B(0.1, 0.1, 0.55), fur, 0, 0.1, -0.78, body); tail.rotation.x = 0.6; rig.tail = tail;
-  for (const [x, z, ph] of [[-0.15, 0.42, 0], [0.15, 0.42, Math.PI], [-0.15, -0.42, Math.PI], [0.15, -0.42, 0]]) {
-    const hip = grp(x, -0.1, z, body);
-    mesh(B(0.12, 0.38, 0.14), fur, 0, -0.18, 0, hip);
-    const kn = grp(0, -0.36, 0, hip);
-    mesh(B(0.09, 0.3, 0.1), dark, 0, -0.13, 0, kn);
-    rig.legs.push({ up: hip, kn, ph });
-  }
-  torso.castShadow = true;
-  root.scale.setScalar(o.scale || 1);
-  rig.height = 1.2;
-  return rig;
-}
-
+const robe = (color, o = {}) => ({ top: { style: "robe", color }, ...o });
 const MONSTER_BUILD = {
   cave_crawler: () => spider({ body: "#8a8478", abd: "#a09a8a", mark: "#5affe0", leg: "#6a645a", glow: true, scale: 1.9 }),
-  crypt_ghoul: () => humanoid({ scale: 1.1, hunch: true, skin: "#7a8a6a", shirt: "#3a3a2a", pants: "#2a2a1e", boots: "#1a1a14", eyes: "#d0ff5a", ears: true, hair: "#2a2a20" }),
-  bone_colossus: () => humanoid({ scale: 2.3, bulk: 1.3, thin: true, skin: "#e0d8c0", head: "skull", pants: "#3a342a", boots: "#2a241c", weapon: "club", weaponColor: "#d8d0b8", eyes: "#7fe0ff", pauldrons: "#d8d0b8" }),
-  hollow_shade: () => humanoid({ scale: 1.25, skin: "#4a3a5a", robe: "#140a1e", shirt: "#1e1028", sleeve: "#1e1028", hood: "#140a1e", weapon: "staff", weaponColor: "#2a1a3a", glow: "#c070ff", eyes: "#e0a0ff" }),
-  hollow_king: () => humanoid({ scale: 2.6, bulk: 1.35, skin: "#9a90a8", head: "skull", shirt: "#1a1222", pants: "#140e1a", boots: "#0e0a12", helm: "#c9a24e", pauldrons: "#c9a24e", cape: "#3a0a4a", robe: "#1a1222", weapon: "sword", weaponColor: "#2a2040", glow: "#b060ff", eyes: "#d080ff" }),
+  crypt_ghoul: () => humanoid({ scale: 1.1, hunch: true, skin: "#7a8a6a", top: { style: "rags", color: "#3a3a2a" }, legs: { style: "cloth", color: "#2a2a1e" }, boots: { style: "bare" }, eyes: "#d0ff5a", ears: true, hair: "#2a2a20", hairStyle: "long", claws: true, sleeveless: true }),
+  bone_colossus: () => humanoid({ scale: 2.3, bulk: 1.3, body: "bone", skin: "#e0d8c0", head: "skull", top: { color: "#3a342a" }, weapon: "club", weaponColor: "#d8d0b8", eyes: "#7fe0ff", pauldrons: "#d8d0b8" }),
+  hollow_shade: () => humanoid(robe("#140a1e", { scale: 1.25, skin: "#4a3a5a", faceVoid: true, helm: { style: "hood", color: "#140a1e" }, tatter: true, weapon: "staff", weaponColor: "#2a1a3a", glow: "#c070ff", eyes: "#e0a0ff", cape: "#0e0614" })),
+  hollow_king: () => humanoid({ scale: 2.6, bulk: 1.35, body: "bone", skin: "#9a90a8", head: "skull", top: { color: "#1a1222" }, helm: { style: "crown", color: "#c9a24e" }, pauldrons: "#c9a24e", cape: "#3a0a4a", tatter: true, weapon: "sword", weaponColor: "#2a2040", glow: "#b060ff", eyes: "#d080ff" }),
   dire_wolf: () => wolf({ color: "#2e2c30", dark: "#141216", scale: 1.75 }),
   broodmother: () => spider({ body: "#2a1030", abd: "#3a1440", mark: "#ff3a8a", leg: "#1a0a20", glow: true, scale: 2.4 }),
-  shadow_wraith: () => humanoid({ scale: 1.15, skin: "#3a3a4a", robe: "#0e0e18", shirt: "#14141f", sleeve: "#14141f", hood: "#0e0e18", weapon: "staff", weaponColor: "#1a1a2a", glow: "#5affe0", eyes: "#5affe0" }),
-  stone_golem: () => humanoid({ scale: 2.1, bulk: 1.7, hunch: true, skin: "#7a7468", shirt: "#6a6458", pants: "#5a5448", boots: "#4a463e", pauldrons: "#8a8478", eyes: "#ff9a3a", weapon: "club", weaponColor: "#5a5448" }),
-  death_knight: () => humanoid({ scale: 1.35, bulk: 1.2, skin: "#d8d2bc", head: "skull", shirt: "#22222a", pants: "#1a1a20", boots: "#141418", helm: "#2a2a32", pauldrons: "#3a3a44", cape: "#3a0a10", weapon: "sword", weaponColor: "#3a3a50", glow: "#ff3a3a", off: "shield", shieldColor: "#1a1a20", eyes: "#ff3a3a" }),
-  abyssal_fiend: () => humanoid({ scale: 2.4, bulk: 1.4, skin: "#5a1010", shirt: "#4a0a0a", pants: "#2a0505", boots: "#1a0505", horns: "#1a0a0a", wings: "#2a0505", tail: "#4a0a0a", eyes: "#ffea3a", weapon: "axe", weaponColor: "#2a1a1a", glow: "#ff5a1a" }),
+  shadow_wraith: () => humanoid(robe("#0e0e18", { scale: 1.15, faceVoid: true, helm: { style: "hood", color: "#0e0e18" }, tatter: true, weapon: "staff", weaponColor: "#1a1a2a", glow: "#5affe0", eyes: "#5affe0", cape: "#08080e" })),
+  stone_golem: () => humanoid({ scale: 2.1, bulk: 1.7, hunch: true, body: "stone", head: "brute", skin: "#7a7468", hairStyle: "bald", boots: { style: "bare" }, rocky: true, eyes: "#ff9a3a", weapon: "club", weaponColor: "#5a5448" }),
+  death_knight: () => humanoid({ scale: 1.35, bulk: 1.2, skin: "#d8d2bc", head: "skull", top: { style: "plate", color: "#2a2a32" }, legs: { style: "plate", color: "#22222a" }, boots: { style: "plate", color: "#1a1a20" }, gloves: { style: "gauntlet", color: "#2a2a32" }, helm: { style: "great", color: "#2a2a32" }, helmHorns: true, cape: "#3a0a10", tatter: true, weapon: "sword", weaponColor: "#3a3a50", glow: "#ff3a3a", off: "shield", shieldKind: "iron", shieldColor: "#1a1a20", eyes: "#ff3a3a" }),
+  abyssal_fiend: () => humanoid({ scale: 2.4, bulk: 1.4, body: "bare", head: "brute", skin: "#5a1010", hairStyle: "bald", boots: { style: "bare" }, loin: "#1a0505", horns: "#1a0a0a", wings: "#2a0505", tail: "#4a0a0a", eyes: "#ffea3a", claws: true, weapon: "axe", weaponColor: "#2a1a1a", glow: "#ff5a1a" }),
   giant_spider: () => spider({ body: "#2e231a", abd: "#3b2b1d", mark: "#9a6a32", scale: 1.0 }),
   venomous_spider: () => spider({ body: "#16201a", abd: "#21301a", mark: "#8aff3a", leg: "#2a1a30", glow: true, scale: 1.45 }),
-  imp: () => humanoid({ scale: 0.62, skin: "#a8352a", shirt: "#8a2a22", pants: "#3a1410", boots: "#2a0e0a", horns: "#2a1a10", wings: "#5a1a14", tail: "#8a2a22", eyes: "#ffd23a", ears: true }),
+  imp: () => humanoid({ scale: 0.62, body: "bare", head: "goblin", skin: "#a8352a", hairStyle: "bald", boots: { style: "bare" }, loin: "#3a1410", horns: "#2a1a10", wings: "#5a1a14", tail: "#8a2a22", eyes: "#ffd23a", ears: true, claws: true }),
   forest_wolf: () => wolf({ color: "#625e57", dark: "#3d3a35" }),
-  goblin_scout: () => humanoid({ scale: 0.74, skin: "#64803a", ears: true, hood: "#4a3a22", shirt: "#55452a", pants: "#3a3020", weapon: "dagger", eyes: "#ffe14a", headScale: 1.2 }),
-  skeleton: () => humanoid({ thin: true, skin: "#d8d2bc", head: "skull", pants: "#4a4238", boots: "#3a332a", weapon: "sword", weaponColor: "#7a6a5a", off: "shield", shieldColor: "#3a2e22", eyes: "#7fe0ff" }),
-  forest_bandit: () => humanoid({ skin: "#b88466", hood: "#2a2620", shirt: "#3e3226", pants: "#2a241c", cape: "#24201a", weapon: "sword", belt: "#5a3a1a" }),
-  orc_warrior: () => humanoid({ scale: 1.22, bulk: 1.35, skin: "#5a6c34", tusks: true, mohawk: "#1a1410", shirt: "#4a3020", pants: "#2e2418", pauldrons: "#6a6a6a", weapon: "axe", eyes: "#ff3a2a" }),
-  dark_cultist: () => humanoid({ skin: "#8a7a72", robe: "#1c1226", shirt: "#251733", sleeve: "#251733", hood: "#1c1226", weapon: "staff", weaponColor: "#2a1a1a", glow: "#b05cff", eyes: "#d07aff" }),
-  forest_troll: () => humanoid({ scale: 1.75, bulk: 1.5, hunch: true, skin: "#667a64", hair: "#3a4a2a", shirt: "#667a64", pants: "#3a2a1a", weapon: "club", weaponColor: "#5a4632", tusks: true, eyes: "#ffcf3a" }),
+  goblin_scout: () => humanoid({ scale: 0.74, head: "goblin", skin: "#64803a", ears: true, helm: { style: "hood", color: "#4a3a22" }, top: { style: "leather", color: "#55452a" }, legs: { style: "cloth", color: "#3a3020" }, boots: { style: "bare" }, sleeveless: true, weapon: "dagger", eyes: "#ffe14a", headScale: 1.25 }),
+  skeleton: () => humanoid({ body: "bone", skin: "#d8d2bc", head: "skull", top: { color: "#4a4238" }, weapon: "sword", weaponColor: "#7a6a5a", off: "shield", shieldColor: "#3a2e22", eyes: "#7fe0ff" }),
+  forest_bandit: () => humanoid({ skin: "#b88466", beard: "#3a2414", beardStyle: "stubble", helm: { style: "hood", color: "#2a2620" }, top: { style: "leather", color: "#3e3226" }, legs: { style: "leather", color: "#2a241c" }, boots: { style: "boot", color: "#2a1f16" }, cape: "#24201a", tatter: true, weapon: "sword", belt: "#5a3a1a", bracers: "#2a1a10" }),
+  orc_warrior: () => humanoid({ scale: 1.22, bulk: 1.35, body: "bare", head: "brute", skin: "#5a6c34", hairStyle: "bald", tusks: true, mohawk: "#1a1410", legs: { style: "leather", color: "#2e2418" }, boots: { style: "fur", color: "#3a2a1a" }, pauldrons: "#6a6a6a", bracers: "#3a2416", weapon: "axe", eyes: "#ff3a2a", belt: "#3a2416" }),
+  dark_cultist: () => humanoid(robe("#1c1226", { skin: "#8a7a72", faceVoid: true, helm: { style: "hood", color: "#1c1226" }, trim: "#6a2a8a", weapon: "staff", weaponColor: "#2a1a1a", glow: "#b05cff", eyes: "#d07aff" })),
+  forest_troll: () => humanoid({ scale: 1.75, bulk: 1.5, hunch: true, body: "bare", head: "brute", skin: "#667a64", hair: "#3a4a2a", hairStyle: "long", legs: { style: "leather", color: "#3a2a1a" }, boots: { style: "bare" }, loin: "#3a2a1a", weapon: "club", weaponColor: "#5a4632", tusks: true, eyes: "#ffcf3a", claws: true }),
 };
 export const buildMonster = (type) => MONSTER_BUILD[type]();
 
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const NPC_BUILD = {
-  gilded: () => humanoid({ skin: "#d8b090", shirt: "#6a1a2a", pants: "#2a1a24", sleeve: "#c9a24e", hair: "#e8e0d0", beard: "#e8e0d0", weapon: "sword", weaponColor: "#ffd36b", glow: "#ffcf5a", belt: "#c9a24e", cape: "#7a1a2a", bulk: 1.1 }),
-  smith: () => humanoid({ skin: "#c08a6a", shirt: "#5a3a26", pants: "#3a2a1a", beard: "#5a3a1a", hair: "#3a2a1a", weapon: "hammer", belt: "#2a1a0e", bulk: 1.15 }),
-  merchant: () => humanoid({ skin: "#d6a888", shirt: "#7a5a2a", robe: "#6a3a2a", hair: "#7a4a2a", sleeve: "#7a5a2a" }),
-  healer: () => humanoid({ skin: "#e0b898", robe: "#e8e0cc", shirt: "#e8e0cc", sleeve: "#e8e0cc", hood: "#d8cc9c", weapon: "staff", weaponColor: "#c9b07a", glow: "#ffe08a" }),
-  druid: () => humanoid({ skin: "#c09070", robe: "#2e5a3a", shirt: "#3a6a42", sleeve: "#3a6a42", antlers: true, beard: "#bbb", weapon: "staff", weaponColor: "#5a4a2a", glow: "#7affc8" }),
-  elder: () => humanoid({ skin: "#d0a888", robe: "#4a3a5a", shirt: "#5a4a6a", sleeve: "#5a4a6a", beard: "#ddd", hair: "#ccc", weapon: "staff", weaponColor: "#5a4632", glow: "#ffcf7a" }),
-  guard: () => humanoid({ skin: "#c8946e", shirt: "#7a8088", pants: "#3a3a40", helm: "#8a8f96", cape: "#7a1f1f", weapon: "spear", off: "shield", shieldColor: "#7a1f1f", pauldrons: "#8a8f96" }),
-  villager: () => humanoid({ skin: "#d0a080", shirt: ["#6a5a3a", "#5a6a4a", "#7a4a3a"][Math.floor(Math.random() * 3)], pants: "#4a3a2a", hair: "#4a2a1a" }),
-  child: () => humanoid({ scale: 0.6, skin: "#e0b090", shirt: "#4a6a8a", hair: "#9a6a2a", headScale: 1.2 }),
+  gilded: () => humanoid({ bulk: 1.1, skin: "#d8b090", top: { style: "tunic", color: "#6a1a2a" }, legs: { style: "cloth", color: "#2a1a24" }, boots: { style: "boot", color: "#2a1a10" }, hair: "#e8e0d0", beard: "#e8e0d0", beardStyle: "full", weapon: "sword", weaponColor: "#ffd36b", glow: "#ffcf5a", belt: "#c9a24e", cape: "#7a1a2a", mantle: "#c9a24e", helm: { style: "crown", color: "#c9a24e" } }),
+  smith: () => humanoid({ bulk: 1.2, skin: "#c08a6a", top: { style: "leather", color: "#5a3a26" }, sleeveless: true, legs: { style: "cloth", color: "#3a2a1a" }, boots: { style: "boot", color: "#2a1a0e" }, beard: "#5a3a1a", beardStyle: "full", hair: "#3a2a1a", hairStyle: "bald", weapon: "hammer", belt: "#2a1a0e", gloves: { style: "leather", color: "#3a2416" } }),
+  merchant: () => humanoid(robe("#6a3a2a", { skin: "#d6a888", hair: "#7a4a2a", beard: "#7a4a2a", beardStyle: "stubble", trim: "#c9a24e", helm: { style: "cap", color: "#4a2a1a" } })),
+  healer: () => humanoid(robe("#e8e0cc", { skin: "#e0b898", hair: "#c8a060", hairStyle: "long", helm: { style: "hood", color: "#d8cc9c" }, trim: "#c9a24e", weapon: "staff", weaponColor: "#c9b07a", glow: "#ffe08a" })),
+  druid: () => humanoid(robe("#2e5a3a", { skin: "#c09070", antlers: true, hair: "#bbb", hairStyle: "long", beard: "#bbb", beardStyle: "full", trim: "#8a6a3a", mantle: "#4a3a22", weapon: "staff", weaponColor: "#5a4a2a", glow: "#7affc8" })),
+  elder: () => humanoid(robe("#4a3a5a", { skin: "#d0a888", beard: "#ddd", beardStyle: "full", hair: "#ccc", hairStyle: "long", trim: "#c9a24e", weapon: "staff", weaponColor: "#5a4632", glow: "#ffcf7a" })),
+  guard: () => humanoid({ skin: "#c8946e", beard: "#3a2414", beardStyle: "stubble", top: { style: "mail", color: "#8a8f96" }, trim: "#7a1f1f", legs: { style: "plate", color: "#8a8f96" }, boots: { style: "plate", color: "#6a6e74" }, gloves: { style: "gauntlet", color: "#8a8f96" }, helm: { style: "nasal", color: "#8a8f96" }, cape: "#7a1f1f", weapon: "spear", off: "shield", shieldKind: "iron", shieldColor: "#7a1f1f", pauldrons: "#8a8f96" }),
+  villager: () => humanoid({ skin: pick(["#d0a080", "#c08a6a", "#e0b898", "#9a6a4a"]), top: { style: "tunic", color: pick(["#6a5a3a", "#5a6a4a", "#7a4a3a", "#4a5a6a"]) }, legs: { style: "cloth", color: "#4a3a2a" }, boots: { style: "shoe", color: "#3a2a1a" }, hair: pick(["#4a2a1a", "#8a6a3a", "#2a1a10", "#a8a090"]), hairStyle: pick(["short", "long", "tail"]), beard: Math.random() < 0.4 ? "#4a2a1a" : null, beardStyle: "stubble" }),
+  child: () => humanoid({ scale: 0.6, skin: "#e0b090", top: { style: "tunic", color: "#4a6a8a" }, hair: "#9a6a2a", headScale: 1.25 }),
 };
 function waystone() {
-  const root = new THREE.Group(), st = M("#5a5862", { roughness: 0.8 }), rune = M("#9ad8ff", { emissive: "#5ab8ff", emissiveIntensity: 2.2 });
+  const root = new THREE.Group(), st = mat("stone", "#6a6872"), rune = M("#9ad8ff", { emissive: "#5ab8ff", emissiveIntensity: 2.2 });
   mesh(new THREE.CylinderGeometry(1.2, 1.4, 0.4, 8), st, 0, 0.2, 0, root);
-  const m = mesh(new THREE.CylinderGeometry(0.35, 0.55, 3, 6), st, 0, 1.9, 0, root); m.castShadow = true;
+  mesh(new THREE.CylinderGeometry(0.35, 0.55, 3, 6), st, 0, 1.9, 0, root);
   mesh(new THREE.OctahedronGeometry(0.4, 0), rune, 0, 3.8, 0, root);
   for (let i = 0; i < 3; i++) mesh(B(0.08, 0.5, 0.05), rune, Math.sin(i * 2.1) * 0.46, 1.3 + i * 0.7, Math.cos(i * 2.1) * 0.46, root).rotation.y = i * 2.1;
   return { root, kind: "prop", height: 3.6 };
 }
 function trunk() {
-  const root = new THREE.Group(), wood = M("#5a3a20", { roughness: 0.9 }), iron = M("#3a3a40", { metalness: 0.6, roughness: 0.5 }), gold = M("#c9a24e", { metalness: 0.8, roughness: 0.3 });
-  const body = mesh(B(1.6, 0.8, 0.95), wood, 0, 0.4, 0, root); body.castShadow = true;
-  const lid = mesh(new THREE.CylinderGeometry(0.48, 0.48, 1.6, 12, 1, false, 0, Math.PI), wood, 0, 0.8, 0, root); lid.rotation.z = Math.PI / 2; lid.castShadow = true;
-  for (const x of [-0.6, 0, 0.6]) { mesh(B(0.1, 0.84, 1.0), iron, x, 0.4, 0, root); const band = mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.1, 12, 1, false, 0, Math.PI), iron, x, 0.8, 0, root); band.rotation.z = Math.PI / 2; }
+  const root = new THREE.Group(), wood = mat("leather", "#5a3a20"), iron = mat("metal", "#3a3a40"), gold = mat("metal", "#c9a24e");
+  mesh(B(1.6, 0.8, 0.95), wood, 0, 0.4, 0, root);
+  mesh(new THREE.CylinderGeometry(0.48, 0.48, 1.6, 12, 1, false, 0, Math.PI), wood, 0, 0.8, 0, root).rotation.z = Math.PI / 2;
+  for (const x of [-0.6, 0, 0.6]) { mesh(B(0.1, 0.84, 1.0), iron, x, 0.4, 0, root); mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.1, 12, 1, false, 0, Math.PI), iron, x, 0.8, 0, root).rotation.z = Math.PI / 2; }
   mesh(B(0.22, 0.26, 0.06), gold, 0, 0.72, 0.5, root);
   return { root, kind: "prop", height: 1.6 };
 }
 export const buildNpc = (kind) => kind === "trunk" ? trunk() : kind === "waystone" ? waystone() : (NPC_BUILD[kind] || NPC_BUILD.villager)();
 
 const CLASS_LOOK = {
-  warrior: { skin: "#c8946e", shirt: "#6a6e74", pants: "#3a3028", hair: "#3a2414", pauldrons: "#80868e", belt: "#3a2414" },
-  wizard: { skin: "#d8b090", shirt: "#2a2e5a", sleeve: "#2a2e5a", robe: "#23264a", hat: "#1e2044", hair: "#bbb" },
-  warlock: { skin: "#c8b0a8", shirt: "#3a0e1e", sleeve: "#2a0a16", robe: "#1e0810", hat: "#140610", hair: "#1a1a1a", cape: "#4a0a1e" },
-  ranger: { skin: "#c49070", shirt: "#3a4a2a", pants: "#3a3020", hood: "#2e3e22", cape: "#2e3e22" },
+  warrior: { skin: "#c8946e", hair: "#3a2414", hairStyle: "short", beard: "#3a2414", beardStyle: "stubble", top: { style: "tunic", color: "#6a5a48" }, legs: { style: "leather", color: "#3a3028" }, boots: { style: "boot", color: "#3a2a1c" }, bracers: "#4a3020", pauldrons: "#80868e", belt: "#3a2414" },
+  wizard: { skin: "#d8b090", hair: "#cfcfcf", hairStyle: "long", beard: "#d0d0d0", beardStyle: "full", top: { style: "robe", color: "#2a2e6a" }, trim: "#c9a24e", helm: { style: "hat", color: "#1e2050" }, boots: { style: "shoe", color: "#2a1f16" } },
+  warlock: { skin: "#c8b0a8", hair: "#141414", hairStyle: "long", top: { style: "robe", color: "#3a0e1e" }, trim: "#8a1a2a", helm: { style: "hood", color: "#1e0810" }, cape: "#4a0a1e", robeCape: true, iris: "#8a1010", boots: { style: "shoe", color: "#1a0e0a" } },
+  ranger: { skin: "#c49070", hair: "#6a4a2a", hairStyle: "tail", top: { style: "leather", color: "#4a5a2e" }, undershirt: "#3a4a2a", legs: { style: "leather", color: "#3a3020" }, helm: { style: "hood", color: "#2e3e22" }, cape: "#2e3e22", bracers: "#3a2a1a", boots: { style: "boot", color: "#3a2a1a" } },
 };
+const helmStyle = (id) => /cap/.test(id) ? "cap" : /crown_/.test(id) ? "crown" : /heartwood|circlet/.test(id) ? "circlet" : /dread|great/.test(id) ? "great" : /hood|cowl/.test(id) ? "hood" : "nasal";
+const chestStyle = (id) => /robe|vestment/.test(id) ? "robe" : /plate/.test(id) ? "plate" : /chain|mail/.test(id) ? "mail" : /cloak|mantle/.test(id) ? "cloak" : /leather|garb|hide/.test(id) ? "leather" : "tunic";
+
 export function buildPlayer(cls, eqStr, items) {
-  const [main, off, head, chest] = (eqStr || "").split("|");
-  const look = { ...CLASS_LOOK[cls] };
-  if (chest && items[chest]?.color) { look.shirt = items[chest].color; if (look.robe) look.robe = items[chest].color; if (look.sleeve) look.sleeve = items[chest].color; }
-  if (head) { look.helm = items[head]?.color === "#6b5a45" ? "#6b5a45" : (items[head]?.color || "#8a8f96"); delete look.hat; delete look.hood; delete look.hair; }
+  const [main, off, head, chest, counts, feet, legs, hands, belt] = (eqStr || "").split("|");
+  const look = { ...(CLASS_LOOK[cls] || CLASS_LOOK.warrior) };
+  const col = (id, d) => items[id]?.color || d;
+  if (chest) {
+    const st = chestStyle(chest), c = col(chest, "#6b5a45");
+    look.top = { style: st === "cloak" ? (look.top.style === "robe" ? "robe" : "tunic") : st, color: st === "cloak" ? (look.top.color) : c };
+    if (st === "cloak") { look.cape = c; look.mantle = c; look.robeCape = true; }
+    if (st === "plate") { look.pauldrons = c; look.gloves = look.gloves || { style: "gauntlet", color: c }; }
+    if (st === "mail") look.trim = look.trim && look.top.style !== "robe" ? look.trim : { warrior: "#7a1f1f", ranger: "#2e3e22", wizard: "#2a2e6a", warlock: "#3a0e1e" }[cls];
+  }
+  if (head) { const hs = helmStyle(head); look.helm = { style: hs, color: col(head, "#8a8f96") }; if (head === "dreadknight_helm") look.helmHorns = true; }
+  if (feet) look.boots = { style: /wolf/.test(feet) ? "fur" : /plate|sabaton/.test(feet) ? "plate" : "boot", color: col(feet, "#4a3a2a") };
+  if (legs) look.legs = { style: /greave|plate/.test(legs) ? "plate" : /leather/.test(legs) ? "leather" : "cloth", color: col(legs, "#4a3a2a") };
+  if (hands) look.gloves = { style: /gauntlet/.test(hands) ? "gauntlet" : "leather", color: col(hands, "#5a4030") };
+  if (belt) look.belt = col(belt, "#3a2414");
   look.weapon = weaponKind(main); look.weaponColor = items[main]?.color;
-  look.glow = main === "ember_staff" ? "#ff7a2a" : main === "cultist_staff" ? "#b05cff" : "#7fd0ff";
-  look.off = off === "wooden_shield" || off === "iron_shield" ? "shield" : off === "spell_tome" ? "tome" : off === "quiver" ? "quiver" : null;
-  look.shieldColor = off === "iron_shield" ? "#8a8f96" : "#6a4a2a";
+  look.glow = main === "ember_staff" ? "#ff7a2a" : main === "cultist_staff" ? "#b05cff" : ["epic", "legendary"].includes(items[main]?.rarity) ? items[main].color : "#7fd0ff";
+  look.off = off === "wooden_shield" || off === "iron_shield" || /shield|aegis|bulwark/.test(off || "") ? "shield" : off === "spell_tome" || /tome|grimoire/.test(off || "") ? "tome" : /quiver/.test(off || "") ? "quiver" : null;
+  look.shieldKind = /iron|aegis|bulwark/.test(off || "") ? "iron" : "wood";
+  look.shieldColor = items[off]?.color || (look.shieldKind === "iron" ? "#8a8f96" : "#6a4a2a");
   const rig = humanoid(look);
   rig.eqStr = eqStr;
-  addGearGlow(rig, items[main]?.rarity, (eqStr || "").split("|")[4]);
+  addGearGlow(rig, items[main]?.rarity, counts);
   return rig;
 }
 
@@ -313,57 +153,4 @@ export function proxy(radius, height, data) {
   return m;
 }
 
-// ---------- animation
-export function animateRig(rig, a, dt, t) {
-  const moving = a.moving, sp = rig.kind === "humanoid" ? 7 : rig.kind === "spider" ? 11 : 10;
-  a.phase = (a.phase || 0) + dt * (moving ? sp : 0);
-  a.atk = Math.max(0, (a.atk || 0) - dt * 2.4);
-  a.cast = Math.max(0, (a.cast || 0) - dt * 2);
-  a.hurt = Math.max(0, (a.hurt || 0) - dt * 4);
-  const sw = moving ? Math.sin(a.phase) : 0;
-  if (a.dead) {
-    a.deadT = (a.deadT || 0) + dt;
-    const k = Math.min(1, a.deadT * 2.5);
-    if (rig.kind === "humanoid") rig.body.rotation.x = -k * Math.PI / 2;
-    else if (rig.kind === "quad") rig.body.rotation.z = k * Math.PI / 2;
-    else rig.legs.forEach((l) => { l.up.rotation.z = 0.7 - k * 1.5; l.kn.rotation.z = -1.9 - k * 0.8; });
-    rig.body.position.y = (rig.kind === "humanoid" ? 0.15 : rig.kind === "spider" ? 0.3 : 0.4) * k * (rig.kind === "humanoid" ? 1 : 1) - Math.max(0, a.deadT - 2.2) * 0.6;
-    return;
-  }
-  if (a.deadT) { a.deadT = 0; rig.body.rotation.set(0, 0, 0); rig.body.position.y = rig.kind === "spider" ? 0.45 : rig.kind === "quad" ? 0.72 : 0; }
-  const atkCurve = a.atk > 0 ? Math.sin((1 - a.atk) * Math.PI) : 0;
-  if (rig.kind === "humanoid") {
-    rig.legL.hip.rotation.x = sw * 0.65; rig.legR.hip.rotation.x = -sw * 0.65;
-    rig.legL.knee.rotation.x = Math.max(0, -sw) * 0.8; rig.legR.knee.rotation.x = Math.max(0, sw) * 0.8;
-    rig.body.position.y = moving ? Math.abs(Math.cos(a.phase)) * 0.05 : Math.sin(t * 2) * 0.008;
-    const ranged = rig.weaponKind === "bow";
-    rig.armL.sh.rotation.x = -sw * 0.5; rig.armR.sh.rotation.x = sw * 0.5;
-    rig.armL.sh.rotation.z = -0.08; rig.armR.sh.rotation.z = 0.08;
-    rig.armR.el.rotation.x = -0.3; rig.armL.el.rotation.x = -0.3;
-    if (a.atk > 0) {
-      if (ranged) { rig.armL.sh.rotation.x = -1.5; rig.armR.sh.rotation.x = -1.5 + atkCurve * 0.3; rig.armR.el.rotation.x = -atkCurve * 1.2; }
-      else if (rig.weaponKind === "staff") { rig.armR.sh.rotation.x = -1.3 * atkCurve - 0.2; }
-      else { rig.armR.sh.rotation.x = -2.6 * atkCurve + (1 - a.atk) * 0.8 * atkCurve; rig.armR.el.rotation.x = -0.6 * atkCurve; rig.torso.rotation.y = -0.4 * atkCurve; }
-    } else rig.torso.rotation.y = 0;
-    if (a.cast > 0) { const c = Math.sin(a.cast * Math.PI); rig.armL.sh.rotation.x = -2.2 * c; rig.armR.sh.rotation.x = -2.2 * c; }
-    if (rig.wings) rig.wings.forEach((w, i) => { w.rotation.y = Math.sin(t * 14 + i * Math.PI) * 0.5; });
-  } else if (rig.kind === "spider") {
-    rig.legs.forEach((l) => { l.up.rotation.z = 0.7 + (moving ? Math.sin(a.phase + l.ph) * 0.35 : Math.sin(t * 1.5 + l.ph) * 0.03); l.up.rotation.x = moving ? Math.cos(a.phase + l.ph) * 0.25 : 0; });
-    rig.body.position.y = 0.45 + (moving ? Math.abs(Math.sin(a.phase * 2)) * 0.04 : 0);
-    rig.body.position.z = atkCurve * 0.35;
-    rig.body.rotation.x = -atkCurve * 0.4;
-    for (let i = 0; i < 2; i++) rig.legs[i].up.rotation.z = 0.7 + atkCurve * 0.9 + (moving ? 0 : 0);
-  } else {
-    rig.legs.forEach((l) => { l.up.rotation.x = moving ? Math.sin(a.phase + l.ph) * 0.7 : 0; l.kn.rotation.x = moving ? Math.max(0, Math.sin(a.phase + l.ph + 1)) * -0.6 : 0; });
-    rig.body.position.y = 0.72 + (moving ? Math.abs(Math.sin(a.phase)) * 0.05 : 0);
-    rig.head.rotation.x = -atkCurve * 0.5 + (moving ? 0 : Math.sin(t * 1.2) * 0.05);
-    rig.head.position.z = 0.55 + atkCurve * 0.25;
-    if (rig.tail) rig.tail.rotation.y = Math.sin(t * (moving ? 10 : 3)) * 0.4;
-  }
-  const flash = a.hurt > 0;
-  if (flash !== a.flashOn) {
-    a.flashOn = flash;
-    rig.root.traverse((o) => { if (o.isMesh && o.material && !o.material.isMeshBasicMaterial) { if (flash) { o.userData.m = o.material; o.material = HURT; } else if (o.userData.m) o.material = o.userData.m; } });
-  }
-}
-const HURT = new THREE.MeshStandardMaterial({ color: "#ff6a5a", emissive: "#ff2a1a", emissiveIntensity: 0.9, flatShading: true });
+export { animateRig } from "./rig/anim";

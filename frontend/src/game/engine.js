@@ -4,6 +4,7 @@ import { buildStructures, animateStructures } from "./structures";
 import { buildMonster, buildNpc, buildPlayer, buildLoot, proxy, animateGlow, animateRig, RARITY } from "./models";
 import { getState, setState } from "./store";
 import { sfx } from "./audio";
+import { setEnv } from "./rig/tex";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
@@ -28,7 +29,7 @@ export class Engine {
     this.entities = new Map(); this.fxList = []; this.nums = []; this.hover = null; this.discovered = new Set(JSON.parse(localStorage.getItem(`sx_disc_${meId}`) || "[]"));
     this.yaw = 0; this.zoom = 19; this.camTarget = new THREE.Vector3(90, 0, 195); this.clock = new THREE.Clock();
     this.quality = quality || "high"; this.stepT = 0; this.lastRegion = ""; this.ray = new THREE.Raycaster(); this.mouse = new THREE.Vector2(); this.mouseIn = false;
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" }); setEnv(this.renderer);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.quality === "high" ? 1.5 : 1));
     this.renderer.shadowMap.enabled = true; this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.2;
@@ -90,6 +91,7 @@ export class Engine {
   removeEntity(e) {
     this.scene.remove(e.grp); this.proxies = this.proxies.filter((p) => p !== e.px);
     if (e.plate) e.plate.remove();
+    e.rig.dispose?.();
     this.entities.delete(e.id);
   }
   onSnapshot(s) {

@@ -252,7 +252,7 @@ class Game:
             if (o.x - p.x) ** 2 + (o.z - p.z) ** 2 < VIEW_R2:
                 eq = "|".join(o.equipment[s]["item"] if s in o.equipment else "" for s in ("main", "off", "head", "chest"))
                 rar = [ITEMS[e["item"]]["rarity"] for e in o.equipment.values()]
-                eq += f"|{rar.count('legendary')},{rar.count('epic')}"
+                eq += f"|{rar.count('legendary')},{rar.count('epic')}|" + "|".join(o.equipment[s]["item"] if s in o.equipment else "" for s in ("feet", "legs", "hands", "belt"))
                 ps.append([o.id, o.name, o.level, o.cls, round(o.x, 2), round(o.z, 2), round(o.rot, 2), 1 if o.moving else 0,
                            round(o.hp), o.max_hp, eq, 1 if o.dead_until else 0, 1 if o.linkdead_at else 0])
         for m in self.monsters.values():
