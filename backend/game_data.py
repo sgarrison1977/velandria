@@ -31,11 +31,13 @@ XP_TABLE = _xp_table()
 
 CLASSES = {
     "warrior": dict(name="Warrior", attrs=dict(str=9, sta=8, wis=3, int=3, dex=5), weapon="rusty_sword", offhand="wooden_shield",
-                    range=2.4, start_ability="power_strike", desc="Steel and grit. Fights at arm's length, shrugs off blows."),
-    "mage": dict(name="Mage", attrs=dict(str=3, sta=5, wis=8, int=9, dex=3), weapon="oak_staff", offhand=None,
-                 range=11.0, start_ability="arcane_bolt", desc="Wields raw arcana from afar. Fragile, devastating."),
+                    range=2.4, start_abilities=[], desc="Steel and grit. Fights at arm's length, shrugs off blows."),
     "ranger": dict(name="Ranger", attrs=dict(str=5, sta=6, wis=4, int=3, dex=10), weapon="hunting_bow", offhand=None,
-                   range=14.0, start_ability="aimed_shot", desc="Swift hunter of the deep woods. Strikes before the foe arrives."),
+                   range=14.0, start_abilities=[], desc="Swift hunter of the deep woods. Strikes before the foe arrives."),
+    "wizard": dict(name="Wizard", attrs=dict(str=3, sta=5, wis=8, int=9, dex=3), weapon="oak_staff", offhand=None,
+                   range=11.0, start_abilities=["agredi"], desc="Master of pure arcane energy. Beams, blasts and blinks."),
+    "warlock": dict(name="Warlock", attrs=dict(str=3, sta=6, wis=7, int=9, dex=3), weapon="oak_staff", offhand=None,
+                    range=11.0, start_abilities=["agredi"], desc="Wields fire, poison and rot. Watches foes wither."),
 }
 
 ATTR_INFO = {
@@ -46,37 +48,48 @@ ATTR_INFO = {
     "dex": "Dexterity: faster attacks, +0.3% crit, evasion, and ranged damage.",
 }
 
+ALL_CLS, CASTERS, CHARGE_SECS = ["warrior", "ranger", "wizard", "warlock"], ["wizard", "warlock"], 300
 ABILITIES = {
-    "power_strike": dict(name="Power Strike", cls="warrior", level=1, cost=8, cd=0, range=2.6, kind="melee", mult=1.9, flat=4,
-                         desc="A crushing blow dealing 190% weapon damage +4."),
-    "iron_guard": dict(name="Iron Guard", cls="warrior", level=3, cost=15, cd=0, kind="buff", buff="armor", value=25, dur=10,
-                       desc="Brace yourself: +25 armor for 10 seconds."),
-    "cleave": dict(name="Cleave", cls="warrior", level=5, cost=18, cd=0, kind="aoe_self", radius=4.0, mult=1.3, flat=2,
-                   desc="Sweep all enemies within 4m for 130% weapon damage."),
-    "arcane_bolt": dict(name="Arcane Bolt", cls="mage", level=1, cost=6, cd=0, range=14, kind="spell", base=8, scale=1.2,
-                        desc="Hurl a bolt of arcane force: 8 + 120% Intelligence damage."),
-    "flame_burst": dict(name="Flame Burst", cls="mage", level=3, cost=20, cd=0, range=12, kind="aoe_target", radius=4.0, base=12, scale=1.0,
-                        desc="Erupt fire at your target, burning everything within 4m."),
-    "aimed_shot": dict(name="Aimed Shot", cls="ranger", level=1, cost=7, cd=0, range=16, kind="ranged", mult=1.8, flat=3,
-                       desc="A careful shot for 180% weapon damage +3 at long range."),
-    "venom_arrow": dict(name="Venom Arrow", cls="ranger", level=4, cost=14, cd=0, range=16, kind="dot", base=6, scale=0.5, ticks=6,
-                        desc="Poison the target, dealing damage every second for 6s."),
-    "whirlwind": dict(name="Whirlwind", cls="warrior", level=8, cost=25, cd=0, kind="aoe_self", radius=6.0, mult=1.6, flat=6,
-                      desc="Spin with your blade, striking every enemy within 6m for 160% weapon damage +6."),
-    "earthshatter": dict(name="Earthshatter", cls="warrior", level=12, cost=32, cd=0, range=8, kind="aoe_target", radius=6.0, mult=2.0, flat=8,
-                         desc="Slam the ground at your target, hitting all enemies within 6m for 200% weapon damage +8."),
-    "frost_nova": dict(name="Frost Nova", cls="mage", level=6, cost=22, cd=0, kind="aoe_self", radius=7.0, base=18, scale=1.3,
-                       desc="Blast frost outward, dealing 18 + 130% Intelligence to all enemies within 7m."),
-    "meteor_storm": dict(name="Meteor Storm", cls="mage", level=8, cost=35, cd=0, range=16, kind="aoe_target", radius=7.0, base=30, scale=1.8,
-                         desc="Call down meteors on your target: 30 + 180% Intelligence to everything within 7m."),
-    "volley": dict(name="Volley", cls="ranger", level=6, cost=20, cd=0, range=18, kind="aoe_target", radius=6.0, mult=1.3, flat=4,
-                   desc="Rain arrows on your target, hitting all enemies within 6m for 130% weapon damage +4."),
-    "multishot": dict(name="Multishot", cls="ranger", level=8, cost=24, cd=0, range=16, kind="multi", count=5, mult=1.2, flat=3,
-                      desc="Loose arrows at up to 5 nearby enemies within 16m for 120% weapon damage +3 each."),
-    "minor_heal": dict(name="Minor Heal", cls=None, level=2, cost=12, cd=0, kind="heal", base=25, scale=1.5,
-                       desc="Restore 25 + 150% Wisdom health to yourself."),
-    "quickstep": dict(name="Quickstep", cls=None, level=2, cost=10, cd=0, kind="buff", buff="speed", value=0.5, dur=5,
-                      desc="Move 50% faster for 5 seconds."),
+    "agredi": dict(name="Agredi", cls=CASTERS, level=1, cost=5, cd=0, range=14, kind="spell", base=8, scale=1.2,
+                   desc="Magic projectile: 8 + 120% Intelligence damage."),
+    "minor_mederi": dict(name="Minor Mederi", cls=ALL_CLS, level=2, cost=12, cd=0, kind="heal", base=25, scale=1.5,
+                         desc="Heal yourself for 25 + 150% Wisdom health."),
+    "minor_sanatio": dict(name="Minor Sanatio", cls=ALL_CLS, level=2, cost=8, cd=0, kind="cure",
+                          desc="Cure poison: purge every poison from your body."),
+    "double_stab": dict(name="Double Stab", cls=["warrior"], level=2, cost=8, cd=0, range=2.6, kind="melee", hits=2, gap=0.15, mult=1.05, flat=2,
+                        desc="Stab your target twice in a flash, each for 105% weapon damage +2."),
+    "attack_run": dict(name="Attack Run", cls=["warrior", "ranger"], level=3, cost=12, cd=0, range=16, kind="dash", mult=1.6, flat=4,
+                       desc="Rush up to 16m to your target and strike for 160% weapon damage +4."),
+    "multi_shot": dict(name="Multi Shot", cls=["ranger"], level=3, cost=20, cd=0, range=16, kind="multi", count=10, mult=1.1, flat=3,
+                       desc="Arrows fly in all directions, hitting up to 10 enemies within 16m for 110% weapon damage +3."),
+    "arrow_barrage": dict(name="Arrow Barrage", cls=["ranger"], level=3, cost=18, cd=0, range=16, kind="ranged", hits=10, gap=0.08, mult=0.45, flat=1,
+                          desc="Fire 10 arrows at your target in rapid succession, each 45% weapon damage +1."),
+    "ignis": dict(name="Ignis", cls=CASTERS, level=3, cost=14, cd=0, range=15, kind="spell", base=16, scale=1.7, splash=2.5,
+                  desc="Fireball: 16 + 170% Intelligence to the target and half that to enemies within 2.5m."),
+    "spin_attack": dict(name="Spin Attack", cls=["warrior"], level=4, cost=16, cd=0, kind="aoe_self", radius=5.0, mult=1.4, flat=4,
+                        desc="Spin with your weapon, hitting every enemy within 5m for 140% weapon damage +4."),
+    "multi_vis_nex": dict(name="Multi Vis Nex", cls=["wizard"], level=4, cost=24, cd=0, range=14, kind="multi", count=8, base=12, scale=1.1,
+                          desc="Energy blast that strikes up to 8 enemies within 14m for 12 + 110% Intelligence each."),
+    "radius": dict(name="Radius", cls=["wizard"], level=4, cost=16, cd=0, range=16, kind="spell", base=24, scale=2.1,
+                   desc="Energy beam: a focused ray dealing 24 + 210% Intelligence to one target."),
+    "venenum": dict(name="Venenum", cls=["warlock"], level=4, cost=12, cd=0, range=15, kind="dot", base=5, scale=0.45, stat="int", ticks=8,
+                    desc="Poison your target for 5 + 45% Intelligence every second for 8 seconds."),
+    "flamma_ventus": dict(name="Flamma Ventus", cls=["warlock"], level=5, cost=22, cd=0, range=10, kind="cone", angle=0.7, base=14, scale=1.3,
+                          desc="Flame wind: scorch every enemy in a 10m cone for 14 + 130% Intelligence."),
+    "tabes_viscera": dict(name="Tabes Viscera", cls=["warlock"], level=6, cost=30, cd=0, kind="aoe_self", radius=9.0, base=10, scale=1.0, rot=0.3,
+                          desc="Rot flesh: every enemy within 9m takes 10 + 100% Intelligence, then rots for 5 seconds."),
+    "teuri": dict(name="Teuri", cls=ALL_CLS, level=5, cost=15, cd=0, kind="buff", buff="armor", value=10, per_level=0.8, dur=CHARGE_SECS, charge=True,
+                  desc="Charge spell: +10 armor (+0.8 per level) for 5 minutes."),
+    "velocitas": dict(name="Velocitas", cls=ALL_CLS, level=5, cost=12, cd=0, kind="buff", buff="speed", value=0.4, dur=CHARGE_SECS, charge=True,
+                      desc="Charge spell: move 40% faster for 5 minutes."),
+    "robur": dict(name="Robur", cls=ALL_CLS, level=5, cost=15, cd=0, kind="buff", buff="str", value=5, per_level=0.25, dur=CHARGE_SECS, charge=True,
+                  desc="Charge spell: +5 Strength (+0.25 per level) for 5 minutes."),
+    "contra_visus": dict(name="Contra Visus", cls=ALL_CLS, level=5, cost=20, cd=0, kind="buff", buff="invis", value=1, dur=CHARGE_SECS, charge=True,
+                         desc="Charge spell: monsters cannot see or attack you for 5 minutes. Use Stop Action to reappear."),
+    "pergere_trans": dict(name="Pergere Trans", cls=CASTERS, level=8, cost=15, cd=0, range=12, kind="blink",
+                          desc="Teleport up to 12m to the spot under your cursor."),
+    "creare_porta": dict(name="Creare Porta", cls=ALL_CLS, level=10, cost=30, cd=0, range=8, kind="portal",
+                         desc="Open a portal to one of your marks (type mark0 – mark9 in chat to set). Lasts 60 seconds."),
 }
 
 ACTIONS = ["attack_nearest", "stop", "inventory", "character", "skills", "map", "quests", "chat", "menu"] + [f"ability:{a}" for a in ABILITIES]
@@ -87,7 +100,7 @@ DEFAULT_BINDS = {"attack_nearest": "Space", "stop": "KeyS", "inventory": "KeyI",
 def default_binds(cls):
     b = dict(DEFAULT_BINDS)
     keys = ["Digit1", "Digit2", "Digit3", "Digit4", "Digit5", "Digit6", "Digit7", "Digit8", "Digit9", "Digit0"]
-    abil = [k for k, a in ABILITIES.items() if a["cls"] == cls] + [k for k, a in ABILITIES.items() if a["cls"] is None]
+    abil = [k for k, a in ABILITIES.items() if cls in a["cls"]]
     for i, a in enumerate(abil):
         b[f"ability:{a}"] = keys[i] if i < len(keys) else ""
     return b
@@ -411,5 +424,40 @@ def public_data():
                 merchants={k: dict(name=v["name"]) for k, v in MERCHANTS.items()})
 
 
-def sell_price(item_id):
-    return max(1, math.floor(ITEMS[item_id]["price"] * SELL_RATIO)) if ITEMS[item_id]["price"] > 0 else 0
+def sell_price(item_id, props=None):
+    base = max(1, math.floor(ITEMS[item_id]["price"] * SELL_RATIO)) if ITEMS[item_id]["price"] > 0 else 0
+    return round(base * (1 + 0.3 * len(props))) if props and base else base
+
+
+for _it in ITEMS.values():
+    if _it.get("cls") and "mage" in _it["cls"]:
+        _it["cls"] = [c for c in _it["cls"] if c != "mage"] + CASTERS
+
+# random item properties: (stat, name prefix, base, per item-level)
+AFFIX_POOL = [("str", "Mighty", 2, 0.3), ("sta", "Sturdy", 2, 0.3), ("wis", "Wise", 2, 0.3), ("int", "Arcane", 2, 0.3), ("dex", "Nimble", 2, 0.3),
+              ("hp_regen", "Regenerating", 1, 0.12), ("mp_regen", "Mystic", 1, 0.1), ("life_steal", "Vampiric", 1, 0.06),
+              ("mana_steal", "Siphoning", 1, 0.05), ("crit", "Keen", 1, 0.08), ("max_hp", "Vital", 10, 2.0), ("max_mp", "Brimming", 8, 1.5),
+              ("armor", "Warded", 3, 0.6), ("move_speed", "Swift", 3, 0.1)]
+AFFIX_SUFFIX = ["of the Bear", "of the Fox", "of the Owl", "of Embers", "of the Void", "of Ages", "of the Wolf", "of Storms", "of the Moon"]
+RANDOM_GEAR_CHANCE = 0.25
+
+
+def roll_props(item_id, mlvl, rnd, force=False):
+    it = ITEMS[item_id]
+    if it["type"] not in ("weapon", "armor") or (not force and rnd.random() > 0.35 + min(0.4, mlvl * 0.008)):
+        return None, None
+    n = rnd.choices([1, 2, 3, 4], [50, 30, 15, 5 + mlvl / 5])[0]
+    lv = max(mlvl, it.get("lvl", 1))
+    picks = rnd.sample(AFFIX_POOL, n)
+    props = {k: max(1, round(base + per * lv * rnd.uniform(0.5, 1.0))) for k, _, base, per in picks}
+    name = f"{picks[0][1]} {it['name']}" + (f" {rnd.choice(AFFIX_SUFFIX)}" if n >= 3 else "")
+    return props, name
+
+
+QUEST_ONLY = {i for q in QUESTS.values() for i, _ in q["reward"].get("items", [])}
+
+
+def random_gear(mlvl, rnd):
+    pool = [k for k, it in ITEMS.items() if it["type"] in ("weapon", "armor") and it["price"] > 0 and it["rarity"] != "legendary" and k not in QUEST_ONLY
+            and mlvl - 15 <= it.get("lvl", 1) <= mlvl + 3]
+    return rnd.choice(pool) if pool else None

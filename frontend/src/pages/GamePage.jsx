@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { PartyFrame, PartyInvite } from "../components/game/Party";
+import { BuffBar, MarkPicker } from "../components/game/Spells";
 import { useNavigate, useParams } from "react-router-dom";
 import { http } from "@/lib/api";
 import { Engine } from "@/game/engine";
@@ -48,7 +49,7 @@ export default function GamePage() {
           case "dialog": setState({ dialog: m, merchant: null }); sfx("open"); break;
           case "merchant": setState({ merchant: m, dialog: null }); break;
           case "trade": toast(m.msg, "good"); sfx("coin"); break;
-          case "pickup": toast(`Picked up ${m.qty > 1 ? m.qty + "× " : ""}${d.data.items[m.item].name}`, "good"); sfx(m.item === "gold" ? "coin" : "loot"); break;
+          case "pickup": toast(`Picked up ${m.qty > 1 ? m.qty + "× " : ""}${m.name || d.data.items[m.item].name}`, "good"); sfx(m.item === "gold" ? "coin" : "loot"); break;
           case "equip": sfx("open"); break;
           case "levelup": setState({ levelup: m.lv }); setTimeout(() => setState({ levelup: null }), 3500); break;
           case "inspect": setState({ inspect: m.d }); break;
@@ -79,14 +80,16 @@ export default function GamePage() {
       const n = net.current;
       if (action.startsWith("ability:")) { const ab = action.slice(8); if (!st.me.abilities.includes(ab)) { toast(`${data.abilities[ab].name} is locked.`, "error"); return; } const ad = data.abilities[ab], hov = eng.current?.hover;
         const id = ad.kind !== "melee" && hov?.kind === "monster" && !hov.anim.dead ? hov.id : eng.current?.targetId;
-        const gp = ad.kind === "aoe_target" ? eng.current?.pointerGround() : null;
+        if (ad.kind === "portal") { setState({ markPick: true }); return; }
+        const gp = ["aoe_target", "blink", "cone"].includes(ad.kind) ? eng.current?.pointerGround() : null;
         n.send({ t: "cast", ab, id, pt: gp ? [gp.x, gp.z] : undefined }); }
       else if (action === "attack_nearest") { const hov = eng.current?.hover; if (hov?.kind === "monster" && !hov.anim.dead) n.send({ t: "target", id: hov.id }); else n.send({ t: "attack_nearest" }); }
       else if (action === "stop") n.send({ t: "stop" });
       else if (action === "chat") setState((s) => ({ chatFocus: (s.chatFocus || 0) + 1 }));
       else if (action === "menu") {
-        const anyOpen = Object.values(st.panels).some(Boolean) || st.dialog || st.merchant || st.inspect || st.ctx || st.exitMenu;
-        if (anyOpen) setState({ panels: {}, dialog: null, merchant: null, inspect: null, ctx: null, exitMenu: false }); else togglePanel("settings", true);
+        const anyOpen = Object.values(st.panels).some(Boolean) || st.dialog || st.merchant || st.inspect || st.ctx || st.exitMenu || st.markPick || st.placing;
+        if (eng.current) eng.current.placing = null;
+        if (anyOpen) setState({ panels: {}, dialog: null, merchant: null, inspect: null, ctx: null, exitMenu: false, markPick: false, placing: null }); else togglePanel("settings", true);
       } else { sfx("open"); togglePanel(action); }
     };
     window.addEventListener("keydown", down);
@@ -108,6 +111,8 @@ export default function GamePage() {
         <div className="bottom"><XpBar data={data} /></div>
         <MenuBar onLogout={logout} />
         <ExitButton onLogout={logout} />
+        <BuffBar data={data} />
+        <MarkPicker net={n} engine={e} />
         <Toasts /><Banners />
         <ContextMenu net={n} />
         <PartyFrame net={n} data={data} />

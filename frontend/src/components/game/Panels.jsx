@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Plus, Lock, Check } from "lucide-react";
 import { useStore, togglePanel } from "../../game/store";
-import { Panel, ItemIcon, ItemTip, Hover, AbIcon } from "./ui";
+import { Panel, ItemIcon, ItemTip, Hover, AbIcon, inst } from "./ui";
 import { sfx } from "../../game/audio";
 
 const SLOTS = [["head", "Head"], ["amulet", "Amulet"], ["main", "Main hand"], ["chest", "Chest"], ["off", "Off hand"], ["hands", "Hands"], ["legs", "Legs"], ["ring", "Ring"], ["feet", "Feet"]];
@@ -13,7 +13,7 @@ export function Equipment({ data, net, me }) {
         const e = me.equipment[slot], it = e && data.items[e.item];
         return (
           <div key={slot} className="equip-slot">
-            {e ? <Hover tip={<ItemTip id={e.item} item={it} extra={<div className="tip-meta">Click to unequip</div>} />}>
+            {e ? <Hover tip={<ItemTip id={e.item} item={inst(it, e)} extra={<div className="tip-meta">Click to unequip</div>} />}>
               <ItemIcon id={e.item} item={it} testid={`equip-slot-${slot}`} onClick={() => { sfx("click"); net.send({ t: "unequip", slot }); }} />
             </Hover> : <div className="item-icon empty" data-testid={`equip-slot-${slot}`} />}
             <em>{label}</em>
@@ -29,7 +29,7 @@ export function InventoryGrid({ data, me, onSlot, onRight, sellMode }) {
   return (
     <div className="inv-grid" data-testid="inventory-grid">
       {cells.map((s, i) => s ? (
-        <Hover key={s.uid} tip={<ItemTip id={s.item} item={data.items[s.item]} me={me} extra={sellMode ? <div className="tip-meta gold-t">Sells for {Math.max(1, Math.floor(data.items[s.item].price * data.sell_ratio))}g each</div> : <div className="tip-meta">Right-click to {data.items[s.item].type === "consumable" ? "use" : "equip"}</div>} />}>
+        <Hover key={s.uid} tip={<ItemTip id={s.item} item={inst(data.items[s.item], s)} me={me} extra={sellMode ? <div className="tip-meta gold-t">Sells for {Math.max(1, Math.floor(data.items[s.item].price * data.sell_ratio))}g each</div> : <div className="tip-meta">Right-click to {data.items[s.item].type === "consumable" ? "use" : "equip"}</div>} />}>
           <ItemIcon id={s.item} item={data.items[s.item]} qty={s.qty} testid={`inv-slot-${i}`} onClick={() => onSlot(s)} onContextMenu={(e) => { e.preventDefault(); onRight && onRight(s); }} />
         </Hover>
       ) : <div key={`e${i}`} className="item-icon empty" data-testid={`inv-slot-${i}`} />)}
@@ -50,7 +50,7 @@ export function InventoryPanel({ data, net }) {
       <div className="inv-head"><span>Bag <b data-testid="inventory-count">{me.inventory.length}/{data.inv_slots}</b></span><span className="gold-t" data-testid="inventory-gold">{me.gold.toLocaleString()} gold</span></div>
       <InventoryGrid data={data} me={me} onSlot={(x) => setSel(x.uid)} onRight={use} />
       {s && <div className="inv-detail" data-testid="inventory-detail">
-        <ItemTip id={s.item} item={it} me={me} />
+        <ItemTip id={s.item} item={inst(it, s)} me={me} />
         <div className="row">
           {(it.type === "consumable" || it.type === "weapon" || it.type === "armor") && <button type="button" className="btn" data-testid="inventory-use-btn" onClick={() => use(s)}>{it.type === "consumable" ? "Use" : "Equip"}</button>}
           {it.type !== "quest" && <button type="button" className="btn ghost" data-testid="inventory-destroy-btn" onClick={() => { net.send({ t: "destroy", uid: s.uid }); setSel(null); }}>Discard</button>}
@@ -90,7 +90,7 @@ export function CharacterPanel({ data, net }) {
 export function SkillsPanel({ data, net }) {
   const me = useStore((s) => s.me);
   if (!me) return null;
-  const list = Object.entries(data.abilities).filter(([, a]) => !a.cls || a.cls === me.cls);
+  const list = Object.entries(data.abilities).filter(([, a]) => a.cls.includes(me.cls));
   return (
     <Panel title="Skills & Spells" testid="skills-panel" className="skills-panel" onClose={() => togglePanel("skills", false)}>
       <div className="char-points" data-testid="skill-points">Skill points: <b>{me.skill_points}</b> <small>· earned three per level</small></div>
@@ -100,7 +100,7 @@ export function SkillsPanel({ data, net }) {
         return (
           <div key={id} className={`skill-row ${un ? "" : "locked"}`} data-testid={`skill-${id}`}>
             <AbIcon id={id} />
-            <div><b>{a.name}</b> <small>{a.cls ? a.cls : "all classes"} · lv {a.level} · {a.cost} mana · {a.cd}s</small><p>{a.desc}</p></div>
+            <div><b>{a.name}</b> <small>unlocks at lv {a.level} · {a.cost} mana{a.charge ? " · 5 min charge" : ""}</small><p>{a.desc}</p></div>
             {un ? <span className="learned"><Check size={14} /> Learned</span>
               : <button type="button" className="btn" data-testid={`skill-unlock-${id}`} disabled={!can} onClick={() => { sfx("levelup"); net.send({ t: "unlock", ab: id }); }}>{me.level < a.level ? <><Lock size={12} /> Lv {a.level}</> : "Learn"}</button>}
           </div>

@@ -17,7 +17,10 @@ const glowTex = (() => {
   return new THREE.CanvasTexture(c);
 })();
 const sprite = (color, size) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); s.scale.setScalar(size); return s; };
-const AB_COLOR = { arcane_bolt: "#7fb8ff", flame_burst: "#ff7a2a", aimed_shot: "#ffd36b", venom_arrow: "#7aff5a", power_strike: "#ffe0a0", cleave: "#ffc080", minor_heal: "#7aff9a", iron_guard: "#9ac8ff", quickstep: "#c8f0ff", whirlwind: "#ffc080", earthshatter: "#d8a060", frost_nova: "#a8e8ff", meteor_storm: "#ff5a1a", volley: "#ffd36b", multishot: "#ffe08a" };
+const AB_COLOR = { arcane_bolt: "#7fb8ff", flame_burst: "#ff7a2a", aimed_shot: "#ffd36b", venom_arrow: "#7aff5a", power_strike: "#ffe0a0", cleave: "#ffc080", minor_heal: "#7aff9a", iron_guard: "#9ac8ff", quickstep: "#c8f0ff", whirlwind: "#ffc080", earthshatter: "#d8a060", frost_nova: "#a8e8ff", meteor_storm: "#ff5a1a", volley: "#ffd36b", multishot: "#ffe08a",
+  agredi: "#7fb8ff", minor_mederi: "#7aff9a", minor_sanatio: "#c8ff7a", double_stab: "#ffe0a0", attack_run: "#ffb070", spin_attack: "#ffc080", multi_shot: "#ffe08a",
+  arrow_barrage: "#ffd36b", ignis: "#ff6a1a", multi_vis_nex: "#a0d0ff", radius: "#e8f4ff", venenum: "#7aff5a", flamma_ventus: "#ff7a2a", tabes_viscera: "#a8ff5a",
+  teuri: "#9ac8ff", velocitas: "#c8f0ff", robur: "#ffb060", contra_visus: "#c0a8ff", pergere_trans: "#c0a0ff", creare_porta: "#b080ff" };
 
 export class Engine {
   constructor({ canvas, overlay, data, world, net, meId, quality }) {
@@ -107,11 +110,15 @@ export class Engine {
       Object.assign(e, { tx: x, tz: z, trot: rot, hp, max: mhp, aggro });
       e.anim.moving = st === 1; e.anim.dead = st === 2;
     }
-    for (const [id, item, qty, x, z, mine] of s.l) {
+    for (const [id, item, qty, x, z, mine, pname] of s.l) {
       seen.add(id);
       let e = this.entities.get(id);
-      if (!e) e = this.addEntity(id, "loot", { item, qty, x, z, mine, name: this.data.items[item].name });
+      if (!e) e = this.addEntity(id, "loot", { item, qty, x, z, mine, name: pname || this.data.items[item].name });
       e.mine = mine;
+    }
+    for (const [id, x, z, owner] of s.g || []) {
+      seen.add(id);
+      if (!this.entities.get(id)) this.addGate(id, x, z, owner);
     }
     for (const e of [...this.entities.values()]) if (e.kind !== "npc" && !seen.has(e.id)) {
       if (e.kind === "loot" && e.picked !== true) this.puff(e.x, e.z, RARITY[this.data.items[e.item].rarity] || "#fff");
@@ -150,9 +157,22 @@ export class Engine {
       default:
     }
   }
+  addGate(id, x, z, owner) {
+    const root = new THREE.Group(), c = "#b080ff";
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(1.0, 0.09, 8, 40), new THREE.MeshBasicMaterial({ color: c }));
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(0.95, 32), new THREE.MeshBasicMaterial({ color: "#6a30d0", transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+    const swirl = new THREE.Group(); swirl.add(ring, disc); swirl.position.y = 1.2; root.add(swirl);
+    const base = new THREE.Mesh(new THREE.RingGeometry(0.6, 1.2, 32), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false }));
+    base.rotation.x = -Math.PI / 2; base.position.y = 0.05; root.add(base);
+    const gl = sprite(c, 3); gl.position.y = 1.2; root.add(gl);
+    root.position.set(x, this.groundY(x, z), z); this.scene.add(root);
+    const e = { id, kind: "gate", name: `Portal (${owner})`, x, z, tx: x, tz: z, rot: 0, trot: 0, anim: {}, grp: root, rig: { root, height: 2.4, gate: swirl, disc }, hp: 0, max: 0 };
+    this.entities.set(id, e); this.shock(x, z, c, 3); sfx("spell");
+    return e;
+  }
   castFx(src, tgt, ab) {
     const c = AB_COLOR[ab] || "#fff";
-    const melee = ["power_strike", "cleave", "whirlwind", "earthshatter"].includes(ab);
+    const melee = ["power_strike", "cleave", "whirlwind", "earthshatter", "double_stab", "attack_run", "spin_attack"].includes(ab);
     src.anim.cast = melee ? 0 : 1;
     if (melee) src.anim.atk = 1;
     if (Math.hypot(src.x - (this.me?.x || 0), src.z - (this.me?.z || 0)) < 30) sfx(melee ? "heavy" : ab === "minor_heal" ? "heal" : "spell");
@@ -168,7 +188,34 @@ export class Engine {
     if (ab === "power_strike" && tgt) { this.shock(tgt.x, tgt.z, c, 1.6); if (src.id === this.meId) this.shake = 0.2; }
     if (ab === "iron_guard") this.aura(src, c, 10);
     if (ab === "quickstep") this.aura(src, c, 5);
-    if (ab === "minor_heal") this.burst(src, c, 20, 2);
+    if (ab === "minor_heal" || ab === "minor_mederi") this.burst(src, c, 20, 2);
+    if (ab === "minor_sanatio") { this.burst(src, c, 16, 1.5); this.aura(src, c, 2); }
+    if ((ab === "double_stab" || ab === "attack_run") && tgt) { this.shock(tgt.x, tgt.z, c, 1.4); if (src.id === this.meId) this.shake = 0.15; }
+    if (ab === "spin_attack") { this.shock(src.x, src.z, c, 5); this.shock(src.x, src.z, "#fff0d0", 3); }
+    if ((ab === "multi_shot" || ab === "arrow_barrage") && tgt) this.projectile(src, tgt, c, true, 1);
+    if (ab === "agredi" && tgt) this.projectile(src, tgt, c, false, 0.9);
+    if (ab === "ignis" && tgt) this.projectile(src, tgt, c, false, 1.3, () => this.shock(tgt.x, tgt.z, c, 2.5));
+    if (ab === "multi_vis_nex" && tgt) this.projectile(src, tgt, c, false, 0.8, () => this.puff(tgt.x, tgt.z, c));
+    if (ab === "radius" && tgt) this.beam(src, tgt, c);
+    if (ab === "venenum" && tgt) this.projectile(src, tgt, c, false, 0.7, () => this.burst(tgt, c, 10, 1));
+    if (ab === "flamma_ventus" && tgt) this.cone(src, tgt, c);
+    if (ab === "tabes_viscera") { this.shock(src.x, src.z, c, 9); this.shock(src.x, src.z, "#4a6a1a", 6); }
+    if (["teuri", "velocitas", "robur", "contra_visus"].includes(ab)) { this.aura(src, c, 3); this.burst(src, c, 14, 2); }
+    if (ab === "pergere_trans") { this.burst(src, c, 18, 2); this.shock(src.x, src.z, c, 2); }
+    if (ab === "creare_porta" && tgt) this.shock(tgt.x, tgt.z, c, 2.5);
+  }
+  beam(src, tgt, color) {
+    const a = new THREE.Vector3(src.x, this.groundY(src.x, src.z) + 1.3, src.z), b = new THREE.Vector3(tgt.x, this.groundY(tgt.x, tgt.z) + (tgt.height || 1) * 0.55, tgt.z);
+    const len = a.distanceTo(b), m = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, len, 6, 1, true), new THREE.MeshBasicMaterial({ color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+    m.position.copy(a).lerp(b, 0.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
+    this.addFx(m, 0.35, (t) => { m.material.opacity = 1 - t; m.scale.set(1 + t * 2, 1, 1 + t * 2); });
+  }
+  cone(src, tgt, color) {
+    const ang = Math.atan2(tgt.x - src.x, tgt.z - src.z);
+    for (let i = 0; i < 18; i++) {
+      const s = sprite(i % 3 ? color : "#ffd080", 0.9), a = ang + (Math.random() - 0.5) * 1.3, sp = 0.6 + Math.random() * 0.4;
+      this.addFx(s, 0.6, (t) => { const r = t * 10 * sp; s.position.set(src.x + Math.sin(a) * r, this.groundY(src.x, src.z) + 1 + t * 0.5, src.z + Math.cos(a) * r); s.material.opacity = 1 - t; s.scale.setScalar(0.6 + t * 2); });
+    }
   }
 
   // ---------- effects
@@ -245,6 +292,7 @@ export class Engine {
       if (ev.button === 1) { this.drag = { x: ev.clientX, yaw: this.yaw }; ev.preventDefault(); return; }
       if (ev.button !== 0) return;
       sfx.unlock?.();
+      if (this.placing) { const gp = this.pointerGround(); const cb = this.placing; this.placing = null; if (gp) cb(gp); return; }
       const e = this.pick(ev);
       if (e?.kind === "monster") { this.net.send({ t: "target", id: e.id }); sfx("click"); return; }
       if (e?.kind === "loot") { this.net.send({ t: "pickup", id: e.id }); return; }
@@ -300,6 +348,7 @@ export class Engine {
       if (e.kind === "player") { show = d < 45; name = `${e.name}${e.linkdead ? " (linkdead)" : ""}`; sub = `Lv ${e.level} ${e.cls}`; if (e.id !== this.meId && e.hp < e.max) hp = e.hp / e.max; }
       else if (e.kind === "monster") { show = !e.anim.dead && (hovered || targeted || e.aggro || (e.lastHit && now - e.lastHit < 5000)); sub = `Lv ${e.level}`; hp = e.hp / e.max; }
       else if (e.kind === "npc") { show = hovered || (!e.ambient && d < 18); sub = hovered ? e.role : ""; }
+      else if (e.kind === "gate") { show = d < 25; }
       else { const rar = this.data.items[e.item].rarity; show = hovered || (rar !== "common" && d < 14); name = e.qty > 1 ? `${e.name} ×${e.qty}` : e.name; }
       if (!show) { if (e.plate) e.plate.style.display = "none"; continue; }
       v.set(e.x, e.grp.position.y + e.height + 0.35, e.z).project(this.camera);
@@ -348,6 +397,7 @@ export class Engine {
       if (Math.hypot(dx, dz) > 8) { e.x = e.tx; e.z = e.tz; } else { e.x += dx * k; e.z += dz * k; }
       let dr = e.trot - e.rot; dr = Math.atan2(Math.sin(dr), Math.cos(dr)); e.rot += dr * Math.min(1, dt * 12);
       e.grp.position.set(e.x, this.groundY(e.x, e.z), e.z);
+      if (e.rig.gate) { e.rig.gate.rotation.y = this.yaw || 0; e.rig.disc.rotation.z = t * 2; e.rig.disc.material.opacity = 0.4 + 0.2 * Math.sin(t * 4); continue; }
       if (e.rig.body) { e.rig.root.rotation.y = e.rot; animateRig(e.rig, e.anim, dt, t); if (e.rig.shimmer) animateGlow(e.rig, t); }
       else { e.rig.root.rotation.y = t * 1.2; e.rig.root.position.y = 0.05 + Math.sin(t * 2.5 + e.x) * 0.05; }
     }
@@ -468,6 +518,7 @@ export class Engine {
       if (e.kind === "npc" && !e.ambient) dot(e.x, e.z, this.data.npcs[e.id].merchant ? "#ffd23a" : this.data.npcs[e.id].healer ? "#7aff9a" : "#e0e0ff", opts.radius ? 3 : 2);
       else if (e.kind === "monster" && opts.radius && !e.anim.dead) dot(e.x, e.z, "#e04030", 2.2);
       else if (e.kind === "player" && e.id !== this.meId) dot(e.x, e.z, "#5ab0ff", 3);
+      else if (e.kind === "gate") dot(e.x, e.z, "#b080ff", 3.5);
       else if (e.kind === "loot" && opts.radius) dot(e.x, e.z, RARITY[this.data.items[e.item].rarity], 1.6);
     }
     if (!opts.radius) {

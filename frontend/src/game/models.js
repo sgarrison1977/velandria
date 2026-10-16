@@ -194,7 +194,8 @@ export const buildNpc = (kind) => kind === "waystone" ? waystone() : (NPC_BUILD[
 
 const CLASS_LOOK = {
   warrior: { skin: "#c8946e", shirt: "#6a6e74", pants: "#3a3028", hair: "#3a2414", pauldrons: "#80868e", belt: "#3a2414" },
-  mage: { skin: "#d8b090", shirt: "#2a2e5a", sleeve: "#2a2e5a", robe: "#23264a", hat: "#1e2044", hair: "#bbb" },
+  wizard: { skin: "#d8b090", shirt: "#2a2e5a", sleeve: "#2a2e5a", robe: "#23264a", hat: "#1e2044", hair: "#bbb" },
+  warlock: { skin: "#c8b0a8", shirt: "#3a0e1e", sleeve: "#2a0a16", robe: "#1e0810", hat: "#140610", hair: "#1a1a1a", cape: "#4a0a1e" },
   ranger: { skin: "#c49070", shirt: "#3a4a2a", pants: "#3a3020", hood: "#2e3e22", cape: "#2e3e22" },
 };
 export function buildPlayer(cls, eqStr, items) {

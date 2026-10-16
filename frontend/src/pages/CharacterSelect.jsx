@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sword, Wand2, Crosshair, Trash2, Play, LogOut } from "lucide-react";
+import { Sword, Wand2, Crosshair, Trash2, Play, LogOut , Skull } from "lucide-react";
 import { http, errMsg } from "@/lib/api";
 
-const CLS = [["warrior", Sword], ["mage", Wand2], ["ranger", Crosshair]];
+const CLS = [["warrior", Sword], ["ranger", Crosshair], ["wizard", Wand2], ["warlock", Skull]];
 
 export default function CharacterSelect() {
   const nav = useNavigate();

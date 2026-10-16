@@ -2,7 +2,7 @@
 import asyncio, time, math, random, uuid, json, logging, re
 from datetime import datetime, timezone
 from game_data import (ITEMS, MONSTERS, ABILITIES, CLASSES, NPCS, MERCHANTS, QUESTS, XP_TABLE, MAX_LEVEL, INV_SLOTS, TICK, COMBAT,
-                       PLAYER_SPEED, PICKUP_RANGE, NPC_RANGE, LOOT_OWNER_SECS, LOOT_EXPIRE_SECS, ACTIONS, RESTOCK_SECS, sell_price, default_binds, EXTRA_ROLLS, BONUS_LOOT, WAYSTONE_COST)
+                       PLAYER_SPEED, PICKUP_RANGE, NPC_RANGE, LOOT_OWNER_SECS, LOOT_EXPIRE_SECS, ACTIONS, RESTOCK_SECS, sell_price, default_binds, EXTRA_ROLLS, BONUS_LOOT, WAYSTONE_COST, roll_props, random_gear, RANDOM_GEAR_CHANCE)
 from world import PORTALS, World, in_safe, SAFE_ZONES
 
 log = logging.getLogger("game")
@@ -54,6 +54,9 @@ class Player:
         self.dead_until, self.rot, self.moving, self.repath = 0, 0.0, False, 0
         self.chat_times, self.last_save, self.linkdead_at = [], now(), None
         self.dirty, self.regen_acc, self.rewarded = True, 0.0, set()
+        self.marks = doc.get("marks") or {}
+        if self.cls == "mage":
+            self.cls = "wizard"
         self.recalc()
         self.hp = min(self.hp, self.max_hp) or self.max_hp
         self.mp = min(self.mp, self.max_mp)
@@ -68,18 +71,23 @@ class Player:
         for e in self.equipment.values():
             it = ITEMS[e["item"]]
             armor += it.get("armor", 0)
-            for k, v in it.get("stats", {}).items():
-                a[k] = a.get(k, 0) + v
+            for k, v in list(it.get("stats", {}).items()) + list((e.get("props") or {}).items()):
+                if k == "armor":
+                    armor += v
+                else:
+                    a[k] = a.get(k, 0) + v
         if "armor" in self.buffs:
             armor += self.buffs["armor"][0]
-        self.tot, self.armor = a, armor
-        self.max_hp = 50 + self.level * 8 + a["sta"] * 6
-        self.max_mp = 30 + self.level * 4 + a["wis"] * 6
+        if "str" in self.buffs:
+            a["str"] += self.buffs["str"][0]
+        self.tot, self.armor = a, round(armor)
+        self.max_hp = 50 + self.level * 8 + a["sta"] * 6 + a.get("max_hp", 0)
+        self.max_mp = 30 + self.level * 4 + a["wis"] * 6 + a.get("max_mp", 0)
         w = self.weapon()
         self.attack_interval = round(w["spd"] / (1 + a["dex"] * 0.012), 3)
         cls_ok = w.get("cls") and self.cls in w["cls"]
         self.range = CLASSES[self.cls]["range"] if cls_ok else 2.4
-        self.crit = COMBAT["crit_base"] + a["dex"] * COMBAT["crit_per_dex"]
+        self.crit = COMBAT["crit_base"] + a["dex"] * COMBAT["crit_per_dex"] + a.get("crit", 0) / 100
         lo, hi = self.dmg_range()
         self.dmg_lo, self.dmg_hi = lo, hi
         self.dirty = True
@@ -97,11 +105,11 @@ class Player:
         return round(lo + bonus, 1), round(hi + bonus, 1)
 
     def speed(self):
-        return PLAYER_SPEED * (1 + self.buffs["speed"][0] if "speed" in self.buffs else 1)
+        return PLAYER_SPEED * (1 + (self.buffs["speed"][0] if "speed" in self.buffs else 0) + self.tot.get("move_speed", 0) / 100)
 
     def to_doc(self):
         return {k: getattr(self, k) for k in ("name", "cls", "level", "xp", "gold", "attrs", "attr_points", "skill_points", "abilities",
-                                              "inventory", "equipment", "quests", "binds", "hp", "mp")} | {"x": round(self.x, 2), "z": round(self.z, 2)}
+                                              "inventory", "equipment", "quests", "binds", "hp", "mp", "marks")} | {"x": round(self.x, 2), "z": round(self.z, 2)}
 
     def self_view(self):
         return self.to_doc() | dict(id=self.id, max_hp=self.max_hp, max_mp=self.max_mp, tot=self.tot, armor=self.armor, attack_interval=self.attack_interval,
@@ -125,6 +133,7 @@ class Game:
         self.monsters = {}
         self.loot = {}
         self.parties, self.invites, self.party_acc = {}, {}, 0.0
+        self.sched, self.gates = [], {}
         self.stock = {k: {i: q for i, q in v["stock"]} for k, v in MERCHANTS.items()}
         self.last_restock = now()
         n = 0
@@ -210,6 +219,9 @@ class Game:
             self.tick_player(p, dt, t)
         for m in self.monsters.values():
             self.tick_monster(m, dt, t)
+        self.tick_sched(t)
+        for gid in [g for g, v in self.gates.items() if t > v["expires"]]:
+            del self.gates[gid]
         self.party_acc += dt
         if self.party_acc >= 1.0:
             self.party_acc = 0.0
@@ -241,8 +253,9 @@ class Game:
         for l in self.loot.values():
             if (l["x"] - p.x) ** 2 + (l["z"] - p.z) ** 2 < VIEW_R2:
                 mine = l["owner"] is None or l["owner"] == p.id or t > l["owner_until"]
-                ls.append([l["id"], l["item"], l["qty"], l["x"], l["z"], 1 if mine else 0])
-        return {"t": "s", "me": [round(p.x, 2), round(p.z, 2), round(p.hp), round(p.mp), p.target], "p": ps, "m": ms, "l": ls}
+                ls.append([l["id"], l["item"], l["qty"], l["x"], l["z"], 1 if mine else 0, l.get("pname") or ""])
+        gs = [[g["id"], g["x"], g["z"], g["name"]] for g in self.gates.values() if (g["x"] - p.x) ** 2 + (g["z"] - p.z) ** 2 < VIEW_R2]
+        return {"t": "s", "me": [round(p.x, 2), round(p.z, 2), round(p.hp), round(p.mp), p.target], "p": ps, "m": ms, "l": ls, "g": gs}
 
     def step_along(self, e, speed, dt, monster=False):
         e.moving = False
@@ -288,10 +301,16 @@ class Game:
                         mm.target = None
                 p.dirty = True
                 return
+        for g in self.gates.values():
+            if (p.x - g["x"]) ** 2 + (p.z - g["z"]) ** 2 < 1.8 and t > g["ready"]:
+                self.teleport(p, g["to"][0] + rnd.uniform(-1, 1), g["to"][1] + rnd.uniform(-1, 1), f"You step through {g['name']}'s portal.")
+                return
         changed = False
         for k in [k for k, v in p.buffs.items() if t > v[1]]:
             del p.buffs[k]
             changed = True
+            if k in ("armor", "speed", "str", "invis"):
+                p.send({"t": "sys", "msg": f"{dict(armor='Teuri', speed='Velocitas', str='Robur', invis='Contra Visus')[k]} has worn off."})
         if changed:
             p.recalc()
         self.tick_dots(p, t, is_player=True)
@@ -379,7 +398,7 @@ class Game:
                     m.next_wander = t + rnd.uniform(3, 8)
             self.step_along(m, d["speed"] * 1.4, dt, monster=True)
             return
-        if tgt and (tgt.dead_until or in_safe(tgt.x, tgt.z) or math.hypot(m.x - m.hx, m.z - m.hz) > d["leash"] or dist(m, tgt) > d["leash"] * 1.5):
+        if tgt and (tgt.dead_until or in_safe(tgt.x, tgt.z) or "invis" in tgt.buffs or math.hypot(m.x - m.hx, m.z - m.hz) > d["leash"] or dist(m, tgt) > d["leash"] * 1.5):
             tgt = None
         if not tgt and m.target:
             m.target, m.state = None, "return"
@@ -392,7 +411,7 @@ class Game:
                 if p.dead_until or p.linkdead_at:
                     continue
                 dd = dist(m, p)
-                if dd < d["aggro"] and not in_safe(p.x, p.z) and (best is None or dd < best[0]):
+                if dd < d["aggro"] and not in_safe(p.x, p.z) and "invis" not in p.buffs and (best is None or dd < best[0]):
                     best = (dd, p)
             if best:
                 tgt = best[1]
@@ -421,7 +440,7 @@ class Game:
                     m.next_slam = t + d["slam"]["every"]
                     self.fx(m.x, m.z, {"t": "fx", "k": "slam", "src": m.id, "r": d["slam"]["radius"]})
                     for pp in list(self.players.values()):
-                        if not pp.dead_until and dist(m, pp) <= d["slam"]["radius"]:
+                        if not pp.dead_until and "invis" not in pp.buffs and dist(m, pp) <= d["slam"]["radius"]:
                             k = COMBAT["armor_k"] + COMBAT["armor_k_per_level"] * d["level"]
                             self.damage_player(pp, max(1, round(rnd.uniform(*d["dmg"]) * d["slam"]["mult"] * (1 - pp.armor / (pp.armor + k)))), m, "phys")
                 elif t - m.last_attack >= d["interval"]:
@@ -508,6 +527,10 @@ class Game:
         for lv, item, chance in BONUS_LOOT:
             if m.d["level"] >= lv and rnd.random() < chance:
                 drops.append((item, 1))
+        if rnd.random() < RANDOM_GEAR_CHANCE * (2 if m.d.get("boss") else 1):
+            g = random_gear(m.d["level"], rnd)
+            if g:
+                drops.append((g, -1))
         drops = drops[:16 if m.d.get("boss") else 8]
         if m.d.get("boss"):
             self.broadcast_sys(f"{killer.name} has slain {m.d['name']}! The Hollow Deep falls silent... for now.")
@@ -517,7 +540,9 @@ class Game:
             if not self.world.walkable(lx, lz):
                 lx, lz = m.x, m.z
             lid = "l" + uid()
-            self.loot[lid] = dict(id=lid, item=item, qty=qty, x=round(lx, 2), z=round(lz, 2), owner=killer.id,
+            props, pname = (None, None) if item == "gold" else roll_props(item, m.d["level"], rnd, force=qty == -1)
+            qty = max(1, qty)
+            self.loot[lid] = dict(id=lid, item=item, qty=qty, props=props, pname=pname, x=round(lx, 2), z=round(lz, 2), owner=killer.id,
                                   party=getattr(killer, "party", None), owner_until=t + LOOT_OWNER_SECS, expires=t + LOOT_EXPIRE_SECS)
         for o in sharers:
             for qid, q in o.quests.items():
@@ -577,95 +602,188 @@ class Game:
                     mm.target = None
         p.dirty = True
 
-    def cast(self, p, ab_id, target_id, pt=None):
+    def cast(self, p, ab_id, target_id, pt=None, mark=None):
         ab = ABILITIES.get(ab_id)
-        t = now()
         if not ab or p.dead_until:
             return "Unknown ability."
         if ab_id not in p.abilities:
             return f"{ab['name']} is locked."
-        if ab["cls"] and ab["cls"] != p.cls:
+        if p.cls not in ab["cls"]:
             return "Your class cannot use that."
         if p.level < ab["level"]:
             return f"Requires level {ab['level']}."
-        if p.cds.get(ab_id, 0) > t:
-            return f"{ab['name']} is not ready."
         if p.mp < ab["cost"]:
             return "Not enough mana."
-        if ab["kind"] == "aoe_target":
+        k = ab["kind"]
+        if k == "portal":
+            dest = p.marks.get(str(mark))
+            if not dest:
+                return f"Mark {mark} is not set. Type mark{mark if mark is not None else 1} in chat to set it."
+            if not pt or math.hypot(pt[0] - p.x, pt[1] - p.z) > ab["range"] + 0.5 or not self.world.walkable(*pt):
+                return f"Place the portal on open ground within {int(ab['range'])}m."
+            return self.do_cast(p, ab_id, None, pt, dest)
+        if k == "blink":
+            if not pt:
+                return "Point at where you want to teleport."
+            dx, dz = pt[0] - p.x, pt[1] - p.z
+            d = math.hypot(dx, dz) or 1
+            for f in (1.0, 0.85, 0.7, 0.55, 0.4, 0.25):
+                r = min(d, ab["range"]) * f
+                cx, cz = p.x + dx / d * r, p.z + dz / d * r
+                if self.world.walkable(cx, cz):
+                    return self.do_cast(p, ab_id, None, (cx, cz))
+            return "You cannot teleport there."
+        if k in ("aoe_target", "cone"):
             m = self.monsters.get(target_id)
             if m and not m.dead_until and dist(p, m) <= ab["range"] + m.d["radius"]:
                 return self.do_cast(p, ab_id, m)
             if in_safe(p.x, p.z):
                 return "You cannot fight from within a safe square."
-            cx, cz = p.x, p.z
-            if pt:
-                dx, dz = pt[0] - p.x, pt[1] - p.z
+            cx, cz = pt if pt else (p.x + math.sin(p.rot), p.z + math.cos(p.rot))
+            if k == "aoe_target":
+                dx, dz = cx - p.x, cz - p.z
                 d = math.hypot(dx, dz)
-                k = min(1.0, ab["range"] / d) if d > 0 else 0
-                cx, cz = p.x + dx * k, p.z + dz * k
+                kk = min(1.0, ab["range"] / d) if d > 0 else 0
+                cx, cz = p.x + dx * kk, p.z + dz * kk
             return self.do_cast(p, ab_id, None, (cx, cz))
-        needs_target = ab["kind"] in ("melee", "spell", "ranged", "dot")
-        if needs_target:
+        if k in ("melee", "spell", "ranged", "dot", "dash"):
             m = self.monsters.get(target_id or p.target)
             if not m or m.dead_until:
                 return "You need a target."
             if dist(p, m) > ab["range"] + m.d["radius"]:
+                if k == "dash":
+                    return "Too far to charge."
                 p.target, p.queued, p.pending = m.id, ab_id, None
                 return None
+            if k == "dash" and not self.world.los(p.x, p.z, m.x, m.z):
+                return "No clear path to charge."
             return self.do_cast(p, ab_id, m)
-        if ab["kind"] in ("aoe_self", "multi") and in_safe(p.x, p.z):
+        if k in ("aoe_self", "multi") and in_safe(p.x, p.z):
             return "You cannot fight from within a safe square."
         return self.do_cast(p, ab_id, None)
 
-    def do_cast(self, p, ab_id, m, center=None):
+    def spell_dmg(self, p, ab):
+        return ab["base"] + p.tot["int"] * ab["scale"] + rnd.uniform(0, 4)
+
+    def weapon_dmg(self, p, ab):
+        return rnd.uniform(p.dmg_lo, p.dmg_hi) * ab["mult"] + ab["flat"]
+
+    def teleport(self, p, x, z, msg=None):
+        p.x, p.z = x, z
+        p.path, p.target, p.pending, p.queued, p.dirty = [], None, None, None, True
+        for mm in self.monsters.values():
+            if mm.target == p.id:
+                mm.target = None
+        if msg:
+            p.send({"t": "sys", "msg": msg})
+
+    def tick_sched(self, t):
+        due = [h for h in self.sched if t >= h["t"]]
+        if not due:
+            return
+        self.sched = [h for h in self.sched if t < h["t"]]
+        for h in due:
+            p, m = self.players.get(h["pid"]), self.monsters.get(h["mid"])
+            if p and m and not m.dead_until and not p.dead_until:
+                self.fx(p.x, p.z, {"t": "fx", "k": "cast", "src": p.id, "ab": h["ab"], "tgt": m.id})
+                self.damage_monster(m, h["dmg"], p, h["dtype"], h["crit"])
+
+    def do_cast(self, p, ab_id, m, center=None, dest=None):
         ab = ABILITIES[ab_id]
         t = now()
-        if p.mp < ab["cost"] or p.cds.get(ab_id, 0) > t:
-            return "Not ready."
+        if p.mp < ab["cost"]:
+            return "Not enough mana."
         if m and in_safe(p.x, p.z):
             return "You cannot fight from within a safe square."
-        p.mp -= ab["cost"]
-        p.cds[ab_id] = t + ab["cd"]
         k = ab["kind"]
+        if k == "dash":
+            d = dist(p, m) or 1
+            back = 1.2 + m.d["radius"]
+            nx, nz = m.x - (m.x - p.x) / d * back, m.z - (m.z - p.z) / d * back
+            if d > back and self.world.walkable(nx, nz):
+                p.x, p.z = nx, nz
+            p.path, p.target = [], m.id
+        p.mp -= ab["cost"]
         cfx = {"t": "fx", "k": "cast", "src": p.id, "ab": ab_id, "tgt": m.id if m else None}
         if center:
             cfx["x"], cfx["z"] = round(center[0], 2), round(center[1], 2)
+        if k == "blink":
+            cfx["fx0"] = [round(p.x, 2), round(p.z, 2)]
         self.fx(p.x, p.z, cfx)
-        if k in ("melee", "ranged"):
+        if m:
+            p.rot = math.atan2(m.x - p.x, m.z - p.z)
+        if k in ("melee", "ranged", "dash"):
             p.last_attack = t
-            dmg = rnd.uniform(p.dmg_lo, p.dmg_hi) * ab["mult"] + ab["flat"]
-            crit = rnd.random() < p.crit
-            self.damage_monster(m, dmg * (COMBAT["crit_mult"] if crit else 1), p, "phys", crit)
+            for i in range(ab.get("hits", 1)):
+                crit = rnd.random() < p.crit
+                dmg = self.weapon_dmg(p, ab) * (COMBAT["crit_mult"] if crit else 1)
+                if i == 0:
+                    self.damage_monster(m, dmg, p, "phys", crit)
+                else:
+                    self.sched.append(dict(t=t + i * ab["gap"], pid=p.id, mid=m.id, dmg=dmg, crit=crit, dtype="phys", ab=ab_id))
         elif k == "spell":
-            dmg = ab["base"] + p.tot["int"] * ab["scale"] + rnd.uniform(0, 4)
             crit = rnd.random() < p.crit
-            self.damage_monster(m, dmg * (COMBAT["crit_mult"] if crit else 1), p, "magic", crit)
-        elif k == "aoe_target" or k == "aoe_self":
+            dmg = self.spell_dmg(p, ab) * (COMBAT["crit_mult"] if crit else 1)
+            if ab.get("splash"):
+                for mm in list(self.monsters.values()):
+                    if mm is not m and not mm.dead_until and dist(mm, m) <= ab["splash"] + mm.d["radius"]:
+                        self.damage_monster(mm, dmg * 0.5, p, "magic")
+            self.damage_monster(m, dmg, p, "magic", crit)
+        elif k in ("aoe_target", "aoe_self", "cone"):
             cx, cz = (m.x, m.z) if m else (center or (p.x, p.z))
+            if k == "cone":
+                ang, cx, cz = math.atan2(cx - p.x, cz - p.z), p.x, p.z
+                p.rot = ang
             for mm in list(self.monsters.values()):
-                if not mm.dead_until and math.hypot(mm.x - cx, mm.z - cz) <= ab["radius"] + mm.d["radius"]:
-                    if "base" in ab:
-                        self.damage_monster(mm, ab["base"] + p.tot["int"] * ab["scale"] + rnd.uniform(0, 4), p, "magic")
-                    else:
-                        self.damage_monster(mm, rnd.uniform(p.dmg_lo, p.dmg_hi) * ab["mult"] + ab["flat"], p, "phys")
+                if mm.dead_until or in_safe(mm.x, mm.z):
+                    continue
+                if k == "cone":
+                    dd = dist(p, mm)
+                    da = abs((math.atan2(mm.x - p.x, mm.z - p.z) - ang + math.pi) % (2 * math.pi) - math.pi)
+                    if dd > ab["range"] + mm.d["radius"] or (da > ab["angle"] and dd > mm.d["radius"] + 1):
+                        continue
+                elif math.hypot(mm.x - cx, mm.z - cz) > ab["radius"] + mm.d["radius"]:
+                    continue
+                if "base" in ab:
+                    self.damage_monster(mm, self.spell_dmg(p, ab), p, "magic")
+                    if ab.get("rot") and not mm.dead_until:
+                        mm.dots.append(dict(dmg=4 + p.tot["int"] * ab["rot"], n=5, next=t + 1, src=p.id))
+                else:
+                    self.damage_monster(mm, self.weapon_dmg(p, ab), p, "phys")
         elif k == "multi":
             near = sorted((mm for mm in self.monsters.values() if not mm.dead_until and dist(p, mm) <= ab["range"] + mm.d["radius"] and not in_safe(mm.x, mm.z)), key=lambda mm: dist(p, mm))[:ab["count"]]
             p.last_attack = t
             for mm in near:
-                self.fx(p.x, p.z, {"t": "fx", "k": "cast", "src": p.id, "ab": "aimed_shot", "tgt": mm.id})
-                self.damage_monster(mm, rnd.uniform(p.dmg_lo, p.dmg_hi) * ab["mult"] + ab["flat"], p, "phys")
+                self.fx(p.x, p.z, {"t": "fx", "k": "cast", "src": p.id, "ab": ab_id, "tgt": mm.id})
+                if "base" in ab:
+                    self.damage_monster(mm, self.spell_dmg(p, ab), p, "magic")
+                else:
+                    self.damage_monster(mm, self.weapon_dmg(p, ab), p, "phys")
         elif k == "dot":
-            per = ab["base"] + p.tot["dex"] * ab["scale"]
+            per = ab["base"] + p.tot[ab.get("stat", "dex")] * ab["scale"]
             m.dots.append(dict(dmg=per, n=ab["ticks"], next=t + 1, src=p.id))
             self.damage_monster(m, per, p, "poison")
         elif k == "heal":
             amt = round(ab["base"] + p.tot["wis"] * ab["scale"])
             p.hp = min(p.max_hp, p.hp + amt)
             self.fx(p.x, p.z, {"t": "fx", "k": "heal", "tgt": p.id, "v": amt})
+        elif k == "cure":
+            n = len(p.dots)
+            p.dots = []
+            self.fx(p.x, p.z, {"t": "fx", "k": "heal", "tgt": p.id, "v": 0})
+            p.send({"t": "sys", "msg": "The poison leaves your body." if n else "You are not poisoned."})
         elif k == "buff":
-            p.buffs[ab["buff"]] = (ab["value"], t + ab["dur"])
+            p.buffs[ab["buff"]] = (round(ab["value"] + ab.get("per_level", 0) * p.level, 2), t + ab["dur"])
             p.recalc()
+        elif k == "blink":
+            p.x, p.z, p.path = center[0], center[1], []
+        elif k == "portal":
+            for gid in [g["id"] for g in self.gates.values() if g["owner"] == p.id]:
+                del self.gates[gid]
+            gid = "g" + uid()
+            self.gates[gid] = dict(id=gid, x=round(center[0], 2), z=round(center[1], 2), to=list(dest), owner=p.id, name=p.name,
+                                   ready=t + 1.0, expires=t + 60)
+            p.send({"t": "sys", "msg": "A portal tears open. It will close in 60 seconds.", "kind": "quest"})
         p.dirty = True
         return None
 
@@ -681,7 +799,13 @@ class Game:
         room += (INV_SLOTS - len(p.inventory)) * it["stack"]
         return room >= qty
 
-    def add_item(self, p, item, qty):
+    def add_item(self, p, item, qty, props=None, pname=None):
+        if props:
+            if len(p.inventory) >= INV_SLOTS:
+                return False
+            p.inventory.append(dict(uid=uid(), item=item, qty=1, props=props, pname=pname))
+            p.dirty = True
+            return True
         if item == "gold":
             p.gold += qty
             p.dirty = True
@@ -725,10 +849,10 @@ class Game:
             return p.send({"t": "err", "msg": "Too far away."})
         if l["owner"] and l["owner"] != p.id and now() < l["owner_until"] and not (l.get("party") and l["party"] == getattr(p, "party", None)):
             return p.send({"t": "err", "msg": "That loot belongs to another adventurer for now."})
-        if not self.add_item(p, l["item"], l["qty"]):
+        if not self.add_item(p, l["item"], l["qty"], l.get("props"), l.get("pname")):
             return p.send({"t": "err", "msg": "Your inventory is full."})
         del self.loot[lid]
-        p.send({"t": "pickup", "item": l["item"], "qty": l["qty"]})
+        p.send({"t": "pickup", "item": l["item"], "qty": l["qty"], "name": l.get("pname")})
 
     # ------------- npcs / quests / merchants
     def near_npc(self, p, npc_id, flag=None):
@@ -963,7 +1087,7 @@ class Game:
         it = ITEMS[s["item"]]
         if it["type"] == "quest" or it["price"] <= 0:
             return "The merchant won't buy that."
-        gain = sell_price(s["item"]) * qty
+        gain = sell_price(s["item"], s.get("props")) * qty
         s["qty"] -= qty
         if s["qty"] <= 0:
             p.inventory.remove(s)
@@ -987,9 +1111,9 @@ class Game:
         slot = it["slot"]
         p.inventory.remove(s)
         old = p.equipment.get(slot)
-        p.equipment[slot] = dict(uid=s["uid"], item=s["item"])
+        p.equipment[slot] = {k: s[k] for k in ("uid", "item", "props", "pname") if s.get(k)}
         if old:
-            p.inventory.append(dict(uid=old["uid"], item=old["item"], qty=1))
+            p.inventory.append(dict(old, qty=1))
         p.recalc()
         p.hp, p.mp = min(p.hp, p.max_hp), min(p.mp, p.max_mp)
         p.send({"t": "equip", "item": s["item"]})
@@ -1001,7 +1125,7 @@ class Game:
         if len(p.inventory) >= INV_SLOTS:
             return "Your inventory is full."
         del p.equipment[slot]
-        p.inventory.append(dict(uid=e["uid"], item=e["item"], qty=1))
+        p.inventory.append(dict(e, qty=1))
         p.recalc()
         p.hp, p.mp = min(p.hp, p.max_hp), min(p.mp, p.max_mp)
 
@@ -1047,6 +1171,11 @@ class Game:
             return p.send({"t": "err", "msg": "You are sending messages too quickly."})
         p.chat_times.append(t)
         ts = datetime.now(timezone.utc).isoformat()
+        mk = re.fullmatch(r"mark([0-9])", text.lower())
+        if mk:
+            p.marks[mk.group(1)] = [round(p.x, 1), round(p.z, 1)]
+            p.dirty = True
+            return p.send({"t": "sys", "msg": f"Mark {mk.group(1)} set here ({round(p.x)}, {round(p.z)}). Creare Porta can now open a portal to it.", "kind": "quest"})
         if text.startswith("/p "):
             if not getattr(p, "party", None):
                 return p.send({"t": "err", "msg": "You are not in a party."})
@@ -1112,7 +1241,7 @@ class Game:
             ab = ABILITIES.get(msg.get("ab"))
             if not ab or msg.get("ab") in p.abilities:
                 err = "Cannot learn that."
-            elif ab["cls"] and ab["cls"] != p.cls:
+            elif p.cls not in ab["cls"]:
                 err = "Your class cannot learn that."
             elif p.level < ab["level"]:
                 err = f"Requires level {ab['level']}."
@@ -1143,6 +1272,9 @@ class Game:
                     err = "You can't reach that spot."
         elif t == "stop":
             p.path, p.target, p.queued, p.pending = [], None, None, None
+            if p.buffs.pop("invis", None):
+                p.dirty = True
+                p.send({"t": "sys", "msg": "Contra Visus ends. You are visible again."})
         elif t == "target":
             m = self.monsters.get(msg.get("id"))
             if m and not m.dead_until and dist(p, m) < 90:
@@ -1158,7 +1290,7 @@ class Game:
         elif t == "cast":
             pt = msg.get("pt")
             pt = (float(pt[0]), float(pt[1])) if isinstance(pt, list) and len(pt) == 2 and all(isinstance(v, (int, float)) for v in pt) else None
-            err = self.cast(p, msg.get("ab"), msg.get("id"), pt)
+            err = self.cast(p, msg.get("ab"), msg.get("id"), pt, msg.get("mark"))
         elif t == "pickup":
             if msg.get("id") in self.loot:
                 p.pending, p.target = ("loot", msg["id"]), None
@@ -1188,7 +1320,7 @@ def new_character_doc(account_id, name, cls):
         eq["off"] = dict(uid=uid(), item=c["offhand"])
     eq["chest"] = dict(uid=uid(), item="padded_tunic")
     return dict(id=uuid.uuid4().hex, account_id=account_id, name=name, name_lower=name.lower(), cls=cls, level=1, xp=0, gold=25,
-                attrs=dict(c["attrs"]), attr_points=0, skill_points=0, abilities=[c["start_ability"]],
+                attrs=dict(c["attrs"]), attr_points=0, skill_points=0, abilities=list(c["start_abilities"]), marks={},
                 inventory=[dict(uid=uid(), item="minor_hp", qty=5), dict(uid=uid(), item="bread", qty=3)], equipment=eq, quests={},
                 binds=default_binds(cls), x=90.0 + random.uniform(-3, 3), z=192.0, hp=9999, mp=9999, schema=1,
                 created_at=datetime.now(timezone.utc).isoformat())

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
-import { Sword, Wand2, Crosshair, Shield, BookOpen, HardHat, Shirt, Footprints, Hand, Gem, FlaskConical, Coins, Bone, ScrollText, Package, Layers, Circle, X } from "lucide-react";
+import { Sword, Wand2, Crosshair, Shield, BookOpen, HardHat, Shirt, Footprints, Hand, Gem, FlaskConical, Coins, Bone, ScrollText, Package, Layers, Circle, X, Swords, Flame, Skull, EyeOff, Wind, Zap, DoorOpen, HeartPulse, Droplet, Move, Bug, Dumbbell, Radiation, Orbit } from "lucide-react";
 import { RARITY } from "../../game/models";
 
 export const RARITY_COLOR = RARITY;
@@ -30,11 +30,12 @@ const STAT = { str: "Str", sta: "Sta", wis: "Wis", int: "Int", dex: "Dex", hp_re
 export function ItemTip({ id, item, me, extra }) {
   if (!item) return null;
   const eq = item.slot && me?.equipment?.[item.slot];
-  const cur = eq && window.__SX_ITEMS?.[eq.item];
+  const cur = eq && inst(window.__SX_ITEMS?.[eq.item], eq);
   const diff = (a, b) => { const d = (a || 0) - (b || 0); return d ? <span className={d > 0 ? "up" : "down"}> ({d > 0 ? "+" : ""}{d})</span> : null; };
   return (
     <div className="tip">
       <div className="tip-name" style={{ color: RARITY[item.rarity] }}>{item.name}</div>
+      {item.props && <div className="tip-meta prop">✦ {Object.keys(item.props).length} random {Object.keys(item.props).length > 1 ? "properties" : "property"}</div>}
       <div className="tip-meta">{item.rarity} {item.slot ? `· ${item.slot}` : `· ${item.type}`}{item.lvl > 1 ? ` · req. lv ${item.lvl}` : ""}</div>
       {item.cls && <div className="tip-meta">{item.cls.join(" / ")}</div>}
       {item.dmg && <div>Damage {item.dmg[0]}–{item.dmg[1]} {item.magic ? "(magic)" : ""} · {item.spd}s{cur?.dmg && diff(item.dmg[0] + item.dmg[1], cur.dmg[0] + cur.dmg[1])}</div>}
@@ -94,7 +95,21 @@ export function Hover({ tip, children }) {
   );
 }
 
-const AB_ICONS = { power_strike: [Sword, "#e8c27a", "#5a2a12"], iron_guard: [Shield, "#9ac8ff", "#1a2a4a"], cleave: [Layers, "#ffb070", "#4a1a0a"], arcane_bolt: [Wand2, "#9ac8ff", "#1a1a5a"],
+export const inst = (item, s) => {
+  if (!item || !s?.props) return item;
+  const stats = { ...(item.stats || {}) };
+  let armor = item.armor || 0;
+  for (const [k, v] of Object.entries(s.props)) { if (k === "armor") armor += v; else stats[k] = (stats[k] || 0) + v; }
+  return { ...item, name: s.pname || item.name, stats, armor, props: s.props };
+};
+const AB_ICONS = {
+  agredi: [Wand2, "#9ac8ff", "#1a1a5a"], minor_mederi: [HeartPulse, "#9affb0", "#0a3a1a"], minor_sanatio: [Droplet, "#c8ff9a", "#1a3a0a"],
+  double_stab: [Swords, "#ffe0a0", "#5a2a12"], attack_run: [Footprints, "#ffb070", "#4a1a0a"], spin_attack: [Layers, "#ffd0a0", "#4a2a0a"],
+  multi_shot: [Orbit, "#ffe08a", "#3a1a2a"], arrow_barrage: [Crosshair, "#ffd36b", "#2a200a"], ignis: [Flame, "#ff8a3a", "#4a0a00"],
+  multi_vis_nex: [Radiation, "#b0d8ff", "#0a1a4a"], radius: [Zap, "#e0f0ff", "#1a2a5a"], venenum: [Bug, "#9aff6a", "#13300a"],
+  flamma_ventus: [Wind, "#ff7a2a", "#3a0a00"], tabes_viscera: [Skull, "#b0ff7a", "#1a2a0a"], teuri: [Shield, "#9ac8ff", "#1a2a4a"],
+  velocitas: [Footprints, "#c8f0ff", "#0a2a3a"], robur: [Dumbbell, "#ffb060", "#4a1a0a"], contra_visus: [EyeOff, "#d0c0ff", "#1a1030"],
+  pergere_trans: [Move, "#c0a0ff", "#20103a"], creare_porta: [DoorOpen, "#b080ff", "#200a3a"], power_strike: [Sword, "#e8c27a", "#5a2a12"], iron_guard: [Shield, "#9ac8ff", "#1a2a4a"], cleave: [Layers, "#ffb070", "#4a1a0a"], arcane_bolt: [Wand2, "#9ac8ff", "#1a1a5a"],
   flame_burst: [FlaskConical, "#ffb347", "#5a1a00"], aimed_shot: [Crosshair, "#ffe08a", "#3a2a0a"], venom_arrow: [Bone, "#9aff6a", "#13300a"], minor_heal: [Gem, "#9affb0", "#0a3a1a"],
   quickstep: [Footprints, "#c8f0ff", "#0a2a3a"], whirlwind: [Layers, "#ffd0a0", "#4a2a0a"], earthshatter: [Shield, "#d8a060", "#3a200a"], frost_nova: [Gem, "#a8e8ff", "#0a2a4a"], meteor_storm: [FlaskConical, "#ff5a1a", "#4a0a00"], volley: [Crosshair, "#ffd36b", "#2a200a"], multishot: [Crosshair, "#ffe08a", "#3a1a2a"], basic: [Sword, "#ccc", "#2a2a2a"] };
 export function AbIcon({ id, size = 22 }) {

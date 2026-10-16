@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Coins } from "lucide-react";
 import { useStore, setState, togglePanel } from "../../game/store";
-import { Panel, ItemIcon, ItemTip, Hover, RARITY_COLOR, AbIcon } from "./ui";
+import { Panel, ItemIcon, ItemTip, Hover, RARITY_COLOR, AbIcon, inst } from "./ui";
 import { keyLabel } from "./HUD";
 import { audioCfg, setAudio, sfx } from "../../game/audio";
 
@@ -40,7 +40,7 @@ export function MerchantWindow({ data, net }) {
               const it = data.items[s.item], price = it.price > 0 && it.type !== "quest" ? Math.max(1, Math.floor(it.price * data.sell_ratio)) : 0;
               return (
                 <div key={s.uid} className="mrow" data-testid={`sell-row-${s.item}`}>
-                  <Hover tip={<ItemTip id={s.item} item={it} me={me} />}><ItemIcon id={s.item} item={it} qty={s.qty} size={38} /></Hover>
+                  <Hover tip={<ItemTip id={s.item} item={inst(it, s)} me={me} />}><ItemIcon id={s.item} item={it} qty={s.qty} size={38} /></Hover>
                   <div className="mrow-info"><b style={{ color: RARITY_COLOR[it.rarity] }}>{it.name}</b><small>{it.desc || it.type}</small></div>
                   <span className="price">{price ? `${price}g` : "—"}</span>
                   <button type="button" className="btn ghost" disabled={!price} data-testid={`sell-btn-${s.uid}`} onClick={() => net.send({ t: "sell", npc: m.npc, uid: s.uid, qty: 1 })}>Sell</button>
@@ -55,10 +55,10 @@ export function MerchantWindow({ data, net }) {
   );
 }
 
-const ACTION_LABEL = { attack_nearest: "Attack nearest enemy", stop: "Stop / cancel action", inventory: "Inventory", character: "Character stats", skills: "Skills & spells", map: "World map", quests: "Quest journal", chat: "Open chat", menu: "Menu / close windows" };
+const ACTION_LABEL = { attack_nearest: "Attack nearest enemy", stop: "Stop Action (ends Contra Visus)", inventory: "Inventory", character: "Character stats", skills: "Skills & spells", map: "World map", quests: "Quest journal", chat: "Open chat", menu: "Menu / close windows" };
 export function defaultBinds(data, cls) {
   const b = { attack_nearest: "Space", stop: "KeyS", inventory: "KeyI", character: "KeyC", skills: "KeyK", map: "KeyM", quests: "KeyL", chat: "Enter", menu: "Escape" };
-  const abil = [...Object.keys(data.abilities).filter((k) => data.abilities[k].cls === cls), ...Object.keys(data.abilities).filter((k) => !data.abilities[k].cls)];
+  const abil = Object.keys(data.abilities).filter((k) => data.abilities[k].cls.includes(cls));
   abil.forEach((a, i) => { b[`ability:${a}`] = i < 10 ? `Digit${(i + 1) % 10}` : ""; });
   return b;
 }
@@ -88,7 +88,7 @@ export function SettingsPanel({ data, net, engine }) {
   }, [capture]); // eslint-disable-line
   if (!me) return null;
   const label = (k) => ACTION_LABEL[k] || data.abilities[k.slice(8)]?.name;
-  const actions = data.actions.filter((a) => !a.startsWith("ability:") || (!data.abilities[a.slice(8)].cls || data.abilities[a.slice(8)].cls === me.cls));
+  const actions = data.actions.filter((a) => !a.startsWith("ability:") || data.abilities[a.slice(8)].cls.includes(me.cls));
   const dirty = JSON.stringify(binds) !== JSON.stringify(me.binds);
   return (
     <Panel title="Settings" testid="settings-panel" className="settings" onClose={() => { setState({ capture: null }); togglePanel("settings", false); }}>

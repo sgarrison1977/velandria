@@ -58,7 +58,7 @@ export function Hotbar({ data, net, engine }) {
   const me = useStore((s) => s.me), mp = useStore((s) => s.mp), meAt = useStore((s) => s.meAt);
   useTick(100);
   if (!me) return null;
-  const list = Object.entries(data.abilities).filter(([, a]) => !a.cls || a.cls === me.cls);
+  const list = Object.entries(data.abilities).filter(([, a]) => a.cls.includes(me.cls));
   const el = (performance.now() - (meAt || 0)) / 1000;
   return (
     <div className="hotbar" data-testid="hotbar">

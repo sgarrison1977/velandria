@@ -50,7 +50,7 @@ input { font-family: inherit; }
 .char-card { display: flex; align-items: center; gap: 14px; background: #15110ddd; border: 1px solid var(--edge2); padding: 10px 14px; transition: border-color .15s, transform .15s; }
 .char-card:hover { border-color: var(--edge); transform: translateX(4px); }
 .char-sigil { width: 46px; height: 46px; display: grid; place-items: center; border: 1px solid var(--edge); border-radius: 50%; }
-.cls-bg-warrior { background: #4a1a12; color: #f0b090; } .cls-bg-mage { background: #1a1e4a; color: #9ac8ff; } .cls-bg-ranger { background: #1e3a16; color: #b0e08a; }
+.cls-bg-warrior { background: #4a1a12; color: #f0b090; } .cls-bg-wizard { background: #1a1e4a; color: #9ac8ff; } .cls-bg-warlock { background: #3a0e22; color: #e08aff; } .cls-bg-ranger { background: #1e3a16; color: #b0e08a; }
 .char-info { flex: 1; display: flex; flex-direction: column; } .char-info b { font-family: var(--serif); font-size: 20px; } .char-info span { color: var(--muted); font-size: 14px; }
 .class-pick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .class-card { background: #120e0bdd; border: 1px solid var(--edge2); color: var(--text); padding: 16px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; text-align: left; transition: border-color .15s, background-color .15s, transform .15s; }
@@ -124,7 +124,7 @@ input { font-family: inherit; }
 .chat-list { max-height: 190px; overflow-y: auto; padding: 6px 8px; font-size: 13px; line-height: 1.35; text-shadow: 0 1px 2px #000; scrollbar-width: thin; }
 .cm time { color: #776a56; font-size: 11px; margin-right: 5px; } .cm b { color: #9ad0ff; } .cm small { color: #998a70; margin: 0 2px; }
 .cm-system span { color: #e3c27a; font-style: italic; } .cm-whisper span, .cm-whisper b.wh { color: #e49aff; } .cm-error span { color: #ff7a6a; }
-.cls-warrior { color: #f0a080 !important; } .cls-mage { color: #9ac8ff !important; } .cls-ranger { color: #b0e08a !important; }
+.cls-warrior { color: #f0a080 !important; } .cls-wizard { color: #9ac8ff !important; } .cls-warlock { color: #e08aff !important; } .cls-ranger { color: #b0e08a !important; }
 .chat input { background: #070605cc; border: 1px solid #3a2c1c; color: var(--text); padding: 7px 9px; outline: none; font-size: 13px; }
 .chat input:focus { border-color: var(--gold); }
 
@@ -242,3 +242,16 @@ input { font-family: inherit; }
 .bind-row.spell { display: flex; align-items: center; gap: 8px; } .bind-row.spell > span { flex: 1; display: flex; flex-direction: column; line-height: 1.2; }
 .bind-row.spell em { font-style: normal; font-size: 11px; color: var(--muted); } .bind-row.spell small { font-size: 11px; color: #8ab8ff; } .bind-row.spell.locked { opacity: 0.55; }
 .keycap.clear { min-width: 24px; padding: 0 6px; color: #ff8a7a; }
+
+.buffbar { position: absolute; left: 50%; bottom: 34px; transform: translateX(-50%); display: flex; gap: 8px; pointer-events: auto; z-index: 20; }
+.buff-ic { position: relative; width: 44px; height: 44px; border: 1px solid var(--gold); border-radius: 4px; display: grid; place-items: center; box-shadow: 0 0 10px #ffcf5a44; animation: buffIn .3s ease-out; }
+.buff-ic small { position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%); font-size: 10px; color: #f0e0b0; text-shadow: 0 1px 2px #000; white-space: nowrap; }
+.buff-ic.low { animation: buffBlink 1s infinite; }
+@keyframes buffIn { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes buffBlink { 50% { opacity: 0.4; } }
+.mark-picker { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); z-index: 50; pointer-events: auto; background: #0d0a08f5; border: 1px solid #b080ff; padding: 16px 18px; width: 340px; }
+.mark-picker h3 { margin: 0 0 4px; color: #d0b0ff; font-family: var(--serif, serif); font-size: 18px; } .mark-picker p { margin: 0 0 10px; font-size: 12px; color: var(--muted); }
+.mark-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; } .mark-grid button { padding: 8px 0; background: #1a1424; border: 1px solid #4a3a6a; color: #e0d0ff; cursor: pointer; transition: background-color .15s; }
+.mark-grid button:hover:not(:disabled) { background: #2e2050; } .mark-grid button:disabled { opacity: 0.3; cursor: not-allowed; }
+.place-hint { position: absolute; left: 50%; top: 90px; transform: translateX(-50%); z-index: 30; background: #1a1030e6; border: 1px solid #b080ff; color: #e0d0ff; padding: 6px 14px; font-size: 13px; pointer-events: none; }
+.invis-veil { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 120px #6a50c088; z-index: 1; }
