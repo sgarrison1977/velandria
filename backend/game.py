@@ -1403,7 +1403,7 @@ class Game:
                     err = "You can't reach that spot."
         elif t == "stop":
             p.path, p.target, p.queued, p.pending = [], None, None, None
-            if p.buffs.pop("invis", None):
+            if msg.get("action") and p.buffs.pop("invis", None):
                 p.dirty = True
                 p.send({"t": "sys", "msg": "Contra Visus ends. You are visible again."})
         elif t == "target":

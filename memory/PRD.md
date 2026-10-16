@@ -41,3 +41,6 @@ Later requests: hold-to-walk toward pointer; ranged/spell abilities fire at the 
 - DONE: account storage trunks (100 slots, db.storage by account_id) in 4 towns; item compare + red locked items
 - P1: Client-side movement prediction; more quests; crafting from materials
 - P2: GLTF character art pass, day/night cycle, music, mobile controls
+- DONE (2026-06): Character model overhaul — new procedural rig system in `frontend/src/game/rig/` (tex.js canvas textures + env-mapped metals, geo.js sculpted lathe/heads/hair/cloth, gear.js weapons/shields, body.js humanoid w/ visible gear per slot, beasts.js spider/wolf, anim.js walk/attack/cast/cape). Snapshot eq string now `main|off|head|chest|counts|feet|legs|hands|belt`. Dev viewer at `/gallery?set=players|monsters|monsters2|npcs`.
+- DONE: Elderglen square tree removed; Gribllin granted 50k gold, 6 mana-regen rings, level 50.
+- DONE: Contra Visus (5 min) no longer cancelled by releasing hold-to-walk; only the Stop Action keybind ends it.

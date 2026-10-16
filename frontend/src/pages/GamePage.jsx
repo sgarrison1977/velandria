@@ -86,7 +86,7 @@ export default function GamePage() {
         const gp = ad.kind !== "melee" ? eng.current?.pointerGround() : null;
         n.send({ t: "cast", ab, id, pt: gp ? [gp.x, gp.z] : undefined }); }
       else if (action === "attack_nearest") { const hov = eng.current?.hover; if (hov?.kind === "monster" && !hov.anim.dead) n.send({ t: "target", id: hov.id }); else n.send({ t: "attack_nearest" }); }
-      else if (action === "stop") n.send({ t: "stop" });
+      else if (action === "stop") n.send({ t: "stop", action: true });
       else if (action === "loot_all") n.send({ t: "loot_all" });
       else if (action.startsWith("item:")) { const it = action.slice(5), s = st.me.inventory.find((x) => x.item === it); if (s) n.send({ t: "use", uid: s.uid }); else toast(`You have no ${data.items[it].name} left.`, "error"); }
       else if (action === "chat") setState((s) => ({ chatFocus: (s.chatFocus || 0) + 1 }));
