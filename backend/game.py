@@ -112,6 +112,7 @@ class Player:
             bonus = a["dex"] * 0.45
         else:
             bonus = a["str"] * 0.5
+        bonus += a.get("dmg", 0)
         return round(lo + bonus, 1), round(hi + bonus, 1)
 
     def speed(self):
