@@ -262,3 +262,13 @@ input { font-family: inherit; }
 .item-icon { position: relative; overflow: hidden; }
 .item-art { position: absolute; inset: 2px; width: calc(100% - 4px); height: calc(100% - 4px); object-fit: cover; border-radius: 2px; pointer-events: none; }
 .item-icon .item-qty { z-index: 1; }
+.inv-panel { width: 560px; top: 56px; font-size: 15px; }
+.inv-panel .inv-grid { grid-template-columns: repeat(7, 66px); gap: 6px; }
+.inv-panel .equip-grid { grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.inv-panel .item-icon { width: 66px !important; height: 66px !important; }
+.inv-panel .item-icon svg { width: 32px; height: 32px; }
+.inv-panel .item-qty { font-size: 13px; }
+.inv-panel .equip-slot em { font-size: 12px; }
+.inv-panel .inv-head { font-size: 15px; }
+.inv-panel .panel-head { font-size: 18px; }
+@media (max-width: 900px) { .inv-panel .inv-grid { grid-template-columns: repeat(5, 58px); } .inv-panel .item-icon { width: 58px !important; height: 58px !important; } }
