@@ -9,7 +9,7 @@ log = logging.getLogger("game")
 rnd = random.Random()
 VIEW_R2 = 85 ** 2
 LINKDEAD_SECS = 15
-TOWN_NAMES = {"semel": "Titus", "elderglen": "Elderglen"}
+TOWN_NAMES = {"semel": "Titus", "elderglen": "Elderglen", "ironhold": "Ironhold", "sunhollow": "Sunhollow"}
 
 
 def now():

@@ -298,6 +298,15 @@ NPCS = {
     "orin": dict(name="Druid Orin", role="Healer", town="elderglen", pos=[996, 222], kind="druid", healer=True),
     "vaelric": dict(name="Vaelric the Gilded", role="Legendary Arms", town="elderglen", pos=[1003, 192], kind="gilded", merchant="elder_legend"),
     "lyra": dict(name="Warden Lyra", role="Warden of Elderglen", town="elderglen", pos=[1008, 220], kind="guard"),
+    "durgan": dict(name="Durgan Ironbeard", role="Master Armorer", town="ironhold", pos=[1248, 190], kind="smith", merchant="iron_arms"),
+    "brikka": dict(name="Brikka Stonehand", role="Provisions", town="ironhold", pos=[1272, 190], kind="merchant", merchant="iron_goods"),
+    "maelis": dict(name="Sister Maelis", role="Healer", town="ironhold", pos=[1254, 211], kind="healer", healer=True),
+    "thane": dict(name="Thane Borik", role="Lord of Ironhold", town="ironhold", pos=[1268, 211], kind="guard"),
+    "soren": dict(name="Old Captain Soren", role="Provisions & Tackle", town="sunhollow", pos=[1458, 292], kind="merchant", merchant="sun_goods"),
+    "lysandra": dict(name="Lysandra the Enchanter", role="Rings & Talismans", town="sunhollow", pos=[1482, 292], kind="elder", merchant="sun_curios"),
+    "fael": dict(name="Druid Fael", role="Healer", town="sunhollow", pos=[1462, 310], kind="druid", healer=True),
+    "v6": dict(name="Grimli", role="Ironhold Miner", town="ironhold", pos=[1240, 205], kind="villager", ambient=True),
+    "v7": dict(name="Nessa", role="Sunhollow Fisher", town="sunhollow", pos=[1490, 310], kind="villager", ambient=True),
     # ambient townsfolk
     "v1": dict(name="Hob the Farmer", role="Villager", town="semel", pos=[70, 225], kind="villager", ambient=True),
     "v2": dict(name="Ella", role="Villager", town="semel", pos=[112, 178], kind="villager", ambient=True),
@@ -318,6 +327,12 @@ MERCHANTS = {
                                                                ("codex_eternity", -1), ("quiver_windrider", -1), ("dragonscale_plate", -1), ("archmage_vestments", -1),
                                                                ("shadowstalker_garb", -1), ("crown_valor", -1), ("titan_greaves", -1), ("gauntlets_might", -1),
                                                                ("boots_wind", -1), ("ring_ancients", -1), ("amulet_eternity", -1)]),
+    "iron_arms": dict(name="Ironbeard Forge", stock=[("vampiric_blade", 3), ("bloodthorn_bow", 3), ("wraith_staff", 3), ("golemstone_plate", 2), ("wraithweave_robe", 2),
+                                                   ("broodsilk_cloak", 2), ("dreadknight_helm", 2), ("troll_hide_gloves", -1), ("iron_shield", -1), ("iron_greaves", -1), ("chainmail", -1)]),
+    "iron_goods": dict(name="Brikka's Stores", stock=[("hp_potion", -1), ("mp_potion", -1), ("minor_hp", -1), ("bread", -1)]),
+    "sun_goods": dict(name="Soren's Wharf Goods", stock=[("hp_potion", -1), ("mp_potion", -1), ("minor_mp", -1), ("bread", -1)]),
+    "sun_curios": dict(name="Lysandra's Curios", stock=[("ring_vigor", -1), ("ring_focus", -1), ("ring_vampire", 2), ("cultist_amulet", 3), ("amulet_dawn", 2),
+                                                       ("fiendhide_boots", 1), ("soulreaver_blade", 1), ("void_staff", 1), ("stormcaller_bow", 1)]),
     "elder_goods": dict(name="Fenn's Provisions", stock=[("minor_hp", -1), ("hp_potion", -1), ("minor_mp", -1), ("mp_potion", -1), ("bread", -1)]),
 }
 SELL_RATIO = 0.4

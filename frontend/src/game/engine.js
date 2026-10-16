@@ -33,6 +33,9 @@ export class Engine {
     scene.background = new THREE.Color("#2a3631"); scene.fog = new THREE.FogExp2("#2a3631", 0.011);
     this.camera = new THREE.PerspectiveCamera(42, 1, 0.5, 150);
     scene.add((this.hemi = new THREE.HemisphereLight("#b8cad4", "#4a3c26", 1.35)));
+    this.waypoint = JSON.parse(localStorage.getItem(`sx_wp_${meId}`) || "null");
+    this.wpBeam = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.9, 40, 12, 1, true), new THREE.MeshBasicMaterial({ color: "#ffd36b", transparent: true, opacity: 0.28, depthWrite: false, side: THREE.DoubleSide }));
+    this.wpBeam.visible = false; scene.add(this.wpBeam);
     this.lantern = new THREE.PointLight("#ffb070", 0, 30, 1.2); scene.add(this.lantern); this.cave = 0;
     const rim = (this.rim = new THREE.DirectionalLight("#8fb0ff", 0.6)); rim.position.set(60, 40, -80); scene.add(rim);
     const sun = (this.sun = new THREE.DirectionalLight("#ffe2b8", 3.0));
@@ -330,6 +333,7 @@ export class Engine {
     const rd = this.terrain.sample(this.terrain.RD, x, z);
     if (x < 330) return rd < 6 ? "Titus Forest Road" : "Westwood";
     if (x < 700) return rd < 6 ? "The Long Road" : "Shadowpine Deep";
+    if (x > 1110) return rd < 6 ? "Marches Road" : "The Sundered Marches";
     return rd < 6 ? "Elderglen Road" : "Mossveil Wilds";
   }
   loop = () => {
@@ -357,6 +361,10 @@ export class Engine {
       for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) { const key = `${cx + i},${cz + j}`; if (!this.discovered.has(key)) { this.discovered.add(key); this.discDirty = true; } }
       const reg = this.regionAt(me.x, me.z);
       if (reg !== this.lastRegion) { this.lastRegion = reg; setState({ region: reg }); }
+      const wp = this.waypoint;
+      if (wp && Math.hypot(wp.x - me.x, wp.z - me.z) < 4) { this.setWaypoint(null); sfx("loot"); }
+      this.wpBeam.visible = !!wp;
+      if (wp) this.wpBeam.position.set(wp.x, this.groundY(wp.x, wp.z) + 20, wp.z);
       this.cave += ((me.z > this.world.oh ? 1 : 0) - this.cave) * Math.min(1, dt * 3);
       const k = this.cave;
       this.hemi.intensity = 1.35 - k * 1.0; this.sun.intensity = 3.0 - k * 2.6; this.rim.intensity = 0.6 - k * 0.45;
@@ -418,6 +426,15 @@ export class Engine {
   setQuality(q) { this.quality = q; this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, q === "high" ? 1.5 : q === "medium" ? 1 : 0.7)); this.renderer.shadowMap.enabled = q !== "low"; this.sun.castShadow = q !== "low"; this.scene.traverse((o) => { if (o.material) o.material.needsUpdate = true; }); this.resize(); }
 
   // ---------- map rendering
+  setWaypoint(wp) {
+    this.waypoint = wp; localStorage.setItem(`sx_wp_${this.meId}`, JSON.stringify(wp));
+  }
+  mapToWorld(px, pz) {
+    const t = this._mapT; if (!t) return null;
+    const ir = this._inset;
+    if (ir && px >= ir.x && px <= ir.x + ir.w && pz >= ir.y && pz <= ir.y + ir.h) return { x: 370 + (px - ir.x) / ir.s, z: 452 + (pz - ir.y) / ir.s };
+    return { x: t.sx + px / t.scale, z: t.sz + pz / t.scale };
+  }
   drawMap(ctx, w, h, opts = {}) {
     const W = this.world.w, H = this.world.h, src = this.terrain.mapCanvas;
     const me = this.me || { x: 90, z: 200 };
@@ -426,6 +443,7 @@ export class Engine {
     else if (me.z > this.world.oh) { sx = 370; sz = 452; sw = 380; shh = 380 * h / w; }
     else shh = this.world.oh;
     const scale = w / sw;
+    if (!opts.radius) { this._mapT = { sx, sz, scale }; this._inset = null; }
     ctx.fillStyle = "#0b0d0c"; ctx.fillRect(0, 0, w, h);
     ctx.drawImage(src, sx * 2, sz * 2, sw * 2, shh * 2, 0, 0, w, h);
     const P = (x, z) => [(x - sx) * scale, (z - sz) * scale];
@@ -470,17 +488,33 @@ export class Engine {
       ctx.fillStyle = "#e0d0ff"; ctx.beginPath(); ctx.arc(px, pz, 2, 0, 6.28); ctx.fill();
       if (!opts.radius) { ctx.font = "600 13px 'IM Fell English SC', serif"; ctx.textAlign = "center"; ctx.fillStyle = "#000"; ctx.fillText(pt.z < this.world.oh ? "Hollow Deep (Dungeon)" : pt.name, px + 1, pz - r - 5); ctx.fillStyle = "#c8b0ff"; ctx.fillText(pt.z < this.world.oh ? "Hollow Deep (Dungeon)" : pt.name, px, pz - r - 6); }
     }
-    if (!opts.radius && me.z <= this.world.oh) {
-      const iw = Math.round(w * 0.3), ih = Math.round(iw * 138 / 380), ix = 10, iy = h - ih - 10;
+    if (!opts.radius && me.z <= this.world.oh && opts.inset !== false) {
+      const iw = Math.round(w * 0.2), ih = Math.round(iw * 138 / 380), ix = Math.round(w * 0.4), iy = h - ih - 10;
       ctx.fillStyle = "rgba(8,6,14,0.92)"; ctx.fillRect(ix - 4, iy - 20, iw + 8, ih + 24);
       ctx.strokeStyle = "#8a6aff"; ctx.lineWidth = 1.5; ctx.strokeRect(ix - 4, iy - 20, iw + 8, ih + 24);
       ctx.drawImage(src, 370 * 2, 452 * 2, 380 * 2, 138 * 2, ix, iy, iw, ih);
+      this._inset = { x: ix, y: iy, w: iw, h: ih, s: iw / 380 };
       ctx.font = "600 12px 'IM Fell English SC', serif"; ctx.textAlign = "left"; ctx.fillStyle = "#c8b0ff"; ctx.fillText("The Hollow Deep — beneath the cave", ix, iy - 6);
       const isc = iw / 380, IP = (x, z) => [ix + (x - 370) * isc, iy + (z - 452) * isc];
       ctx.textAlign = "center"; ctx.font = "10px 'Alegreya Sans', sans-serif";
       for (const r of this.world.regions) if (r.z > this.world.oh) { const [px, pz] = IP(r.x, r.z); ctx.fillStyle = r.lvl.includes("Boss") ? "#ff7a5a" : "#e8dcc0"; ctx.fillText(`${r.name.replace("Throne of the ", "")} (${r.lvl})`, px, pz + 3); }
       const ent = (this.world.portals || []).find((p) => p.z < this.world.oh);
       if (ent) { const [ex, ez] = P(ent.x, ent.z); ctx.setLineDash([4, 4]); ctx.strokeStyle = "rgba(176,144,255,0.6)"; ctx.beginPath(); ctx.moveTo(ex, ez + 8); ctx.lineTo(ix + iw * 0.5, iy - 20); ctx.stroke(); ctx.setLineDash([]); }
+    }
+    const wp = this.waypoint;
+    if (wp) {
+      const ins = !opts.radius && this._inset && wp.z > this.world.oh && me.z <= this.world.oh;
+      const [wx, wz] = ins ? [this._inset.x + (wp.x - 370) * this._inset.s, this._inset.y + (wp.z - 452) * this._inset.s] : P(wp.x, wp.z);
+      const inside = wx > 6 && wz > 6 && wx < w - 6 && wz < h - 6 && (!opts.radius || Math.hypot(wx - w / 2, wz - h / 2) < w / 2 - 8);
+      if (inside) {
+        ctx.fillStyle = "#ffd36b"; ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(wx, wz - 7); ctx.lineTo(wx + 5, wz); ctx.lineTo(wx, wz + 7); ctx.lineTo(wx - 5, wz); ctx.closePath(); ctx.fill(); ctx.stroke();
+      } else if (opts.radius) {
+        const a = Math.atan2(wz - h / 2, wx - w / 2), R = w / 2 - 12, ax = w / 2 + Math.cos(a) * R, az = h / 2 + Math.sin(a) * R;
+        ctx.save(); ctx.translate(ax, az); ctx.rotate(a); ctx.fillStyle = "#ffd36b"; ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(-5, 6); ctx.lineTo(-2, 0); ctx.lineTo(-5, -6); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
+      }
+      if (opts.radius) { ctx.font = "600 11px 'Alegreya Sans', sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = "#000"; ctx.fillText(`${Math.round(Math.hypot(wp.x - me.x, wp.z - me.z))}m`, w / 2 + 1, h - 15); ctx.fillStyle = "#ffd36b"; ctx.fillText(`${Math.round(Math.hypot(wp.x - me.x, wp.z - me.z))}m`, w / 2, h - 16); }
     }
     const [mx, mz] = P(me.x, me.z);
     ctx.save(); ctx.translate(mx, mz); ctx.rotate(-(this.entities.get(this.meId)?.rot || 0) + Math.PI);

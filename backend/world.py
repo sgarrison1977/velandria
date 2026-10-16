@@ -2,12 +2,16 @@
 import math, random, base64, heapq
 import numpy as np
 
-W, H = 1100, 600
+W, H = 1600, 600
 OH = 400
 SEMEL = (90.0, 200.0)
 ELDER = (1000.0, 210.0)
+IRON = (1260.0, 200.0)
+SUNH = (1470.0, 300.0)
 SAFE_HALF = 16.0
-SAFE_ZONES = [dict(town="semel", x=SEMEL[0], z=SEMEL[1], half=SAFE_HALF), dict(town="elderglen", x=ELDER[0], z=ELDER[1], half=SAFE_HALF)]
+SAFE_ZONES = [dict(town="semel", x=SEMEL[0], z=SEMEL[1], half=SAFE_HALF), dict(town="elderglen", x=ELDER[0], z=ELDER[1], half=SAFE_HALF),
+              dict(town="ironhold", x=IRON[0], z=IRON[1], half=SAFE_HALF), dict(town="sunhollow", x=SUNH[0], z=SUNH[1], half=SAFE_HALF)]
+TOWN_RINGS = [(SEMEL, 60, 60), (ELDER, 66, 52), (IRON, 50, 44), (SUNH, 54, 44)]
 
 
 def in_safe(x, z):
@@ -45,13 +49,18 @@ SIDE_PATHS = [
     dict(w=1.6, pts=[(740, 226), (758, 266), (762, 298)]),
     dict(w=2.0, pts=[(800, 202), (806, 160), (800, 122)]),
     dict(w=2.0, pts=[ELDER, (1000, 162), (990, 112), (966, 72)]),
-    dict(w=2.2, pts=[ELDER, (1062, 210), (1094, 210)]),
+    dict(w=3.0, pts=[ELDER, (1062, 210), (1110, 214), (1170, 198), (1222, 200), IRON]),
+    dict(w=3.0, pts=[IRON, (1310, 214), (1360, 250), (1410, 290), SUNH]),
+    dict(w=2.0, pts=[IRON, (1262, 150), (1240, 95), (1215, 80)]),
+    dict(w=2.0, pts=[IRON, (1268, 250), (1290, 300), (1300, 335)]),
+    dict(w=2.0, pts=[SUNH, (1470, 250), (1520, 190), (1550, 125)]),
+    dict(w=1.6, pts=[(1310, 214), (1350, 160), (1385, 100)]),
     dict(w=1.4, pts=[(560, 186), (560, 152)], hidden=True),
     dict(w=1.6, pts=[(200, 190), (215, 240), (232, 262)]),
 ]
 STREAMS = [[(300, -5), (290, 80), (310, 160), (300, 235), (320, 320), (310, 405)],
            [(700, -5), (715, 90), (690, 170), (705, 240), (690, 330), (700, 405)]]
-LAKES = [dict(x=1045, z=335, rx=30, rz=20), dict(x=420, z=330, rx=14, rz=9)]
+LAKES = [dict(x=1045, z=335, rx=30, rz=20), dict(x=1548, z=352, rx=26, rz=16), dict(x=420, z=330, rx=14, rz=9)]
 
 REGIONS = [
     dict(name="Titus", x=90, z=200, r=58, lvl="Safe town"),
@@ -73,7 +82,15 @@ REGIONS = [
     dict(name="Shattered Quarry", x=505, z=365, r=30, lvl="38 (Danger)"),
     dict(name="Dreadkeep Ruins", x=820, z=35, r=28, lvl="48 (Deadly)"),
     dict(name="Abyssal Rift", x=1040, z=25, r=26, lvl="60 (Deadly)"),
-    dict(name="The Sealed Pass", x=1090, z=210, r=14, lvl="Future region"),
+    dict(name="The Old Pass", x=1094, z=210, r=14, lvl="-"),
+    dict(name="Ironhold", x=1260, z=200, r=52, lvl="Safe town"),
+    dict(name="Sunhollow", x=1470, z=300, r=54, lvl="Safe town"),
+    dict(name="Ashen Steppe", x=1215, z=80, r=38, lvl="20-25"),
+    dict(name="Sunken Marsh", x=1300, z=345, r=34, lvl="25-30"),
+    dict(name="Emberfall Crags", x=1390, z=95, r=34, lvl="38"),
+    dict(name="Howling Ridge", x=1550, z=120, r=36, lvl="48 (Deadly)"),
+    dict(name="Sunmere", x=1548, z=352, r=30, lvl="-"),
+    dict(name="Ghostlight Fen", x=1170, z=300, r=30, lvl="30"),
 ]
 
 DUNGEON_ROOMS = [
@@ -88,7 +105,8 @@ PORTALS = [dict(id="hollow_in", x=518.0, z=51.0, to=(426.0, 550.0), name="Hollow
            dict(id="hollow_out", x=411.0, z=562.0, to=(518.0, 45.0), name="Exit to the surface", msg="You climb back into the daylight.")]
 SCATTER_BANDS = [(200, ["giant_spider", "imp"]), (330, ["forest_wolf", "imp", "goblin_scout"]), (450, ["goblin_scout", "skeleton", "forest_wolf"]),
                  (600, ["forest_bandit", "venomous_spider", "skeleton"]), (760, ["orc_warrior", "venomous_spider", "forest_bandit"]),
-                 (900, ["dark_cultist", "orc_warrior"]), (99999, ["forest_troll", "dark_cultist"])]
+                 (900, ["dark_cultist", "orc_warrior"]), (1120, ["forest_troll", "dark_cultist"]),
+                 (1350, ["dire_wolf", "shadow_wraith", "forest_troll"]), (99999, ["broodmother", "stone_golem", "shadow_wraith"])]
 SPAWNS = [
     ("cave_crawler", 470, 505, 11, 8), ("crypt_ghoul", 540, 555, 11, 8), ("bone_colossus", 605, 495, 10, 5),
     ("hollow_shade", 655, 560, 10, 6), ("crypt_ghoul", 507, 528, 4, 2), ("cave_crawler", 630, 530, 4, 2), ("hollow_king", 702, 500, 3, 1),
@@ -103,6 +121,8 @@ SPAWNS = [
     ("dark_cultist", 762, 300, 32, 13), ("dark_cultist", 830, 350, 22, 6),
     ("dire_wolf", 230, 40, 30, 10), ("broodmother", 380, 372, 28, 6), ("shadow_wraith", 660, 48, 30, 8),
     ("stone_golem", 505, 365, 28, 6), ("death_knight", 820, 35, 26, 7), ("abyssal_fiend", 1040, 25, 24, 4),
+    ("dire_wolf", 1215, 80, 34, 12), ("broodmother", 1300, 345, 30, 8), ("stone_golem", 1390, 95, 30, 8),
+    ("death_knight", 1550, 120, 32, 9), ("shadow_wraith", 1170, 300, 28, 9), ("abyssal_fiend", 1580, 30, 16, 3),
     ("forest_troll", 962, 72, 44, 10), ("forest_troll", 885, 335, 28, 6), ("forest_troll", 1060, 90, 26, 5),
 ]
 
@@ -122,6 +142,18 @@ ELDER_BUILDINGS = [
     _rect(970, 238, 10, 10, "hut", "elder", name="Grove of Orin"), _rect(1032, 238, 9, 9, "hut", "elder", name="Fenn's Provisions"),
     _rect(1000, 250, 16, 8, "longhouse", "elder", name="Warden's Lodge"), _rect(952, 228, 8, 8, "hut", "elder"),
     _rect(1048, 228, 8, 8, "hut", "elder"), _rect(980, 175, 8, 8, "hut", "elder"), _rect(1022, 174, 8, 8, "hut", "elder"),
+]
+IRON_BUILDINGS = [
+    _rect(1232, 180, 11, 10, "smithy", "iron", town="ironhold", name="Ironbeard Forge"), _rect(1288, 180, 11, 9, "shop", "iron", town="ironhold", name="Brikka's Stores"),
+    _rect(1230, 222, 10, 13, "chapel", "iron", town="ironhold", name="Shrine of the Anvil"), _rect(1290, 224, 14, 10, "hall", "iron", town="ironhold", name="Thane's Hall"),
+    _rect(1218, 200, 8, 8, "house", "iron", town="ironhold"), _rect(1302, 200, 8, 8, "house", "iron", town="ironhold"),
+    _rect(1246, 166, 8, 7, "house", "iron", town="ironhold"), _rect(1276, 236, 8, 7, "house", "iron", town="ironhold"),
+]
+SUN_BUILDINGS = [
+    _rect(1438, 282, 10, 10, "hut", "sun", town="sunhollow", name="Soren's Wharf Goods"), _rect(1502, 282, 10, 10, "hut", "sun", town="sunhollow", name="Lysandra's Curios"),
+    _rect(1440, 322, 9, 9, "hut", "sun", town="sunhollow", name="Tidehouse"), _rect(1500, 322, 9, 9, "hut", "sun", town="sunhollow"),
+    _rect(1470, 336, 16, 8, "longhouse", "sun", town="sunhollow", name="Harvest Hall"), _rect(1424, 304, 8, 8, "hut", "sun", town="sunhollow"),
+    _rect(1516, 304, 8, 8, "hut", "sun", town="sunhollow"), _rect(1470, 266, 8, 8, "hut", "sun", town="sunhollow"),
 ]
 WILD_STRUCTS = [
     _rect(232, 266, 9, 7, "ruin_house", "ruin", name="Abandoned Farmstead"),
@@ -164,7 +196,9 @@ class World:
         self.props = []
         self._ring(SEMEL, 56, 56, [0, -math.pi / 2, math.pi / 2], "stone")
         self._ring(ELDER, 62, 48, [math.pi, -math.pi / 2, 0], "palisade")
-        self.buildings = SEMEL_BUILDINGS + ELDER_BUILDINGS + WILD_STRUCTS
+        self._ring(IRON, 46, 40, [math.pi, 0, math.pi / 2, -math.pi / 2], "stone")
+        self._ring(SUNH, 50, 40, [math.pi, -math.pi / 2], "palisade")
+        self.buildings = SEMEL_BUILDINGS + ELDER_BUILDINGS + IRON_BUILDINGS + SUN_BUILDINGS + WILD_STRUCTS
         for bd in self.buildings:
             self._block_rect(bd["x"], bd["z"], bd["w"], bd["d"])
         self._town_props()
@@ -223,6 +257,10 @@ class World:
         P = self.props
         P.append(dict(kind="fountain", x=SEMEL[0], z=SEMEL[1])); self._disc(SEMEL[0], SEMEL[1], 2.8)
         P.append(dict(kind="elder_tree", x=ELDER[0], z=ELDER[1])); self._disc(ELDER[0], ELDER[1], 3.4)
+        P.append(dict(kind="fountain", x=IRON[0], z=IRON[1])); self._disc(IRON[0], IRON[1], 2.8)
+        P.append(dict(kind="moonwell", x=SUNH[0], z=SUNH[1])); self._disc(SUNH[0], SUNH[1], 1.6)
+        for (x, z, k) in [(1246, 186, "anvil"), (1274, 186, "stall"), (1456, 288, "stall"), (1484, 288, "stall"), (1494, 312, "barrels"), (1252, 214, "barrels")]:
+            P.append(dict(kind=k, x=x, z=z)); self._disc(x, z, 1.0)
         for t in SAFE_ZONES:
             for sx in (-1, 1):
                 for sz in (-1, 1):
@@ -233,7 +271,7 @@ class World:
                           (98, 260, "sign"), (382, 232, "sign"), (620, 228, "sign"), (75, 176, "anvil"), (104, 214, "barrels"),
                           (78, 214, "well"), (986, 196, "stall"), (1014, 196, "stall"), (1003, 226, "moonwell"), (110, 200, "lamp"),
                           (130, 202, "lamp"), (960, 204, "spirit_lamp"), (1040, 214, "spirit_lamp"), (518, 60, "cave"),
-                          (1094, 210, "sealed_gate"), (300, 345, "cave_small"), (560, 150, "standing_ring")]:
+                          (300, 345, "cave_small"), (560, 150, "standing_ring")]:
             P.append(dict(kind=k, x=x, z=z))
             r = {"stall": 1.2, "anvil": 0.6, "barrels": 0.8, "well": 1.3, "moonwell": 1.6, "cave": 5.0, "sealed_gate": 3.0, "cave_small": 3.0,
                  "sign": 0.3, "lamp": 0.4, "spirit_lamp": 0.4}.get(k, 0)
@@ -321,7 +359,7 @@ class World:
     def _vegetation(self, rnd):
         b = self.blocked
         def town_d(x, z):
-            return min(((x - SEMEL[0]) / 60) ** 2 + ((z - SEMEL[1]) / 60) ** 2, ((x - ELDER[0]) / 66) ** 2 + ((z - ELDER[1]) / 52) ** 2)
+            return min(((x - c[0]) / rx) ** 2 + ((z - c[1]) / rz) ** 2 for c, rx, rz in TOWN_RINGS)
         clearings = [(r["x"], r["z"], r["r"] * 0.55) for r in REGIONS[2:]] + [(s[1], s[2], s[3] * 0.7) for s in SPAWNS]
         def ok(x, z, road_gap):
             xi, zi = int(x), int(z)
@@ -329,7 +367,7 @@ class World:
                 return False
             return True
         n_tree = 0
-        for _ in range(11000):
+        for _ in range(11000 * W // 1100):
             x, z = rnd.uniform(3, W - 3), rnd.uniform(3, OH - 3)
             if town_d(x, z) < 1.05:
                 continue
@@ -352,7 +390,7 @@ class World:
             if s > 1.25:
                 self._disc(x, z, 0.9)
             n_tree += 1
-        for _ in range(1100):
+        for _ in range(1100 * W // 1100):
             x, z = rnd.uniform(5, W - 5), rnd.uniform(5, OH - 5)
             if town_d(x, z) < 1.1 or not ok(x, z, 3.0):
                 continue
@@ -361,12 +399,12 @@ class World:
             self.rocks.append([round(x, 1), round(z, 1), round(s, 2), round(rnd.uniform(0, 6.28), 2)])
             if s > 0.6:
                 self._disc(x, z, s * 0.75)
-        for _ in range(9000):
+        for _ in range(9000 * W // 1100):
             x, z = rnd.uniform(4, W - 4), rnd.uniform(4, OH - 4)
             if town_d(x, z) < 0.9 or not ok(x, z, 1.5):
                 continue
             self.bushes.append([round(x, 1), round(z, 1), round(rnd.uniform(0.6, 1.4), 2), 1 if x > 820 else 0])
-        for _ in range(16000):
+        for _ in range(16000 * W // 1100):
             x, z = rnd.uniform(4, W - 4), rnd.uniform(4, OH - 4)
             if not ok(x, z, 0.8) or any(abs(x - t["x"]) < 23 and abs(z - t["z"]) < 23 for t in SAFE_ZONES):
                 continue
@@ -463,7 +501,7 @@ class World:
         def ok(x, z):
             if not (5 < x < W - 5 and 5 < z < OH - 5) or not self.walkable(x, z):
                 return False
-            if math.hypot(x - SEMEL[0], z - SEMEL[1]) < 48 or math.hypot(x - ELDER[0], z - ELDER[1]) < 52:
+            if any(math.hypot(x - c[0], z - c[1]) < rx - 6 for c, rx, rz in TOWN_RINGS):
                 return False
             return all(math.hypot(x - s["x"], z - s["z"]) > s["r"] + 14 for s in self.spawns)
         road = self.main_road
@@ -494,4 +532,4 @@ class World:
                     streams=[[[round(a, 1), round(b, 1)] for a, b in s] for s in self.streams], bridges=self.bridges, lakes=LAKES,
                     walls=self.walls, buildings=self.buildings, props=self.props, trees=self.trees, rocks=self.rocks, bushes=self.bushes,
                     grass=self.grass, regions=REGIONS + DUNGEON_ROOMS, safe_zones=SAFE_ZONES, oh=OH, cave_rocks=self.cave_rocks,
-                    portals=[dict(x=p['x'], z=p['z'], name=p['name']) for p in PORTALS], towns=dict(semel=SEMEL, elderglen=ELDER))
+                    portals=[dict(x=p['x'], z=p['z'], name=p['name']) for p in PORTALS], towns=dict(semel=SEMEL, elderglen=ELDER, ironhold=IRON, sunhollow=SUNH))

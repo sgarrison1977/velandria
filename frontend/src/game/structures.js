@@ -21,13 +21,14 @@ function gableRoof(w, d, h, m) {
 function semelHouse(b) {
   const g = new THREE.Group();
   const big = b.kind === "hall" || b.kind === "chapel";
-  const wh = big ? 5.2 : 3.6, plaster = M(b.kind === "smithy" ? "#8a7d6a" : "#cdbb93"), beam = M("#3b2a1c"), stone = M("#6d675e");
+  const iron = b.style === "iron";
+  const wh = big ? 5.2 : 3.6, plaster = M(iron ? (b.kind === "smithy" ? "#5e5c58" : "#807d76") : b.kind === "smithy" ? "#8a7d6a" : "#cdbb93"), beam = M(iron ? "#2a2826" : "#3b2a1c"), stone = M(iron ? "#4e4b47" : "#6d675e");
   box(b.w, 0.8, b.d, stone, 0, 0.4, 0, g);
   box(b.w - 0.2, wh, b.d - 0.2, plaster, 0, 0.8 + wh / 2, 0, g);
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) box(0.35, wh, 0.35, beam, sx * (b.w / 2 - 0.1), 0.8 + wh / 2, sz * (b.d / 2 - 0.1), g);
   for (const sz of [-1, 1]) { box(b.w, 0.3, 0.3, beam, 0, 0.8 + wh, sz * (b.d / 2 - 0.05), g); box(b.w, 0.22, 0.25, beam, 0, 0.8 + wh * 0.5, sz * (b.d / 2 - 0.05), g); }
   for (let x = -b.w / 2 + 2; x < b.w / 2 - 1; x += 2.2) for (const sz of [-1, 1]) { const br = box(0.18, wh * 0.55, 0.2, beam, x, 0.8 + wh * 0.26, sz * (b.d / 2 - 0.02), g); br.rotation.z = 0.6; }
-  const roof = gableRoof(b.w, b.d, big ? 3.6 : 2.6, M(b.kind === "chapel" ? "#3d4a5a" : "#5a2e22"));
+  const roof = gableRoof(b.w, b.d, big ? 3.6 : 2.6, M(iron ? "#2e3640" : b.kind === "chapel" ? "#3d4a5a" : "#5a2e22"));
   roof.position.y = 0.8 + wh; g.add(roof);
   const win = M("#ffcf7a", { emissive: WARM, emissiveIntensity: 1.4 });
   for (let x = -b.w / 2 + 1.6; x < b.w / 2 - 1; x += 2.6) for (const sz of [-1, 1]) {
@@ -45,7 +46,8 @@ function semelHouse(b) {
 
 function elderHut(b) {
   const g = new THREE.Group();
-  const wood = M("#5b3e26"), moss = M("#4c5a2c"), stone = M("#545a55"), win = M("#9fe8ff", { emissive: COOL, emissiveIntensity: 1.2 });
+  const sun = b.style === "sun";
+  const wood = M(sun ? "#9a6a3e" : "#5b3e26"), moss = M(sun ? "#c8963e" : "#4c5a2c"), stone = M(sun ? "#b8a888" : "#545a55"), win = M(sun ? "#ffd27a" : "#9fe8ff", { emissive: sun ? WARM : COOL, emissiveIntensity: 1.2 });
   if (b.kind === "longhouse") {
     box(b.w, 0.7, b.d, stone, 0, 0.35, 0, g); box(b.w - 0.3, 3.4, b.d - 0.3, wood, 0, 2.4, 0, g);
     const r = new THREE.Mesh(new THREE.CylinderGeometry(b.d / 2 + 0.8, b.d / 2 + 0.8, b.w + 1, 10, 1, false, 0, Math.PI), moss);
@@ -57,7 +59,7 @@ function elderHut(b) {
     const r = b.w / 2;
     cyl(r, r + 0.2, 0.8, 10, stone, 0, 0.4, 0, g);
     cyl(r - 0.3, r - 0.2, 3.2, 10, wood, 0, 2.4, 0, g);
-    const roof = cone(r + 1.4, 4.6, 10, M("#6b6234"), 0, 6.2, 0, g); roof.rotation.y = 0.3;
+    const roof = cone(r + 1.4, 4.6, 10, M(sun ? "#a4532a" : "#6b6234"), 0, 6.2, 0, g); roof.rotation.y = 0.3;
     cone(r + 1.5, 1.2, 10, moss, 0, 4.4, 0, g).scale.set(1, 0.5, 1);
     for (let i = 0; i < 4; i++) { const a = i * 1.57 + 0.8; const w = cyl(0.45, 0.45, 0.12, 8, win, Math.sin(a) * (r - 0.2), 2.8, Math.cos(a) * (r - 0.2), g); w.rotation.x = Math.PI / 2; w.rotation.z = -a; w.lookAt(Math.sin(a) * 99, 2.8, Math.cos(a) * 99); w.rotateX(Math.PI / 2); }
     box(1.3, 2.2, 0.3, M("#2a1d12"), 0, 1.9, r - 0.1, g);
@@ -191,10 +193,10 @@ export function buildStructures(world, terrain, scene) {
   const root = new THREE.Group(), animated = [];
   const lights = { count: 0 };
   for (const b of world.buildings) {
-    const town = b.style === "semel" ? world.towns.semel : world.towns.elderglen;
+    const town = world.towns[b.town || (b.style === "semel" ? "semel" : "elderglen")] || world.towns.elderglen;
     const dx = town[0] - b.x, dz = town[1] - b.z, side = Math.abs(dx) > Math.abs(dz);
     const bb = b.style !== "ruin" && side ? { ...b, w: b.d, d: b.w } : b;
-    const g = b.style === "semel" ? semelHouse(bb) : b.style === "elder" ? elderHut(bb) : ruinBuilding(bb);
+    const g = b.style === "semel" || b.style === "iron" ? semelHouse(bb) : b.style === "elder" || b.style === "sun" ? elderHut(bb) : ruinBuilding(bb);
     if (b.style !== "ruin") g.rotation.y = side ? (dx > 0 ? Math.PI / 2 : -Math.PI / 2) : (dz > 0 ? 0 : Math.PI);
     g.position.set(b.x, terrain.height(b.x, b.z) - 0.1, b.z);
     root.add(g);
@@ -213,7 +215,8 @@ export function buildStructures(world, terrain, scene) {
     const g = prop(p, terrain, lights);
     if (g) { root.add(g); g.traverse((o) => { if (o.name) animated.push(o); }); }
   }
-  for (const [town, style] of [["semel", "semel"], ["elderglen", "elder"]]) {
+  for (const [town, style] of [["semel", "semel"], ["elderglen", "elder"], ["ironhold", "semel"], ["sunhollow", "elder"]]) {
+    if (!world.towns[town]) continue;
     const [x, z] = world.towns[town];
     const m = new THREE.Mesh(new THREE.PlaneGeometry(44, 44), new THREE.MeshStandardMaterial({ map: plazaTexture(style), roughness: 0.9, polygonOffset: true, polygonOffsetFactor: -2 }));
     m.rotation.x = -Math.PI / 2; m.position.set(x, 0.04, z); m.receiveShadow = true;

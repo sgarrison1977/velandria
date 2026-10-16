@@ -52,9 +52,9 @@ export class Terrain {
     return (this.grid[k >> 3] >> (7 - (k & 7))) & 1;
   }
   townFactor(x, z) {
-    const s = this.w.towns.semel, e = this.w.towns.elderglen;
-    const ds = Math.hypot(x - s[0], z - s[1]), de = Math.hypot((x - e[0]) * 0.85, z - e[1]);
-    return smooth(40, 75, Math.min(ds, de));
+    let m = 999;
+    for (const [k, c] of Object.entries(this.w.towns)) m = Math.min(m, k === "elderglen" ? Math.hypot((x - c[0]) * 0.85, z - c[1]) : Math.hypot(x - c[0], z - c[1]) * (k === "semel" ? 1 : 1.15));
+    return smooth(40, 75, m);
   }
   lake(x, z) {
     let m = 99;
@@ -92,6 +92,8 @@ export class Terrain {
     const east = smooth(780, 900, x), mid = smooth(330, 480, x) * (1 - east);
     let r = mix(0.3, 0.22, mid), g = mix(0.4, 0.3, mid), b = mix(0.16, 0.14, mid);
     r = mix(r, 0.18, east); g = mix(g, 0.32, east); b = mix(b, 0.24, east);
+    const far = smooth(1110, 1250, x);
+    r = mix(r, 0.42, far); g = mix(g, 0.38, far); b = mix(b, 0.18, far);
     const dirt = smooth(0.55, 0.8, n2) * 0.6;
     r = mix(r, 0.3, dirt); g = mix(g, 0.24, dirt); b = mix(b, 0.15, dirt);
     const v = 0.82 + n * 0.36;

@@ -26,6 +26,7 @@ Later requests: hold-to-walk toward pointer; ranged/spell abilities fire at the 
 
 ## Backlog
 - DONE: Hollow Deep dungeon (6 chambers, 4 dungeon monsters, boss Vorgath lvl 75 with slam AoE, portals at (518,51) and inside)
+- DONE: Map waypoints (click world map, minimap arrow + distance, 3D beam); East expansion "Sundered Marches" W=1600 with towns Ironhold (1260,200) and Sunhollow (1470,300)
 - P1: Party system, bank/storage NPC, PvP arenas outside towns
 - P1: Client-side movement prediction; more quests; crafting from materials
 - P2: GLTF character art pass, day/night cycle, music, mobile controls

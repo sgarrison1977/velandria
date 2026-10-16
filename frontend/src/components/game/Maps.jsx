@@ -20,16 +20,19 @@ export function Minimap({ engine }) {
 
 export function WorldMap({ engine }) {
   const ref = useRef();
+  const [inset, setInset] = useState(true);
+  const draw = () => { const c = ref.current; if (c && engine) engine.drawMap(c.getContext("2d"), c.width, c.height, { inset }); };
   useEffect(() => {
     if (!engine) return;
-    const draw = () => { const c = ref.current; if (c) engine.drawMap(c.getContext("2d"), c.width, c.height, {}); };
     draw(); const i = setInterval(draw, 700);
     return () => clearInterval(i);
-  }, [engine]);
+  }, [engine, inset]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <Panel title="Map of the Western Reach" testid="world-map" className="worldmap" onClose={() => togglePanel("map", false)}>
-      <canvas ref={ref} width={1100} height={400} />
-      <div className="map-legend"><span><i style={{ background: "#ffd23a" }} />Merchant</span><span><i style={{ background: "#7aff9a" }} />Healer</span><span><i style={{ background: "#e0e0ff" }} />Townsfolk</span><span><i style={{ background: "#5ab0ff" }} />Players</span><span><i className="sq" />Safe square</span><span>Unexplored lands remain shrouded.</span></div>
+      <canvas ref={ref} width={engine?.world.w || 1100} height={400} data-testid="world-map-canvas" style={{ cursor: "crosshair" }}
+        onClick={(e) => { const c = ref.current, r = c.getBoundingClientRect(); const p = engine?.mapToWorld((e.clientX - r.left) * c.width / r.width, (e.clientY - r.top) * c.height / r.height); if (p) { engine.setWaypoint({ x: Math.round(p.x), z: Math.round(p.z) }); draw(); } }}
+        onContextMenu={(e) => { e.preventDefault(); engine?.setWaypoint(null); draw(); }} />
+      <div className="map-legend"><span><i style={{ background: "#ffd23a" }} />Merchant</span><span><i style={{ background: "#7aff9a" }} />Healer</span><span><i style={{ background: "#e0e0ff" }} />Townsfolk</span><span><i style={{ background: "#5ab0ff" }} />Players</span><span><i className="sq" />Safe square</span><span><i style={{ background: "#ffd36b" }} />Waypoint — click map to set, right-click to clear</span><button className="btn" data-testid="clear-waypoint-btn" onClick={() => { engine?.setWaypoint(null); draw(); }}>Clear waypoint</button><button className="btn" data-testid="toggle-dungeon-inset-btn" onClick={() => setInset(!inset)}>{inset ? "Hide" : "Show"} Hollow Deep</button></div>
     </Panel>
   );
 }
