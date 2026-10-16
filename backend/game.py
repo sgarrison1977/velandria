@@ -1,4 +1,4 @@
-"""Authoritative real-time game simulation for Suminex."""
+"""Authoritative real-time game simulation for Titus Realms."""
 import asyncio, time, math, random, uuid, json, logging, re
 from datetime import datetime, timezone
 from game_data import (STORAGE_SLOTS, ITEMS, MONSTERS, ABILITIES, CLASSES, NPCS, MERCHANTS, QUESTS, XP_TABLE, MAX_LEVEL, INV_SLOTS, TICK, COMBAT,

@@ -1,4 +1,4 @@
-"""Deterministic world layout + collision grid + pathfinding for Suminex."""
+"""Deterministic world layout + collision grid + pathfinding for Titus Realms."""
 import math, random, base64, heapq
 import numpy as np
 

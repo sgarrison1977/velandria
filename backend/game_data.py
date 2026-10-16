@@ -1,4 +1,4 @@
-"""Static, configurable game definitions for Suminex (balance lives here)."""
+"""Static, configurable game definitions for Titus Realms (balance lives here)."""
 import math
 
 MAX_LEVEL = 100
