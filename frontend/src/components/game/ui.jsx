@@ -40,7 +40,9 @@ export function ItemTip({ id, item, me, extra }) {
     <div className="tip">
       <div className="tip-name" style={{ color: RARITY[item.rarity] }}>{item.name}</div>
       {item.props && <div className="tip-meta prop">✦ {Object.keys(item.props).length} random {Object.keys(item.props).length > 1 ? "properties" : "property"}</div>}
-      <div className="tip-meta">{item.rarity} {item.slot ? `· ${item.slot}` : `· ${item.type}`}{item.lvl > 1 ? ` · req. lv ${item.lvl}` : ""}</div>
+      <div className="tip-meta">{item.rarity} {item.slot ? `· ${item.slot}` : `· ${item.type}`}</div>
+      {item.lvl > 1 && <div className={`tip-meta ${me && me.level < item.lvl ? "down" : ""}`} data-testid="tip-req-level">Requires level {item.lvl}{me && me.level < item.lvl ? ` — you are level ${me.level}` : ""}</div>}
+      {item.cls && me && !item.cls.includes(me.cls) && <div className="tip-meta down">Your class cannot use this</div>}
       {item.cls && <div className="tip-meta">{item.cls.join(" / ")}</div>}
       {item.dmg && <div>Damage {item.dmg[0]}–{item.dmg[1]} {item.magic ? "(magic)" : ""} · {item.spd}s{cur?.dmg && diff(item.dmg[0] + item.dmg[1], cur.dmg[0] + cur.dmg[1])}</div>}
       {item.armor > 0 && <div>Armor {item.armor}{cur && diff(item.armor, cur.armor)}</div>}
