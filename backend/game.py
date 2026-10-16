@@ -983,9 +983,31 @@ class Game:
         async with self.storage_lock:
             acc = p.account_id
             if acc not in self.storages:
-                doc = await self.db.storage.find_one({"account_id": acc}, {"_id": 0})
-                self.storages[acc] = (doc or {}).get("items", [])
-            st, t = self.storages[acc], msg["t"]
+                doc = await self.db.storage.find_one({"account_id": acc}, {"_id": 0}) or {}
+                self.storages[acc] = {"items": doc.get("items", []), "gold": int(doc.get("gold", 0))}
+            vault, t = self.storages[acc], msg["t"]
+            st = vault["items"]
+            if t == "storage_gold":
+                try:
+                    amt = int(msg.get("amount") or 0)
+                except (TypeError, ValueError):
+                    return "Invalid amount."
+                if amt == 0:
+                    return "Enter an amount."
+                if amt > 0 and amt > p.gold:
+                    return "You don't have that much gold."
+                if amt < 0 and -amt > vault["gold"]:
+                    return "The vault doesn't hold that much gold."
+                p.gold -= amt
+                vault["gold"] += amt
+                p.dirty = True
+                await self.db.storage.update_one({"account_id": acc}, {"$set": {"gold": vault["gold"]}}, upsert=True)
+                await self.save(p)
+            if t == "storage_sort":
+                tord = {"weapon": 0, "armor": 1, "consumable": 2, "material": 3, "quest": 4}
+                rord = {"legendary": 0, "epic": 1, "rare": 2, "uncommon": 3, "common": 4}
+                st.sort(key=lambda x: (tord.get(ITEMS[x["item"]]["type"], 9), ITEMS[x["item"]].get("slot") or "", rord.get(ITEMS[x["item"]]["rarity"], 9), x.get("pname") or ITEMS[x["item"]]["name"]))
+                await self.db.storage.update_one({"account_id": acc}, {"$set": {"items": st}}, upsert=True)
             if t in ("storage_put", "storage_take"):
                 src, dst, cap = (p.inventory, st, STORAGE_SLOTS) if t == "storage_put" else (st, p.inventory, INV_SLOTS)
                 s = next((x for x in src if x["uid"] == msg.get("uid")), None)
@@ -1007,7 +1029,7 @@ class Game:
                 p.dirty = True
                 await self.db.storage.update_one({"account_id": acc}, {"$set": {"items": st}}, upsert=True)
                 await self.save(p)
-            view = {"t": "storage", "npc": n["id"] if "id" in n else msg.get("npc"), "name": n["name"], "items": st, "cap": STORAGE_SLOTS}
+            view = {"t": "storage", "npc": n["id"] if "id" in n else msg.get("npc"), "name": n["name"], "items": st, "gold": vault["gold"], "cap": STORAGE_SLOTS}
             for o in self.players.values():
                 if o.account_id == acc:
                     o.send(dict(view, sync=o is not p))
@@ -1418,7 +1440,7 @@ class Game:
                     err = await self.storage_cmd(p, {"t": "storage_open", "npc": nid})
                 else:
                     err = self.npc_action(p, nid, msg["action"])
-        elif t in ("storage_open", "storage_put", "storage_take"):
+        elif t in ("storage_open", "storage_put", "storage_take", "storage_gold", "storage_sort"):
             err = await self.storage_cmd(p, msg)
         elif t == "buy":
             err = self.buy(p, msg.get("npc"), msg.get("item"), msg.get("qty", 1))

@@ -280,3 +280,10 @@ input { font-family: inherit; }
 .storage-cols { display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: start; }
 .storage-grid { display: grid; grid-template-columns: repeat(10, 42px); gap: 4px; max-height: calc(100vh - 260px); overflow-y: auto; padding-right: 4px; }
 @media (max-width: 900px) { .storage-cols { grid-template-columns: 1fr; } .storage-grid { grid-template-columns: repeat(7, 42px); } }
+
+.storage-tools { display: flex; gap: 6px; margin-bottom: 6px; }
+.storage-search { flex: 1; min-width: 0; background: #0b0907; border: 1px solid var(--edge2); color: #f0e6d0; padding: 6px 8px; font-size: 13px; outline: none; transition: border-color .15s; }
+.storage-search:focus { border-color: var(--gold); }
+.vault { border: 1px solid var(--edge2); background: #0b0907aa; padding: 8px 10px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 6px; }
+.vault-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 13px; }
+.vault-row.quick { justify-content: flex-end; }
