@@ -654,7 +654,10 @@ class Game:
                 cx, cz = p.x + dx * kk, p.z + dz * kk
             return self.do_cast(p, ab_id, None, (cx, cz))
         if k in ("melee", "spell", "ranged", "dot", "dash"):
-            m = self.monsters.get(target_id) or (self.aim_at(p, ab, pt) if pt and k != "melee" else None) or self.monsters.get(p.target)
+            m = self.monsters.get(target_id) or (self.aim_at(p, ab, pt) if pt and k != "melee" else None)
+            if not m and pt and k in ("spell", "ranged", "dot"):
+                return self.cast_miss(p, ab_id, pt)
+            m = m or self.monsters.get(p.target)
             if not m or m.dead_until:
                 return "You need a target."
             if dist(p, m) > ab["range"] + m.d["radius"]:
@@ -668,6 +671,18 @@ class Game:
         if k in ("aoe_self", "multi") and in_safe(p.x, p.z):
             return "You cannot fight from within a safe square."
         return self.do_cast(p, ab_id, None)
+
+    def cast_miss(self, p, ab_id, pt):
+        ab = ABILITIES[ab_id]
+        if in_safe(p.x, p.z):
+            return "You cannot fight from within a safe square."
+        dx, dz = pt[0] - p.x, pt[1] - p.z
+        d = math.hypot(dx, dz) or 1
+        r = min(d, ab["range"])
+        p.mp -= ab["cost"]
+        p.rot = math.atan2(dx, dz)
+        p.last_attack, p.dirty = now(), True
+        self.fx(p.x, p.z, {"t": "fx", "k": "cast", "src": p.id, "ab": ab_id, "tgt": None, "x": round(p.x + dx / d * r, 2), "z": round(p.z + dz / d * r, 2)})
 
     def aim_at(self, p, ab, pt):
         live = [mm for mm in self.monsters.values() if not mm.dead_until and dist(p, mm) <= ab["range"] + mm.d["radius"] + 4]
