@@ -116,9 +116,11 @@ export class Engine {
       if (!e) e = this.addEntity(id, "loot", { item, qty, x, z, mine, name: pname || this.data.items[item].name });
       e.mine = mine;
     }
-    for (const [id, x, z, owner] of s.g || []) {
+    for (const [id, x, z, owner, rem] of s.g || []) {
       seen.add(id);
-      if (!this.entities.get(id)) this.addGate(id, x, z, owner);
+      const g = this.entities.get(id) || this.addGate(id, x, z, owner);
+      g.endAt = performance.now() / 1000 + rem;
+      if (!g.total) g.total = Math.max(rem, 1);
     }
     for (const e of [...this.entities.values()]) if (e.kind !== "npc" && !seen.has(e.id)) {
       if (e.kind === "loot" && e.picked !== true) this.puff(e.x, e.z, RARITY[this.data.items[e.item].rarity] || "#fff");
@@ -165,9 +167,11 @@ export class Engine {
     const swirl = new THREE.Group(); swirl.add(ring, disc); swirl.position.y = 1.2; root.add(swirl);
     const base = new THREE.Mesh(new THREE.RingGeometry(0.6, 1.2, 32), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false }));
     base.rotation.x = -Math.PI / 2; base.position.y = 0.05; root.add(base);
+    const timer = new THREE.Mesh(new THREE.RingGeometry(1.9, 2.1, 48), new THREE.MeshBasicMaterial({ color: "#e0c8ff", transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false }));
+    timer.rotation.x = -Math.PI / 2; timer.position.y = 0.07; root.add(timer);
     const gl = sprite(c, 3); gl.position.y = 1.2; root.add(gl);
     root.position.set(x, this.groundY(x, z), z); this.scene.add(root);
-    const e = { id, kind: "gate", name: `Portal (${owner})`, x, z, tx: x, tz: z, rot: 0, trot: 0, anim: {}, grp: root, rig: { root, height: 2.4, gate: swirl, disc }, hp: 0, max: 0 };
+    const e = { id, kind: "gate", name: `Portal (${owner})`, x, z, tx: x, tz: z, rot: 0, trot: 0, anim: {}, grp: root, rig: { root, height: 2.4, gate: swirl, disc, timer }, hp: 0, max: 0 };
     this.entities.set(id, e); this.shock(x, z, c, 3); sfx("spell");
     return e;
   }
@@ -410,7 +414,7 @@ export class Engine {
       if (Math.hypot(dx, dz) > 8) { e.x = e.tx; e.z = e.tz; } else { e.x += dx * k; e.z += dz * k; }
       let dr = e.trot - e.rot; dr = Math.atan2(Math.sin(dr), Math.cos(dr)); e.rot += dr * Math.min(1, dt * 12);
       e.grp.position.set(e.x, this.groundY(e.x, e.z), e.z);
-      if (e.rig.gate) { e.rig.gate.rotation.y = this.yaw || 0; e.rig.disc.rotation.z = t * 2; e.rig.disc.material.opacity = 0.4 + 0.2 * Math.sin(t * 4); continue; }
+      if (e.rig.gate) { const f = Math.max(0.02, Math.min(1, (e.endAt - performance.now() / 1000) / (e.total || 10))); e.rig.timer.scale.setScalar(f); e.rig.timer.material.color.set(f < 0.3 ? "#ff5a5a" : "#e0c8ff"); e.rig.gate.rotation.y = this.yaw || 0; e.rig.disc.rotation.z = t * 2; e.rig.disc.material.opacity = 0.4 + 0.2 * Math.sin(t * 4); continue; }
       if (e.rig.body) { e.rig.root.rotation.y = e.rot; animateRig(e.rig, e.anim, dt, t); if (e.rig.shimmer) animateGlow(e.rig, t); }
       else { e.rig.root.rotation.y = t * 1.2; e.rig.root.position.y = 0.05 + Math.sin(t * 2.5 + e.x) * 0.05; }
     }

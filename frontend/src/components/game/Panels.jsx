@@ -11,8 +11,9 @@ export function Equipment({ data, net, me }) {
     <div className="equip-grid" data-testid="equipment-grid">
       {SLOTS.map(([slot, label]) => {
         const e = me.equipment[slot], it = e && data.items[e.item];
+        const drop = (ev) => { ev.preventDefault(); ev.currentTarget.classList.remove("drop-hot"); const uid = ev.dataTransfer.getData("text/sx-uid"); if (uid) { sfx("click"); net.send({ t: "equip", uid, slot }); } };
         return (
-          <div key={slot} className="equip-slot">
+          <div key={slot} className="equip-slot" data-testid={`equip-drop-${slot}`} onDragOver={(ev) => { ev.preventDefault(); ev.currentTarget.classList.add("drop-hot"); }} onDragLeave={(ev) => ev.currentTarget.classList.remove("drop-hot")} onDrop={drop}>
             {e ? <Hover tip={<ItemTip id={e.item} item={inst(it, e)} extra={<div className="tip-meta">Click to unequip</div>} />}>
               <ItemIcon id={e.item} item={it} testid={`equip-slot-${slot}`} onClick={() => { sfx("click"); net.send({ t: "unequip", slot }); }} />
             </Hover> : <div className="item-icon empty" data-testid={`equip-slot-${slot}`} />}
@@ -29,8 +30,8 @@ export function InventoryGrid({ data, me, onSlot, onRight, sellMode }) {
   return (
     <div className="inv-grid" data-testid="inventory-grid">
       {cells.map((s, i) => s ? (
-        <Hover key={s.uid} tip={<ItemTip id={s.item} item={inst(data.items[s.item], s)} me={me} extra={sellMode ? <div className="tip-meta gold-t">Sells for {Math.max(1, Math.floor(data.items[s.item].price * data.sell_ratio))}g each</div> : <div className="tip-meta">Right-click to {data.items[s.item].type === "consumable" ? "use" : "equip"}</div>} />}>
-          <ItemIcon id={s.item} item={data.items[s.item]} qty={s.qty} testid={`inv-slot-${i}`} onClick={() => onSlot(s)} onContextMenu={(e) => { e.preventDefault(); onRight && onRight(s); }} />
+        <Hover key={s.uid} tip={<ItemTip id={s.item} item={inst(data.items[s.item], s)} me={me} extra={sellMode ? <div className="tip-meta gold-t">Sells for {Math.max(1, Math.floor(data.items[s.item].price * data.sell_ratio))}g each</div> : <div className="tip-meta">Right-click to {data.items[s.item].type === "consumable" ? "use" : "equip"}{data.items[s.item].slot === "ring" ? " · drag onto a ring slot to choose it" : ""}</div>} />}>
+          <ItemIcon id={s.item} item={data.items[s.item]} qty={s.qty} testid={`inv-slot-${i}`} dragUid={data.items[s.item].slot ? s.uid : undefined} onClick={() => onSlot(s)} onContextMenu={(e) => { e.preventDefault(); onRight && onRight(s); }} />
         </Hover>
       ) : <div key={`e${i}`} className="item-icon empty" data-testid={`inv-slot-${i}`} />)}
     </div>

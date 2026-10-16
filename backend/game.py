@@ -261,7 +261,7 @@ class Game:
             if (l["x"] - p.x) ** 2 + (l["z"] - p.z) ** 2 < VIEW_R2:
                 mine = l["owner"] is None or l["owner"] == p.id or t > l["owner_until"]
                 ls.append([l["id"], l["item"], l["qty"], l["x"], l["z"], 1 if mine else 0, l.get("pname") or ""])
-        gs = [[g["id"], g["x"], g["z"], g["name"]] for g in self.gates.values() if (g["x"] - p.x) ** 2 + (g["z"] - p.z) ** 2 < VIEW_R2]
+        gs = [[g["id"], g["x"], g["z"], g["name"], round(g["expires"] - now(), 1)] for g in self.gates.values() if (g["x"] - p.x) ** 2 + (g["z"] - p.z) ** 2 < VIEW_R2]
         return {"t": "s", "me": [round(p.x, 2), round(p.z, 2), round(p.hp), round(p.mp), p.target], "p": ps, "m": ms, "l": ls, "g": gs}
 
     def step_along(self, e, speed, dt, monster=False):
@@ -654,7 +654,7 @@ class Game:
                 cx, cz = p.x + dx * kk, p.z + dz * kk
             return self.do_cast(p, ab_id, None, (cx, cz))
         if k in ("melee", "spell", "ranged", "dot", "dash"):
-            m = self.monsters.get(target_id or p.target)
+            m = self.monsters.get(target_id) or (self.aim_at(p, ab, pt) if pt and k != "melee" else None) or self.monsters.get(p.target)
             if not m or m.dead_until:
                 return "You need a target."
             if dist(p, m) > ab["range"] + m.d["radius"]:
@@ -668,6 +668,22 @@ class Game:
         if k in ("aoe_self", "multi") and in_safe(p.x, p.z):
             return "You cannot fight from within a safe square."
         return self.do_cast(p, ab_id, None)
+
+    def aim_at(self, p, ab, pt):
+        live = [mm for mm in self.monsters.values() if not mm.dead_until and dist(p, mm) <= ab["range"] + mm.d["radius"] + 4]
+        near = min(live, key=lambda mm: math.hypot(mm.x - pt[0], mm.z - pt[1]), default=None)
+        if near and math.hypot(near.x - pt[0], near.z - pt[1]) <= 3.0 + near.d["radius"]:
+            return near
+        dx, dz = pt[0] - p.x, pt[1] - p.z
+        d = math.hypot(dx, dz) or 1
+        dx, dz = dx / d, dz / d
+        best = None
+        for mm in live:
+            along = (mm.x - p.x) * dx + (mm.z - p.z) * dz
+            side = abs((mm.x - p.x) * dz - (mm.z - p.z) * dx)
+            if 0 < along <= ab["range"] + mm.d["radius"] and side <= mm.d["radius"] + 1.2 and (not best or along < best[0]):
+                best = (along, mm)
+        return best[1] if best else None
 
     def spell_dmg(self, p, ab):
         return ab["base"] + p.tot["int"] * ab["scale"] + rnd.uniform(0, 4)
@@ -1128,7 +1144,7 @@ class Game:
         asyncio.ensure_future(self.db.transactions.insert_one(dict(char=p.id, kind="sell", item=s["item"], qty=qty, gold=gain, ts=datetime.now(timezone.utc).isoformat())))
         asyncio.create_task(self.save(p))
 
-    def equip(self, p, suid):
+    def equip(self, p, suid, want=None):
         s = self.slot_of(p, suid)
         if not s:
             return "Item not found."
@@ -1141,7 +1157,7 @@ class Game:
             return f"Requires level {it['lvl']}."
         slot = it["slot"]
         if slot == "ring":
-            slot = next((r for r in RING_SLOTS if r not in p.equipment), RING_SLOTS[0])
+            slot = want if want in RING_SLOTS else next((r for r in RING_SLOTS if r not in p.equipment), RING_SLOTS[0])
         p.inventory.remove(s)
         old = p.equipment.get(slot)
         p.equipment[slot] = {k: s[k] for k in ("uid", "item", "props", "pname") if s.get(k)}
@@ -1286,7 +1302,7 @@ class Game:
                 p.dirty = True
                 p.send({"t": "sys", "msg": f"You learned {ab['name']}!", "kind": "quest"})
         elif t == "equip":
-            err = self.equip(p, msg.get("uid"))
+            err = self.equip(p, msg.get("uid"), msg.get("slot"))
         elif t == "unequip":
             err = self.unequip(p, msg.get("slot"))
         elif t == "use":

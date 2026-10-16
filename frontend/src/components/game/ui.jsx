@@ -14,11 +14,12 @@ export function iconFor(id, it) {
   return { off: /tome/.test(id) ? BookOpen : /quiver/.test(id) ? Layers : Shield, head: HardHat, chest: Shirt, legs: Layers, hands: Hand, feet: Footprints, ring: Circle, amulet: Gem }[it.slot] || Package;
 }
 
-export function ItemIcon({ id, item, qty, size = 44, dim, testid, onClick, onContextMenu, title }) {
+export function ItemIcon({ id, item, qty, size = 44, dim, testid, onClick, onContextMenu, title, dragUid }) {
   const I = iconFor(id, item);
   const col = RARITY[item?.rarity] || "#888";
   return (
     <button type="button" data-testid={testid} onClick={onClick} onContextMenu={onContextMenu} className={`item-icon ${dim ? "dim" : ""}`} title={title}
+      draggable={!!dragUid} onDragStart={dragUid ? (e) => { e.dataTransfer.setData("text/sx-uid", dragUid); e.dataTransfer.effectAllowed = "move"; } : undefined}
       style={{ width: size, height: size, borderColor: col, boxShadow: item?.rarity && item.rarity !== "common" ? `inset 0 0 12px ${col}55` : undefined }}>
       <I size={size * 0.5} color={col} strokeWidth={1.6} />
       {qty > 1 && <span className="item-qty">{qty}</span>}

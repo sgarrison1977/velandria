@@ -30,8 +30,10 @@ Later requests: hold-to-walk toward pointer; ranged/spell abilities fire at the 
 - DONE: Waystones in 4 towns (gold fast travel), Thane Borik 4-quest chain (requires field), Party system (invite/accept/leave/kick, shared XP+quest credit within 60m, party loot, /p chat, party frame, minimap green dots)
 - DONE: Elderglen (Warden Lyra) + Sunhollow (Captain Soren) 4-quest chains with unique rewards; legendary/epic gear glow (weapon shimmer + aura); hotbar removed, spells bound in Settings > Key Bindings; 3 skill points per level (retroactive)
 - DONE: 4 classes (warrior/ranger/wizard/warlock), 20 Latin-named spells, charge buffs 5min + buff bar, Contra Visus + Stop Action, Creare Porta + mark0-9, random item properties (AFFIX_POOL), settings blank fix (ab-glyph absolute)
+- DONE: drag ring to chosen ring slot, portal countdown ring, spells aim at pointer (aim_at)
 - P1: bank/storage NPC, PvP arenas outside towns
 - DONE: Elderglen (Warden Lyra) + Sunhollow (Captain Soren) 4-quest chains with unique rewards; legendary/epic gear glow (weapon shimmer + aura); hotbar removed, spells bound in Settings > Key Bindings; 3 skill points per level (retroactive)
 - DONE: 4 classes (warrior/ranger/wizard/warlock), 20 Latin-named spells, charge buffs 5min + buff bar, Contra Visus + Stop Action, Creare Porta + mark0-9, random item properties (AFFIX_POOL), settings blank fix (ab-glyph absolute)
+- DONE: drag ring to chosen ring slot, portal countdown ring, spells aim at pointer (aim_at)
 - P1: Client-side movement prediction; more quests; crafting from materials
 - P2: GLTF character art pass, day/night cycle, music, mobile controls

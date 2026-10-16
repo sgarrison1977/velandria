@@ -79,9 +79,9 @@ export default function GamePage() {
       e.preventDefault();
       const n = net.current;
       if (action.startsWith("ability:")) { const ab = action.slice(8); if (!st.me.abilities.includes(ab)) { toast(`${data.abilities[ab].name} is locked.`, "error"); return; } const ad = data.abilities[ab], hov = eng.current?.hover;
-        const id = ad.kind !== "melee" && hov?.kind === "monster" && !hov.anim.dead ? hov.id : eng.current?.targetId;
+        const id = ad.kind === "melee" ? eng.current?.targetId : hov?.kind === "monster" && !hov.anim.dead ? hov.id : null;
         if (ad.kind === "portal") { setState({ markPick: true }); return; }
-        const gp = ["aoe_target", "blink", "cone"].includes(ad.kind) ? eng.current?.pointerGround() : null;
+        const gp = ad.kind !== "melee" ? eng.current?.pointerGround() : null;
         n.send({ t: "cast", ab, id, pt: gp ? [gp.x, gp.z] : undefined }); }
       else if (action === "attack_nearest") { const hov = eng.current?.hover; if (hov?.kind === "monster" && !hov.anim.dead) n.send({ t: "target", id: hov.id }); else n.send({ t: "attack_nearest" }); }
       else if (action === "stop") n.send({ t: "stop" });

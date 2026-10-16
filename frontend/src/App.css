@@ -257,3 +257,4 @@ input { font-family: inherit; }
 .invis-veil { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 120px #6a50c088; z-index: 1; }
 .bind-row.spell .ab-glyph, .buff-ic .ab-glyph { position: relative; inset: auto; width: 30px; height: 30px; flex: none; }
 .buff-ic .ab-glyph { width: 40px; height: 40px; border: none; }
+.equip-slot.drop-hot .item-icon { border-color: var(--gold) !important; box-shadow: 0 0 12px #ffcf5a88 !important; }
