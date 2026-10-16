@@ -101,8 +101,24 @@ DUNGEON_ROOMS = [
     dict(name="Shade Sanctum", x=655, z=560, r=14, lvl="58"),
     dict(name="Throne of the Hollow King", x=700, z=500, r=19, lvl="75 (Boss)"),
 ]
+PIT_ROOMS = [
+    dict(name="Proving Pits Gate", x=902, z=520, r=10, lvl="Grinding"),
+    dict(name="Pit I — Initiates", x=955, z=520, r=26, lvl="1-15"),
+    dict(name="Pit II — Bloodied", x=1017, z=520, r=26, lvl="15-35"),
+    dict(name="Pit III — Veterans", x=1079, z=520, r=26, lvl="35-60"),
+    dict(name="Pit IV — Champions", x=1141, z=520, r=26, lvl="60+"),
+]
+DUNGEONS = [dict(name="The Hollow Deep", label="The Hollow Deep — beneath the cave", entry="Hollow Deep", x0=370, z0=452, w=380, h=138),
+            dict(name="The Proving Pits", label="The Proving Pits — grinding halls", entry="The Proving Pits", x0=880, z0=478, w=290, h=84)]
+PIT_ENTRY = (722.0, 212.0)
 PORTALS = [dict(id="hollow_in", x=518.0, z=51.0, to=(426.0, 550.0), name="Hollow Deep", msg="You descend into the Hollow Deep..."),
-           dict(id="hollow_out", x=411.0, z=562.0, to=(518.0, 45.0), name="Exit to the surface", msg="You climb back into the daylight.")]
+           dict(id="hollow_out", x=411.0, z=562.0, to=(518.0, 45.0), name="Exit to the surface", msg="You climb back into the daylight."),
+           dict(id="pits_in", x=PIT_ENTRY[0], z=PIT_ENTRY[1], to=(904.0, 520.0), name="The Proving Pits", msg="You descend into the Proving Pits. The horde never stops coming..."),
+           dict(id="pits_out", x=893.0, z=520.0, to=(PIT_ENTRY[0], PIT_ENTRY[1] + 5), name="Exit to the surface", msg="You climb out of the Proving Pits.")]
+PIT_TIERS = [(1, ["pit_giant_spider", "pit_skeleton", "pit_orc_warrior", "pit_dark_cultist"]),
+             (2, ["pit_forest_troll", "pit_dire_wolf", "pit_broodmother", "pit_shadow_wraith", "pit_cave_crawler"]),
+             (3, ["pit_stone_golem", "pit_crypt_ghoul", "pit_death_knight", "pit_bone_colossus", "pit_hollow_shade"]),
+             (4, ["pit_abyssal_fiend", "pit_hollow_shade_66", "pit_death_knight_72", "pit_abyssal_fiend_80"])]
 SCATTER_BANDS = [(200, ["giant_spider", "imp"]), (330, ["forest_wolf", "imp", "goblin_scout"]), (450, ["goblin_scout", "skeleton", "forest_wolf"]),
                  (600, ["forest_bandit", "venomous_spider", "skeleton"]), (760, ["orc_warrior", "venomous_spider", "forest_bandit"]),
                  (900, ["dark_cultist", "orc_warrior"]), (1120, ["forest_troll", "dark_cultist"]),
@@ -125,6 +141,11 @@ SPAWNS = [
     ("death_knight", 1550, 120, 32, 9), ("shadow_wraith", 1170, 300, 28, 9), ("abyssal_fiend", 1580, 30, 16, 3),
     ("forest_troll", 962, 72, 44, 10), ("forest_troll", 885, 335, 28, 6), ("forest_troll", 1060, 90, 26, 5),
 ]
+for _ri, _types in PIT_TIERS:
+    _rm = PIT_ROOMS[_ri]
+    for _i, _t in enumerate(_types):
+        _a = _i / len(_types) * 6.283 + 0.4
+        SPAWNS.append((_t, _rm["x"] + math.cos(_a) * 11, _rm["z"] + math.sin(_a) * 11, 8, 20 // len(_types)))
 
 
 def _rect(x, z, w, d, kind, style, **kw):
@@ -185,11 +206,12 @@ class World:
                     if on and not prev_on:
                         self.bridges.append(self._bridge_at(s, x, z))
                     prev_on = on
-                self._disc(x, z, 2.6, skip_road=True)
+                if z < OH - 3:
+                    self._disc(x, z, 2.6, skip_road=True)
         for lk in LAKES:
             for zi in range(int(lk["z"] - lk["rz"]), int(lk["z"] + lk["rz"]) + 1):
                 for xi in range(int(lk["x"] - lk["rx"]), int(lk["x"] + lk["rx"]) + 1):
-                    if ((xi - lk["x"]) / lk["rx"]) ** 2 + ((zi - lk["z"]) / lk["rz"]) ** 2 <= 1 and 0 <= xi < W and 0 <= zi < H:
+                    if ((xi - lk["x"]) / lk["rx"]) ** 2 + ((zi - lk["z"]) / lk["rz"]) ** 2 <= 1 and 0 <= xi < W and 0 <= zi < OH:
                         b[zi, xi] = 1
         # town walls
         self.walls = []
@@ -288,7 +310,7 @@ class World:
                 for xi in range(int(x - r) - 1, int(x + r) + 2):
                     if OH + 8 < zi < H - 4 and 4 < xi < W - 4 and (xi + 0.5 - x) ** 2 + (zi + 0.5 - z) ** 2 <= r * r:
                         b[zi, xi] = 0
-        for rm in DUNGEON_ROOMS:
+        for rm in DUNGEON_ROOMS + PIT_ROOMS:
             ph = rnd.uniform(0, 6.28)
             for i in range(72):
                 a = i / 72 * 6.283
@@ -296,7 +318,7 @@ class World:
                 for f in (0.35, 0.6, 0.85):
                     carve(rm["x"] + math.cos(a) * rr * f, rm["z"] + math.sin(a) * rr * f, rr * 0.28)
             carve(rm["x"], rm["z"], rm["r"] * 0.6)
-        for a, c in zip(DUNGEON_ROOMS, DUNGEON_ROOMS[1:]):
+        for a, c in list(zip(DUNGEON_ROOMS, DUNGEON_ROOMS[1:])) + list(zip(PIT_ROOMS, PIT_ROOMS[1:])):
             n = int(math.hypot(c["x"] - a["x"], c["z"] - a["z"]) / 0.5)
             nx, nz = -(c["z"] - a["z"]), c["x"] - a["x"]
             ln = math.hypot(nx, nz)
@@ -307,7 +329,7 @@ class World:
         P = self.props
         for pt in PORTALS:
             P.append(dict(kind="portal", x=pt["x"], z=pt["z"], name=pt["name"]))
-        for k, rm in enumerate(DUNGEON_ROOMS):
+        for k, rm in enumerate(DUNGEON_ROOMS + PIT_ROOMS):
             for i in range(4):
                 a = i * math.pi / 2 + 0.7
                 x, z = rm["x"] + math.cos(a) * rm["r"] * 0.72, rm["z"] + math.sin(a) * rm["r"] * 0.72
@@ -530,5 +552,5 @@ class World:
                     paths=[dict(w=p["w"], hidden=p["hidden"], pts=[[round(a, 1), round(b, 1)] for a, b in p["pts"]]) for p in self.paths],
                     streams=[[[round(a, 1), round(b, 1)] for a, b in s] for s in self.streams], bridges=self.bridges, lakes=LAKES,
                     walls=self.walls, buildings=self.buildings, props=self.props, trees=self.trees, rocks=self.rocks, bushes=self.bushes,
-                    grass=self.grass, regions=REGIONS + DUNGEON_ROOMS, safe_zones=SAFE_ZONES, oh=OH, cave_rocks=self.cave_rocks,
+                    grass=self.grass, regions=REGIONS + DUNGEON_ROOMS + PIT_ROOMS, dungeons=DUNGEONS, safe_zones=SAFE_ZONES, oh=OH, cave_rocks=self.cave_rocks,
                     portals=[dict(x=p['x'], z=p['z'], name=p['name']) for p in PORTALS], towns=dict(semel=SEMEL, elderglen=ELDER, ironhold=IRON, sunhollow=SUNH))

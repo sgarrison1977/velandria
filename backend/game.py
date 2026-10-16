@@ -559,7 +559,7 @@ class Game:
         for o in sharers:
             for qid, q in o.quests.items():
                 qd = QUESTS[qid]
-                if q["s"] == "active" and qd["kind"] in ("kill", "kill_collect") and qd["target"] == m.type and q["k"] < qd["count"]:
+                if q["s"] == "active" and qd["kind"] in ("kill", "kill_collect") and qd["target"] == m.d.get("base", m.type) and q["k"] < qd["count"]:
                     q["k"] += 1
                     o.send({"t": "sys", "msg": f"[{qd['name']}] {MONSTERS[m.type]['name']} slain: {q['k']}/{qd['count']}", "kind": "quest"})
                     o.dirty = True

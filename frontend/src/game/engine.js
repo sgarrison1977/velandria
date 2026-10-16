@@ -76,7 +76,7 @@ export class Engine {
   // ---------- entities
   addEntity(id, kind, o) {
     let rig, r = 0.5, hgt = 1.9;
-    if (kind === "monster") { rig = buildMonster(o.type); const md = this.data.monsters[o.type]; r = Math.max(0.6, md.radius); hgt = rig.height; }
+    if (kind === "monster") { rig = buildMonster(this.data.monsters[o.type]?.base || o.type); const md = this.data.monsters[o.type]; r = Math.max(0.6, md.radius); hgt = rig.height; }
     else if (kind === "npc") rig = buildNpc(o.npcKind);
     else if (kind === "player") rig = buildPlayer(o.cls, o.eq, this.data.items);
     else { rig = { root: buildLoot(o.item, this.data.items[o.item]) }; r = 0.5; hgt = 0.6; }
@@ -394,11 +394,12 @@ export class Engine {
   }
 
   // ---------- main loop
+  dungeonAt(x) { return (this.world.dungeons || []).find((d) => x >= d.x0 - 20 && x <= d.x0 + d.w + 20); }
   regionAt(x, z) {
     let best = null;
     for (const r of this.world.regions) { const d = Math.hypot(r.x - x, r.z - z); if (d < r.r && (!best || d / r.r < best.k)) best = { r, k: d / r.r }; }
     if (best) return best.r.name;
-    if (z > this.world.oh) return "The Hollow Deep";
+    if (z > this.world.oh) return this.dungeonAt(x)?.name || "The Hollow Deep";
     const rd = this.terrain.sample(this.terrain.RD, x, z);
     if (x < 330) return rd < 6 ? "Titus Forest Road" : "Westwood";
     if (x < 700) return rd < 6 ? "The Long Road" : "Shadowpine Deep";
@@ -503,7 +504,7 @@ export class Engine {
   mapToWorld(px, pz) {
     const t = this._mapT; if (!t) return null;
     const ir = this._inset;
-    if (ir && px >= ir.x && px <= ir.x + ir.w && pz >= ir.y && pz <= ir.y + ir.h) return { x: 370 + (px - ir.x) / ir.s, z: 452 + (pz - ir.y) / ir.s };
+    for (const r of ir || []) if (px >= r.x && px <= r.x + r.w && pz >= r.y && pz <= r.y + r.h) return { x: r.d.x0 + (px - r.x) / r.s, z: r.d.z0 + (pz - r.y) / r.s };
     return { x: t.sx + px / t.scale, z: t.sz + pz / t.scale };
   }
   drawMap(ctx, w, h, opts = {}) {
@@ -511,7 +512,7 @@ export class Engine {
     const me = this.me || { x: 90, z: 200 };
     let sx = 0, sz = 0, sw = W, shh = H;
     if (opts.radius) { sw = shh = opts.radius * 2; sx = me.x - opts.radius; sz = me.z - opts.radius; }
-    else if (me.z > this.world.oh) { sx = 370; sz = 452; sw = 380; shh = 380 * h / w; }
+    else if (me.z > this.world.oh) { const d = this.dungeonAt(me.x) || { x0: 370, z0: 452, w: 380 }; sx = d.x0; sz = d.z0; sw = d.w; shh = d.w * h / w; }
     else shh = this.world.oh;
     const scale = w / sw;
     if (!opts.radius) { this._mapT = { sx, sz, scale }; this._inset = null; }
@@ -558,20 +559,24 @@ export class Engine {
       ctx.fillStyle = "rgba(120,70,255,0.35)"; ctx.beginPath(); ctx.arc(px, pz, r + 3, 0, 6.28); ctx.fill();
       ctx.strokeStyle = "#b090ff"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(px, pz, r, 0, 6.28); ctx.stroke();
       ctx.fillStyle = "#e0d0ff"; ctx.beginPath(); ctx.arc(px, pz, 2, 0, 6.28); ctx.fill();
-      if (!opts.radius) { ctx.font = "600 13px 'IM Fell English SC', serif"; ctx.textAlign = "center"; ctx.fillStyle = "#000"; ctx.fillText(pt.z < this.world.oh ? "Hollow Deep (Dungeon)" : pt.name, px + 1, pz - r - 5); ctx.fillStyle = "#c8b0ff"; ctx.fillText(pt.z < this.world.oh ? "Hollow Deep (Dungeon)" : pt.name, px, pz - r - 6); }
+      if (!opts.radius) { ctx.font = "600 13px 'IM Fell English SC', serif"; ctx.textAlign = "center"; ctx.fillStyle = "#000"; const lbl = pt.z < this.world.oh ? `${pt.name} (${pt.name.includes("Pits") ? "Grinding Dungeon" : "Dungeon"})` : pt.name; ctx.fillText(lbl, px + 1, pz - r - 5); ctx.fillStyle = "#c8b0ff"; ctx.fillText(lbl, px, pz - r - 6); }
     }
     if (!opts.radius && me.z <= this.world.oh && opts.inset !== false) {
-      const iw = Math.round(w * 0.2), ih = Math.round(iw * 138 / 380), ix = Math.round(w * 0.4), iy = h - ih - 10;
-      ctx.fillStyle = "rgba(8,6,14,0.92)"; ctx.fillRect(ix - 4, iy - 20, iw + 8, ih + 24);
-      ctx.strokeStyle = "#8a6aff"; ctx.lineWidth = 1.5; ctx.strokeRect(ix - 4, iy - 20, iw + 8, ih + 24);
-      ctx.drawImage(src, 370 * 2, 452 * 2, 380 * 2, 138 * 2, ix, iy, iw, ih);
-      this._inset = { x: ix, y: iy, w: iw, h: ih, s: iw / 380 };
-      ctx.font = "600 12px 'IM Fell English SC', serif"; ctx.textAlign = "left"; ctx.fillStyle = "#c8b0ff"; ctx.fillText("The Hollow Deep — beneath the cave", ix, iy - 6);
-      const isc = iw / 380, IP = (x, z) => [ix + (x - 370) * isc, iy + (z - 452) * isc];
-      ctx.textAlign = "center"; ctx.font = "10px 'Alegreya Sans', sans-serif";
-      for (const r of this.world.regions) if (r.z > this.world.oh) { const [px, pz] = IP(r.x, r.z); ctx.fillStyle = r.lvl.includes("Boss") ? "#ff7a5a" : "#e8dcc0"; ctx.fillText(`${r.name.replace("Throne of the ", "")} (${r.lvl})`, px, pz + 3); }
-      const ent = (this.world.portals || []).find((p) => p.z < this.world.oh);
-      if (ent) { const [ex, ez] = P(ent.x, ent.z); ctx.setLineDash([4, 4]); ctx.strokeStyle = "rgba(176,144,255,0.6)"; ctx.beginPath(); ctx.moveTo(ex, ez + 8); ctx.lineTo(ix + iw * 0.5, iy - 20); ctx.stroke(); ctx.setLineDash([]); }
+      const ds = this.world.dungeons || [{ name: "The Hollow Deep", label: "The Hollow Deep — beneath the cave", entry: "Hollow Deep", x0: 370, z0: 452, w: 380, h: 138 }];
+      this._inset = [];
+      ds.forEach((d, k) => {
+        const iw = Math.round(w * 0.22), ih = Math.round(iw * d.h / d.w), ix = Math.round(w * (0.16 + k * 0.4)), iy = h - ih - 10;
+        ctx.fillStyle = "rgba(8,6,14,0.92)"; ctx.fillRect(ix - 4, iy - 20, iw + 8, ih + 24);
+        ctx.strokeStyle = "#8a6aff"; ctx.lineWidth = 1.5; ctx.strokeRect(ix - 4, iy - 20, iw + 8, ih + 24);
+        ctx.drawImage(src, d.x0 * 2, d.z0 * 2, d.w * 2, d.h * 2, ix, iy, iw, ih);
+        const isc = iw / d.w, IP = (x, z) => [ix + (x - d.x0) * isc, iy + (z - d.z0) * isc];
+        this._inset.push({ x: ix, y: iy, w: iw, h: ih, s: isc, d });
+        ctx.font = "600 12px 'IM Fell English SC', serif"; ctx.textAlign = "left"; ctx.fillStyle = "#c8b0ff"; ctx.fillText(d.label, ix, iy - 6);
+        ctx.textAlign = "center"; ctx.font = "10px 'Alegreya Sans', sans-serif";
+        for (const r of this.world.regions) if (r.z > this.world.oh && r.x >= d.x0 && r.x <= d.x0 + d.w) { const [px, pz] = IP(r.x, r.z); ctx.fillStyle = r.lvl.includes("Boss") ? "#ff7a5a" : "#e8dcc0"; ctx.fillText(`${r.name.replace("Throne of the ", "").replace(/ — .*/, "")} (${r.lvl})`, px, pz + 3); }
+        const ent = (this.world.portals || []).find((p) => p.z < this.world.oh && p.name === d.entry);
+        if (ent) { const [ex, ez] = P(ent.x, ent.z); ctx.setLineDash([4, 4]); ctx.strokeStyle = "rgba(176,144,255,0.6)"; ctx.beginPath(); ctx.moveTo(ex, ez + 8); ctx.lineTo(ix + iw * 0.5, iy - 20); ctx.stroke(); ctx.setLineDash([]); }
+      });
     }
     for (const pm of this.party?.members || []) {
       if (pm.id === this.meId) continue;
@@ -582,8 +587,8 @@ export class Engine {
     }
     const wp = this.waypoint;
     if (wp) {
-      const ins = !opts.radius && this._inset && wp.z > this.world.oh && me.z <= this.world.oh;
-      const [wx, wz] = ins ? [this._inset.x + (wp.x - 370) * this._inset.s, this._inset.y + (wp.z - 452) * this._inset.s] : P(wp.x, wp.z);
+      const ins = !opts.radius && wp.z > this.world.oh && me.z <= this.world.oh && (this._inset || []).find((r) => wp.x >= r.d.x0 && wp.x <= r.d.x0 + r.d.w);
+      const [wx, wz] = ins ? [ins.x + (wp.x - ins.d.x0) * ins.s, ins.y + (wp.z - ins.d.z0) * ins.s] : P(wp.x, wp.z);
       const inside = wx > 6 && wz > 6 && wx < w - 6 && wz < h - 6 && (!opts.radius || Math.hypot(wx - w / 2, wz - h / 2) < w / 2 - 8);
       if (inside) {
         ctx.fillStyle = "#ffd36b"; ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5;

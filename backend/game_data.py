@@ -301,6 +301,24 @@ MONSTERS = {
                               ("amulet_eternity", 0.4), ("fiendhide_boots", 0.5), ("dreadknight_helm", 0.5), ("fiend_horn", 1.0), ("hp_potion", 1.0)]),
 }
 
+# Proving Pits: fast-respawning copies of regular monsters (optionally level-scaled)
+def _pit(base, lvl=None):
+    m = {k: (list(v) if isinstance(v, list) else v) for k, v in MONSTERS[base].items()}
+    if lvl:
+        f = lvl / m["level"]
+        m.update(name="Ascended " + m["name"], level=lvl, hp=round(m["hp"] * f ** 1.4), xp=round(m["xp"] * f ** 1.4),
+                 dmg=[round(d * f ** 1.1) for d in m["dmg"]], armor=round(m["armor"] * f ** 0.8))
+    m.update(respawn=5, base=base, leash=18, boss=False)
+    m.pop("slam", None)
+    return m
+
+
+for _b in ["giant_spider", "skeleton", "orc_warrior", "dark_cultist", "forest_troll", "dire_wolf", "broodmother", "shadow_wraith", "cave_crawler",
+           "stone_golem", "crypt_ghoul", "death_knight", "bone_colossus", "hollow_shade", "abyssal_fiend"]:
+    MONSTERS["pit_" + _b] = _pit(_b)
+for _b, _l in [("hollow_shade", 66), ("death_knight", 72), ("abyssal_fiend", 80)]:
+    MONSTERS[f"pit_{_b}_{_l}"] = _pit(_b, _l)
+
 # Gold scales with monster level: [lo, hi] = GOLD_SCALE * level^GOLD_EXP
 GOLD_SCALE, GOLD_EXP = (2.0, 5.0), 1.45
 for _m in MONSTERS.values():
