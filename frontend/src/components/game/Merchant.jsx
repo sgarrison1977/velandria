@@ -23,7 +23,7 @@ export function MerchantWindow({ data, net }) {
                 <div key={s.item} className="mrow" data-testid={`merchant-item-${s.item}`}>
                   <Hover tip={<ItemTip id={s.item} item={it} me={me} />}><ItemIcon id={s.item} item={it} size={38} /></Hover>
                   <div className="mrow-info"><b style={{ color: RARITY_COLOR[it.rarity] }}>{it.name}</b>
-                    <small>{it.dmg ? `${it.dmg[0]}–${it.dmg[1]} dmg` : it.armor ? `${it.armor} armor` : it.heal ? `+${it.heal} hp` : it.mana ? `+${it.mana} mp` : it.type}{it.lvl > 1 ? ` · lv ${it.lvl}` : ""} · {s.qty === -1 ? "plenty" : `${s.qty} left`}</small></div>
+                    <small>{it.dmg ? `${it.dmg[0]}–${it.dmg[1]} dmg` : it.armor ? `${it.armor} armor` : it.full ? `full ${it.full}` : it.heal ? `+${it.heal} hp` : it.mana ? `+${it.mana} mp` : it.type}{it.lvl > 1 ? ` · lv ${it.lvl}` : ""} · {s.qty === -1 ? "plenty" : `${s.qty} left`}</small></div>
                   {it.stack > 1 && <input type="number" min={1} max={20} value={q} data-testid={`merchant-qty-${s.item}`} onChange={(e) => setQty({ ...qty, [s.item]: Math.max(1, Math.min(20, +e.target.value || 1)) })} />}
                   <span className="price">{s.price * q}g</span>
                   <button type="button" className="btn" disabled={!afford || out} data-testid={`merchant-buy-${s.item}`} onClick={() => net.send({ t: "buy", npc: m.npc, item: s.item, qty: q })}>{out ? "Sold out" : "Buy"}</button>

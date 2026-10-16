@@ -45,7 +45,7 @@ export function ItemTip({ id, item, me, extra }) {
       {item.dmg && <div>Damage {item.dmg[0]}–{item.dmg[1]} {item.magic ? "(magic)" : ""} · {item.spd}s{cur?.dmg && diff(item.dmg[0] + item.dmg[1], cur.dmg[0] + cur.dmg[1])}</div>}
       {item.armor > 0 && <div>Armor {item.armor}{cur && diff(item.armor, cur.armor)}</div>}
       {Object.entries(item.stats || {}).map(([k, v]) => <div key={k} className={STAT[k]?.startsWith("%") || k.endsWith("regen") ? "up prop" : "up"}>+{v}{STAT[k]?.startsWith("%") ? "" : " "}{STAT[k]}</div>)}
-      {item.heal && <div className="up">Restores {item.heal} health</div>}
+      {item.heal && <div className="up">Restores {item.heal} health</div>}{item.full && <div className="up">Restores all {item.full === "hp" ? "health" : "mana"}</div>}
       {item.mana && <div className="up">Restores {item.mana} mana</div>}
       {item.desc && item.type !== "consumable" && <div className="tip-desc">{item.desc}</div>}
       {cur && cur !== item && <div className="tip-meta">Equipped: {cur.name}</div>}

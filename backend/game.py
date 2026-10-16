@@ -59,6 +59,7 @@ class Player:
         self.chat_times, self.last_save, self.linkdead_at = [], now(), None
         self.dirty, self.regen_acc, self.rewarded = True, 0.0, set()
         self.marks = doc.get("marks") or {}
+        self.binds = {k: v for k, v in self.binds.items() if k in ACTIONS}
         if "ring" in self.equipment:
             self.equipment["ring1"] = self.equipment.pop("ring")
         if "loot_all" not in self.binds and "KeyF" not in self.binds.values():
@@ -1206,13 +1207,14 @@ class Game:
         if p.cds.get("potion", 0) > now():
             return "You must wait before drinking again."
         p.cds["potion"] = now() + 2
-        p.hp = min(p.max_hp, p.hp + it.get("heal", 0))
-        p.mp = min(p.max_mp, p.mp + it.get("mana", 0))
+        before = p.hp
+        p.hp = p.max_hp if it.get("full") == "hp" else min(p.max_hp, p.hp + it.get("heal", 0))
+        p.mp = p.max_mp if it.get("full") == "mp" else min(p.max_mp, p.mp + it.get("mana", 0))
         s["qty"] -= 1
         if s["qty"] <= 0:
             p.inventory.remove(s)
         p.dirty = True
-        self.fx(p.x, p.z, {"t": "fx", "k": "heal", "tgt": p.id, "v": it.get("heal", 0)})
+        self.fx(p.x, p.z, {"t": "fx", "k": "heal", "tgt": p.id, "v": round(p.hp - before)})
 
     def destroy(self, p, suid):
         s = self.slot_of(p, suid)
@@ -1390,6 +1392,6 @@ def new_character_doc(account_id, name, cls):
     eq["chest"] = dict(uid=uid(), item="padded_tunic")
     return dict(id=uuid.uuid4().hex, account_id=account_id, name=name, name_lower=name.lower(), cls=cls, level=1, xp=0, gold=25,
                 attrs=dict(c["attrs"]), attr_points=0, skill_points=0, abilities=list(c["start_abilities"]), marks={},
-                inventory=[dict(uid=uid(), item="minor_hp", qty=5), dict(uid=uid(), item="bread", qty=3)], equipment=eq, quests={},
+                inventory=[dict(uid=uid(), item="hp_potion", qty=5), dict(uid=uid(), item="mp_potion", qty=3)], equipment=eq, quests={},
                 binds=default_binds(cls), x=90.0 + random.uniform(-3, 3), z=192.0, hp=9999, mp=9999, schema=1,
                 created_at=datetime.now(timezone.utc).isoformat())

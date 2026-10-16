@@ -247,7 +247,7 @@ export function buildLoot(itemId, item) {
   const g = new THREE.Group(), col = RARITY[item.rarity] || "#ccc";
   if (itemId === "gold") for (let i = 0; i < 5; i++) mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.04, 10), M("#ffcc3a", { metalness: 0.8, roughness: 0.25, emissive: "#5a3a00" }), (i % 3 - 1) * 0.12, 0.03 + i * 0.035, (i % 2) * 0.1, g);
   else if (item.type === "weapon") { const w = weaponMesh(weaponKind(itemId), item.color); w.rotation.set(0, 0, Math.PI / 2); w.position.y = 0.1; w.scale.setScalar(0.7); g.add(w); }
-  else if (item.type === "consumable") { const c = item.mana && !item.heal ? "#3a6aff" : item.mana ? "#c9a24e" : "#d0302a"; mesh(new THREE.SphereGeometry(0.14, 8, 6), M(c, { emissive: c, emissiveIntensity: 0.6, roughness: 0.2 }), 0, 0.14, 0, g); mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.12, 6), M("#8a6a4a"), 0, 0.3, 0, g); }
+  else if (item.type === "consumable") { const c = item.full === "mp" || (item.mana && !item.heal) ? "#3a6aff" : item.mana ? "#c9a24e" : "#d0302a"; mesh(new THREE.SphereGeometry(0.14, 8, 6), M(c, { emissive: c, emissiveIntensity: 0.6, roughness: 0.2 }), 0, 0.14, 0, g); mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.12, 6), M("#8a6a4a"), 0, 0.3, 0, g); }
   else if (item.type === "armor") { mesh(B(0.42, 0.22, 0.34), M(item.color || "#6b5a45"), 0, 0.11, 0, g); mesh(B(0.44, 0.06, 0.36), M(col), 0, 0.2, 0, g); }
   else { const p = mesh(new THREE.IcosahedronGeometry(0.17, 1), M("#7a5a3a"), 0, 0.15, 0, g); p.scale.y = 0.8; mesh(new THREE.CylinderGeometry(0.05, 0.08, 0.08, 6), M(col), 0, 0.3, 0, g); }
   if (["rare", "epic", "legendary"].includes(item.rarity)) {
