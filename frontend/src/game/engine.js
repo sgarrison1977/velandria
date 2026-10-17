@@ -252,11 +252,8 @@ export class Engine {
     }, done);
   }
   shock(x, z, color, r) {
-    const m = new THREE.Mesh(new THREE.RingGeometry(0.6, 1, 40), new THREE.MeshBasicMaterial({ color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
-    m.rotation.x = -Math.PI / 2; m.position.set(x, this.groundY(x, z) + 0.15, z);
     const fl = sprite(color, r * 1.4); fl.position.set(x, this.groundY(x, z) + 0.8, z);
     this.addFx(fl, 0.5, (t) => { fl.material.opacity = 1 - t; fl.scale.setScalar(r * (1 + t)); });
-    this.addFx(m, 0.55, (t) => { m.scale.setScalar(0.3 + t * r); m.material.opacity = 1 - t; });
   }
   burst(e, color, n, up) {
     for (let i = 0; i < n; i++) {
