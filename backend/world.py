@@ -108,11 +108,26 @@ PIT_ROOMS = [
     dict(name="Pit III — Veterans", x=1079, z=520, r=26, lvl="35-60"),
     dict(name="Pit IV — Champions", x=1141, z=520, r=26, lvl="60+"),
 ]
-DUNGEONS = [dict(name="The Hollow Deep", label="The Hollow Deep — beneath the cave", entry="Hollow Deep", x0=370, z0=452, w=380, h=138),
+BARROW_ROOMS = [
+    dict(name="Barrow Stair", x=58, z=468, r=10, lvl="1-10"),
+    dict(name="Hall of Webs", x=98, z=482, r=21, lvl="1-2"),
+    dict(name="Gnawing Pits", x=152, z=468, r=22, lvl="2-4"),
+    dict(name="Ossuary Crossing", x=200, z=520, r=23, lvl="4-6"),
+    dict(name="Bandit Hideaway", x=140, z=548, r=20, lvl="5-7"),
+    dict(name="Venom Grotto", x=84, z=560, r=18, lvl="7-9"),
+    dict(name="Hall of the Fallen", x=262, z=468, r=22, lvl="8-10"),
+    dict(name="Tomb of the Barrow King", x=300, z=542, r=25, lvl="10 Boss"),
+]
+BARROW_LINKS = [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (3, 6), (6, 7)]
+BARROW_ENTRY = (92.0, 128.0)
+DUNGEONS = [dict(name="The Titus Barrows", label="The Titus Barrows — beneath Titus", entry="The Titus Barrows", x0=30, z0=440, w=310, h=140),
+            dict(name="The Hollow Deep", label="The Hollow Deep — beneath the cave", entry="Hollow Deep", x0=370, z0=452, w=380, h=138),
             dict(name="The Proving Pits", label="The Proving Pits — grinding halls", entry="The Proving Pits", x0=880, z0=478, w=290, h=84)]
 PIT_ENTRY = (722.0, 212.0)
 PORTALS = [dict(id="hollow_in", x=518.0, z=51.0, to=(426.0, 550.0), name="Hollow Deep", msg="You descend into the Hollow Deep..."),
            dict(id="hollow_out", x=411.0, z=562.0, to=(518.0, 45.0), name="Exit to the surface", msg="You climb back into the daylight."),
+           dict(id="barrow_in", x=BARROW_ENTRY[0], z=BARROW_ENTRY[1], to=(62.0, 468.0), name="The Titus Barrows", msg="You descend the worn stair into the Titus Barrows..."),
+           dict(id="barrow_out", x=50.0, z=468.0, to=(BARROW_ENTRY[0], BARROW_ENTRY[1] + 5), name="Exit to the surface", msg="You climb back up into the light north of Titus."),
            dict(id="pits_in", x=PIT_ENTRY[0], z=PIT_ENTRY[1], to=(904.0, 520.0), name="The Proving Pits", msg="You descend into the Proving Pits. The horde never stops coming..."),
            dict(id="pits_out", x=893.0, z=520.0, to=(PIT_ENTRY[0], PIT_ENTRY[1] + 5), name="Exit to the surface", msg="You climb out of the Proving Pits.")]
 PIT_TIERS = [(1, ["pit_giant_spider", "pit_skeleton", "pit_orc_warrior", "pit_dark_cultist"]),
@@ -141,6 +156,12 @@ SPAWNS = [
     ("death_knight", 1550, 120, 32, 9), ("shadow_wraith", 1170, 300, 28, 9), ("abyssal_fiend", 1580, 30, 16, 3),
     ("forest_troll", 962, 72, 44, 10), ("forest_troll", 885, 335, 28, 6), ("forest_troll", 1060, 90, 26, 5),
 ]
+for _ri, _sp in enumerate([[], [("giant_spider", 8), ("imp", 4)], [("imp", 5), ("forest_wolf", 6)], [("goblin_scout", 5), ("skeleton", 6)],
+                            [("forest_bandit", 7), ("skeleton", 4)], [("venomous_spider", 8)], [("orc_warrior", 6), ("venomous_spider", 4)], [("barrow_king", 1), ("skeleton", 6)]]):
+    _rm = BARROW_ROOMS[_ri]
+    for _i, (_t, _n) in enumerate(_sp):
+        _off = 0 if _t == "barrow_king" else 9
+        SPAWNS.append((_t, _rm["x"] + (_i * 2 - 1) * _off * 0.8, _rm["z"] + (_i % 2 * 2 - 1) * _off * 0.4, _rm["r"] * 0.55, _n))
 for _ri, _types in PIT_TIERS:
     _rm = PIT_ROOMS[_ri]
     for _i, _t in enumerate(_types):
@@ -310,7 +331,7 @@ class World:
                 for xi in range(int(x - r) - 1, int(x + r) + 2):
                     if OH + 8 < zi < H - 4 and 4 < xi < W - 4 and (xi + 0.5 - x) ** 2 + (zi + 0.5 - z) ** 2 <= r * r:
                         b[zi, xi] = 0
-        for rm in DUNGEON_ROOMS + PIT_ROOMS:
+        for rm in DUNGEON_ROOMS + PIT_ROOMS + BARROW_ROOMS:
             ph = rnd.uniform(0, 6.28)
             for i in range(72):
                 a = i / 72 * 6.283
@@ -318,7 +339,7 @@ class World:
                 for f in (0.35, 0.6, 0.85):
                     carve(rm["x"] + math.cos(a) * rr * f, rm["z"] + math.sin(a) * rr * f, rr * 0.28)
             carve(rm["x"], rm["z"], rm["r"] * 0.6)
-        for a, c in list(zip(DUNGEON_ROOMS, DUNGEON_ROOMS[1:])) + list(zip(PIT_ROOMS, PIT_ROOMS[1:])):
+        for a, c in list(zip(DUNGEON_ROOMS, DUNGEON_ROOMS[1:])) + list(zip(PIT_ROOMS, PIT_ROOMS[1:])) + [(BARROW_ROOMS[i], BARROW_ROOMS[j]) for i, j in BARROW_LINKS]:
             n = int(math.hypot(c["x"] - a["x"], c["z"] - a["z"]) / 0.5)
             nx, nz = -(c["z"] - a["z"]), c["x"] - a["x"]
             ln = math.hypot(nx, nz)
@@ -329,7 +350,7 @@ class World:
         P = self.props
         for pt in PORTALS:
             P.append(dict(kind="portal", x=pt["x"], z=pt["z"], name=pt["name"]))
-        for k, rm in enumerate(DUNGEON_ROOMS + PIT_ROOMS):
+        for k, rm in enumerate(DUNGEON_ROOMS + PIT_ROOMS + BARROW_ROOMS):
             for i in range(4):
                 a = i * math.pi / 2 + 0.7
                 x, z = rm["x"] + math.cos(a) * rm["r"] * 0.72, rm["z"] + math.sin(a) * rm["r"] * 0.72
@@ -552,5 +573,5 @@ class World:
                     paths=[dict(w=p["w"], hidden=p["hidden"], pts=[[round(a, 1), round(b, 1)] for a, b in p["pts"]]) for p in self.paths],
                     streams=[[[round(a, 1), round(b, 1)] for a, b in s] for s in self.streams], bridges=self.bridges, lakes=LAKES,
                     walls=self.walls, buildings=self.buildings, props=self.props, trees=self.trees, rocks=self.rocks, bushes=self.bushes,
-                    grass=self.grass, regions=REGIONS + DUNGEON_ROOMS + PIT_ROOMS, dungeons=DUNGEONS, safe_zones=SAFE_ZONES, oh=OH, cave_rocks=self.cave_rocks,
+                    grass=self.grass, regions=REGIONS + DUNGEON_ROOMS + PIT_ROOMS + BARROW_ROOMS, dungeons=DUNGEONS, safe_zones=SAFE_ZONES, oh=OH, cave_rocks=self.cave_rocks,
                     portals=[dict(x=p['x'], z=p['z'], name=p['name']) for p in PORTALS], towns=dict(semel=SEMEL, elderglen=ELDER, ironhold=IRON, sunhollow=SUNH))

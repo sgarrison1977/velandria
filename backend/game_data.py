@@ -318,6 +318,10 @@ for _b in ["giant_spider", "skeleton", "orc_warrior", "dark_cultist", "forest_tr
     MONSTERS["pit_" + _b] = _pit(_b)
 for _b, _l in [("hollow_shade", 66), ("death_knight", 72), ("abyssal_fiend", 80)]:
     MONSTERS[f"pit_{_b}_{_l}"] = _pit(_b, _l)
+_bk = _pit("skeleton", 10)
+_bk.update(name="Morvath the Barrow King", hp=_bk["hp"] * 6, xp=_bk["xp"] * 5, dmg=[round(d * 1.4) for d in _bk["dmg"]], boss=True,
+           respawn=180, leash=24, model_scale=1.4, radius=round(_bk["radius"] * 1.3, 2), barrow=True)
+MONSTERS["barrow_king"] = _bk
 PIT_CHAMPION_KILLS = 100
 PIT_CHAMPIONS = {1: ("orc_warrior", 18, "Gorrak the Unbroken"), 2: ("forest_troll", 38, "Mossjaw the Devourer"),
                  3: ("death_knight", 62, "Ser Vaelric the Hollow"), 4: ("abyssal_fiend", 88, "Azgharoth, Pit Tyrant")}

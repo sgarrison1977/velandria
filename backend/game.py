@@ -574,7 +574,7 @@ class Game:
         if m.d.get("champion"):
             self.broadcast_sys(f"{killer.name} has slain the Wave Champion {m.d['name']}!")
         if m.d.get("boss"):
-            self.broadcast_sys(f"{killer.name} has slain {m.d['name']}! The Hollow Deep falls silent... for now.")
+            self.broadcast_sys(f"{killer.name} has slain {m.d['name']}! " + ("The Titus Barrows fall silent... for now." if m.d.get("barrow") else "The Hollow Deep falls silent... for now."))
         for i, (item, qty) in enumerate(drops):
             a = i * 2.1 + rnd.uniform(0, 1)
             lx, lz = m.x + math.cos(a) * (0.6 + 0.4 * i), m.z + math.sin(a) * (0.6 + 0.4 * i)

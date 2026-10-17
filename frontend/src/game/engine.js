@@ -200,7 +200,7 @@ export class Engine {
     if (ab === "attack_run" && !tgt) { this.shock(src.x, src.z, c, 1.8); if (src.id === this.meId) this.shake = 0.08; }
     if (ab === "attack_run" && tgt && Math.hypot(src.x - tgt.x, src.z - tgt.z) > 3.5) src.anim.atk = 0;
     else if ((ab === "double_stab" || ab === "attack_run") && tgt) { this.shock(tgt.x, tgt.z, c, 1.4); if (src.id === this.meId) this.shake = 0.15; }
-    if (ab === "spin_attack" || ab === "whirlwind") { src.anim.atk = 0; src.anim.spin = 1; this.spinTrail(src, c); }
+    if (ab === "spin_attack" || ab === "whirlwind") { src.anim.atk = 0; src.anim.spin = 1; }
     if ((ab === "multi_shot" || ab === "arrow_barrage") && tgt) this.projectile(src, tgt, c, true, 1);
     if (ab === "agredi" && tgt) this.projectile(src, tgt, c, false, 0.9);
     if (ab === "ignis" && tgt) this.projectile(src, tgt, c, false, 1.3, () => this.shock(tgt.x, tgt.z, c, 2.5));
@@ -251,11 +251,6 @@ export class Engine {
       const to = new THREE.Vector3(tgt.x, this.groundY(tgt.x, tgt.z) + tgt.height * 0.55, tgt.z);
       o.position.lerpVectors(from, to, t); o.position.y += Math.sin(t * Math.PI) * (arrow ? 0.6 : 0.3); o.lookAt(to);
     }, done);
-  }
-  spinTrail(src, color) {
-    const m = new THREE.Mesh(new THREE.RingGeometry(0.9, 2.1, 48, 1, 0, Math.PI * 1.1), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
-    m.rotation.x = -Math.PI / 2;
-    this.addFx(m, 0.48, (t) => { const q = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2; m.position.set(src.x, this.groundY(src.x, src.z) + 1.05, src.z); m.rotation.z = (src.rig?.root.rotation.y || 0) - Math.PI / 2 + q * Math.PI * 2 - Math.PI * 0.55; m.material.opacity = 0.65 * Math.sin(t * Math.PI); });
   }
   shock(x, z, color, r) {
     const fl = sprite(color, r * 1.4); fl.position.set(x, this.groundY(x, z) + 0.8, z);
@@ -568,7 +563,7 @@ export class Engine {
       const ds = this.world.dungeons || [{ name: "The Hollow Deep", label: "The Hollow Deep — beneath the cave", entry: "Hollow Deep", x0: 370, z0: 452, w: 380, h: 138 }];
       this._inset = [];
       ds.forEach((d, k) => {
-        const iw = Math.round(w * 0.22), ih = Math.round(iw * d.h / d.w), ix = Math.round(w * (0.16 + k * 0.4)), iy = h - ih - 10;
+        const iw = Math.round(w * 0.22), ih = Math.round(iw * d.h / d.w), ix = Math.round(w * (0.04 + k * 0.32)), iy = h - ih - 10;
         ctx.fillStyle = "rgba(8,6,14,0.92)"; ctx.fillRect(ix - 4, iy - 20, iw + 8, ih + 24);
         ctx.strokeStyle = "#8a6aff"; ctx.lineWidth = 1.5; ctx.strokeRect(ix - 4, iy - 20, iw + 8, ih + 24);
         ctx.drawImage(src, d.x0 * 2, d.z0 * 2, d.w * 2, d.h * 2, ix, iy, iw, ih);
