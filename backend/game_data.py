@@ -461,6 +461,21 @@ LOOK_OPTS = dict(
 )
 
 
+RARITY_MULT = dict(common=1, uncommon=1.12, rare=1.28, epic=1.5, legendary=1.8)
+
+
+def gear_score(equipment):
+    total = 0
+    for e in (equipment or {}).values():
+        it = e and ITEMS.get(e.get("item"))
+        if not it:
+            continue
+        vals = sum(v / 10 if k in ("max_hp", "max_mp") else v for k, v in list(it.get("stats", {}).items()) + list((e.get("props") or {}).items()))
+        dmg = (it["dmg"][0] + it["dmg"][1]) * 0.75 if it.get("dmg") else 0
+        total += (it.get("lvl", 1) * 2 + vals + it.get("armor", 0) + dmg) * RARITY_MULT.get(it.get("rarity"), 1)
+    return round(total)
+
+
 def clean_look(look):
     if not isinstance(look, dict):
         return None

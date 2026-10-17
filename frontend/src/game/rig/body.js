@@ -107,14 +107,21 @@ function headParts(head, o, skinM, hc) {
   helmet(head, o, hc);
 }
 
+// dome that sits above the brow in front and drops lower at the back
+const helmShell = (R, front) => G(`hshell${R}${front}`, () => sculpt(new THREE.SphereGeometry(R, 28, 18, 0, Math.PI * 2, 0, Math.PI * 0.64), (v) => {
+  const f = Math.max(0, v.z / Math.hypot(v.x, v.z || 1e-6)), minY = R * (-0.36 + Math.pow(f, 1.4) * (0.36 + front));
+  if (v.y < minY) { const rr = Math.sqrt(Math.max(0, R * R - minY * minY)), cur = Math.hypot(v.x, v.z) || 1; v.x *= rr / cur; v.z *= rr / cur; v.y = minY; }
+  v.x *= 0.93; v.y *= 1.08;
+}));
+
 function helmet(head, o, hc) {
   const h = o.helm; if (!h) return;
   const c = h.color;
-  if (h.style === "cap") { mesh(dome(0.134, 0.56), mat("leather", c), 0, hc - 0.004, -0.005, head); mesh(torus(0.128, 0.012), mat("leather", "#2a1a10"), 0, hc + 0.02, -0.005, head, Math.PI / 2, 0, 0); }
+  if (h.style === "cap") { mesh(helmShell(0.134, 0.3), mat("leather", c), 0, hc, -0.006, head); mesh(torus(0.128, 0.011), mat("leather", "#2a1a10"), 0, hc, -0.006, head, Math.PI / 2 - 0.36, 0, 0).scale.set(0.93, 1, 1); }
   else if (h.style === "nasal") {
     const m = mat("metal", c);
-    mesh(G("nasaldome", () => sculpt(new THREE.SphereGeometry(0.14, 24, 14, 0, Math.PI * 2, 0, Math.PI * 0.56), (v) => { v.y *= 1.12; })), m, 0, hc + 0.008, -0.005, head);
-    mesh(torus(0.134, 0.01), m, 0, hc + 0.02, -0.005, head, Math.PI / 2, 0, 0);
+    mesh(helmShell(0.14, 0.26), m, 0, hc + 0.004, -0.005, head);
+    mesh(torus(0.134, 0.01), m, 0, hc + 0.004, -0.005, head, Math.PI / 2 - 0.34, 0, 0).scale.set(0.93, 1, 1);
     mesh(box(0.018, 0.075, 0.012), m, 0, hc - 0.005, 0.135, head);
     for (const sd of [-1, 1]) mesh(box(0.012, 0.085, 0.06), m, sd * 0.118, hc - 0.03, 0.05, head, 0, -sd * 0.25, sd * 0.12);
     mesh(G("avent", () => new THREE.CylinderGeometry(0.135, 0.165, 0.13, 20, 1, true, Math.PI * 0.6, Math.PI * 0.8)), mat("chain", "#7a7e86", { side: THREE.DoubleSide }), 0, hc - 0.06, -0.005, head);

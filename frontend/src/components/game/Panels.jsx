@@ -47,7 +47,7 @@ function GearScore({ me, items }) {
     const t = setTimeout(() => setBump(0), 900);
     return () => { clearInterval(id); clearTimeout(t); };
   }, [gs]); // eslint-disable-line react-hooks/exhaustive-deps
-  return <div className={`gear-score ${bump > 0 ? "up" : bump < 0 ? "down" : ""}`} data-testid="gear-score">Gear Score <b>{shown.toLocaleString()}</b></div>;
+  return <div className={`gear-score ${bump > 0 ? "up" : bump < 0 ? "down" : ""}`} data-testid="gear-score">Gear Score <b>{shown.toLocaleString()}</b><button type="button" className="gs-rank" data-testid="gear-score-rankings-btn" onClick={() => togglePanel("leaderboard", true)}>Rankings</button></div>;
 }
 
 export function Equipment({ data, net, me }) {

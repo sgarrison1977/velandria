@@ -31,7 +31,7 @@ export function CharPreview({ cls, eq, items, spin = true, zoomable = true, clas
     const loop = () => { const now = performance.now(), dt = Math.min(0.05, (now - last) / 1000); last = now; if (st.current.rig) animateRig(st.current.rig, {}, dt, now / 1000); if (drag === null && spin) holder.rotation.y += dt * 0.25; r.render(scene, cam); raf = requestAnimationFrame(loop); };
     loop();
     return () => { cancelAnimationFrame(raf); cv.removeEventListener("pointerdown", down); window.removeEventListener("pointerup", up); window.removeEventListener("pointermove", move); S.rig?.dispose?.(); r.dispose(); };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     const s = st.current; if (!s.holder || !items) return;
     if (s.rig) { s.holder.remove(s.rig.root); s.rig.dispose?.(); }

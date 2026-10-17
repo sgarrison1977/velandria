@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Backpack, User, Sparkles, Map as MapIcon, ScrollText, Settings as Cog, Coins, LogOut } from "lucide-react";
+import { Backpack, User, Sparkles, Map as MapIcon, ScrollText, Settings as Cog, Coins, LogOut, Trophy } from "lucide-react";
 import { useStore, setState, togglePanel } from "../../game/store";
 import { Bar, Panel, Hover, AbIcon } from "./ui";
 import { sfx } from "../../game/audio";
@@ -82,16 +82,16 @@ export function Hotbar({ data, net, engine }) {
   );
 }
 
-const MENU = [["inventory", Backpack, "Inventory"], ["character", User, "Character"], ["skills", Sparkles, "Skills"], ["quests", ScrollText, "Quests"], ["map", MapIcon, "World Map"], ["settings", Cog, "Settings"]];
+const MENU = [["inventory", Backpack, "Inventory"], ["character", User, "Character"], ["skills", Sparkles, "Skills"], ["quests", ScrollText, "Quests"], ["map", MapIcon, "World Map"], ["leaderboard", Trophy, "Gear Rankings"], ["settings", Cog, "Settings"]];
 export function MenuBar({ onLogout }) {
   const me = useStore((s) => s.me), panels = useStore((s) => s.panels);
   if (!me) return null;
-  const ab = { inventory: "inventory", character: "character", skills: "skills", quests: "quests", map: "map", settings: "menu" };
+  const ab = { inventory: "inventory", character: "character", skills: "skills", quests: "quests", map: "map", leaderboard: "leaderboard", settings: "menu" };
   return (
     <div className="menubar">
       <div className="gold" data-testid="currency-display"><Coins size={15} /> {me.gold.toLocaleString()}</div>
       {MENU.map(([k, I, label]) => (
-        <button key={k} type="button" data-testid={`menu-${k}-btn`} className={`mbtn ${panels[k] ? "on" : ""}`} title={`${label} (${keyLabel(me.binds[ab[k]])})`} onClick={() => { sfx("open"); togglePanel(k); }}>
+        <button key={k} type="button" data-testid={`menu-${k}-btn`} className={`mbtn ${panels[k] ? "on" : ""}`} title={me.binds[ab[k]] ? `${label} (${keyLabel(me.binds[ab[k]])})` : label} onClick={() => { sfx("open"); togglePanel(k); }}>
           <I size={18} />{(k === "character" && me.attr_points > 0) || (k === "skills" && me.skill_points > 0) ? <span className="pip" /> : null}
         </button>
       ))}

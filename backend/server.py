@@ -12,7 +12,7 @@ from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field
 from game import Game, new_character_doc
-from game_data import public_data, CLASSES, clean_look
+from game_data import public_data, CLASSES, clean_look, gear_score
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("server")
@@ -141,6 +141,20 @@ async def create_char(body: CharIn, u=Depends(current_user)):
     except Exception:
         raise HTTPException(400, "That name is already taken")
     return public_char(doc)
+
+
+@api.get("/leaderboard/gear")
+async def gear_leaderboard(u=Depends(current_user)):
+    rows = []
+    async for c in db.characters.find({}, {"_id": 0, "id": 1, "name": 1, "cls": 1, "level": 1, "equipment": 1}):
+        live = game.players.get(c["id"])
+        eq = live.equipment if live else c.get("equipment")
+        rows.append(dict(id=c["id"], name=c["name"], cls=c["cls"], level=live.level if live else c["level"], score=gear_score(eq), online=bool(live)))
+    rows.sort(key=lambda r: -r["score"])
+    for i, r in enumerate(rows):
+        r["rank"] = i + 1
+    mine = [r for r in rows if r["id"] in {c["id"] async for c in db.characters.find({"account_id": u["id"]}, {"id": 1})}]
+    return {"top": rows[:10], "mine": mine, "total": len(rows)}
 
 
 @api.put("/characters/{cid}/look")

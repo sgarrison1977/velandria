@@ -334,3 +334,18 @@ input { font-family: inherit; }
 .gear-score.up b { color: #7aff9a; text-shadow: 0 0 12px #7aff9a88; } .gear-score.down b { color: #ff7a6a; }
 .inv-panel .equip-doll .item-icon { width: 46px !important; height: 46px !important; }
 .equip-doll .equip-slot em { display: block; text-align: center; line-height: 1.1; }
+.lb-panel { left: 50%; top: 70px; transform: translateX(-50%); width: min(520px, 96vw); }
+.lb-head { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 14px; margin-bottom: 10px; }
+.lb-list { display: flex; flex-direction: column; gap: 4px; }
+.lb-row { display: grid; grid-template-columns: 54px 1fr 130px 80px; align-items: center; padding: 8px 10px; background: #15110d; border: 1px solid #2a2016; font-size: 15px; transition: border-color .15s, transform .15s; }
+.lb-row:hover { border-color: var(--edge); transform: translateX(2px); }
+.lb-row.me { border-color: var(--gold); background: #2a1f14; }
+.lb-rank { display: flex; align-items: center; gap: 4px; font-family: var(--serif); color: var(--muted); }
+.lb-row.top1 .lb-rank { color: #ffd36b; } .lb-row.top2 .lb-rank { color: #d8dce4; } .lb-row.top3 .lb-rank { color: #d08a4a; }
+.lb-name { font-family: var(--serif); color: var(--text); display: flex; align-items: center; gap: 6px; }
+.lb-on { width: 7px; height: 7px; border-radius: 50%; background: #5fd35a; box-shadow: 0 0 6px #5fd35a; }
+.lb-cls { color: var(--muted); font-size: 13px; text-transform: capitalize; }
+.lb-score { color: var(--gold); text-align: right; font-size: 17px; }
+.lb-you { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #c99a2e44; }
+.gs-rank { margin-left: 12px; background: none; border: 1px solid var(--edge2); color: var(--gold); font-size: 12px; padding: 2px 8px; cursor: pointer; transition: border-color .15s; }
+.gs-rank:hover { border-color: var(--gold); }
