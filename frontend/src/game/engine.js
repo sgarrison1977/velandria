@@ -346,7 +346,7 @@ export class Engine {
     if (!this.lastMove || !this.mouseIn) { if (this.hover) { this.hover = null; } return; }
     const e = this.pick(this.lastMove);
     this.hover = e;
-    this.canvas.style.cursor = !e ? "default" : e.kind === "monster" ? "default" : "pointer";
+    this.canvas.style.cursor = `url(/cursors/${!e ? "arrow" : e.kind === "monster" ? "enemy" : "interact"}.svg) 2 2, ${!e || e.kind === "monster" ? "default" : "pointer"}`;
   }
 
   // ---------- nameplates

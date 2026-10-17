@@ -370,3 +370,6 @@ input { font-family: inherit; }
 .lb-panel { width: min(560px, calc(96vw / var(--pz))); }
 @media (max-width: 1500px) { .inv-cols { grid-template-columns: 1fr; } .inv-left .equip-doll { width: min(100%, calc((60vh - 60px) / var(--pz) * 1.149)); margin: 0 auto 10px; } }
 .ui-scale input { flex: 1; margin: 0 10px; } .ui-scale b { color: var(--gold); min-width: 48px; }
+html, body, .game-root, canvas { cursor: url(/cursors/arrow.svg) 2 2, default; }
+button, a, [role="button"], .item-icon, .look-swatch, .look-chip, .mbtn, .btn, .panel-x { cursor: url(/cursors/interact.svg) 2 2, pointer !important; }
+input[type="text"], input[type="email"], input[type="password"], textarea { cursor: text; }
