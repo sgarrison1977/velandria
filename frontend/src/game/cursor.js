@@ -1,8 +1,8 @@
 // draws a sword cursor (tip at top-left = click point) to a PNG data URL and installs it as --cur
 export function installCursor() {
-  const S = 36, c = document.createElement("canvas"); c.width = c.height = S;
+  const K = 1.15, S = 42, c = document.createElement("canvas"); c.width = c.height = S;
   const g = c.getContext("2d");
-  g.translate(2, 2); g.rotate(-Math.PI / 4); g.translate(0, 0);
+  g.scale(K, K); g.translate(2, 2); g.rotate(-Math.PI / 4); g.translate(0, 0);
   // local frame: sword points up along -y from origin (tip at 0,0)
   const blade = new Path2D("M0 0 L3.2 5 L3.2 26 L-3.2 26 L-3.2 5 Z");
   const guard = new Path2D("M-9 26 Q0 24 9 26 L9 29.5 Q0 28 -9 29.5 Z");
