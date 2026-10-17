@@ -22,7 +22,8 @@ export function ItemIcon({ id, item, qty, size = 44, dim, testid, onClick, onCon
   const col = RARITY[item?.rarity] || "#888";
   return (
     <button type="button" data-testid={testid} onClick={onClick} onContextMenu={onContextMenu} className={`item-icon ${dim ? "dim" : ""} ${locked ? "locked" : ""}`} title={title}
-      draggable={!!(dragUid || dragSlot)} onDragStart={dragUid || dragSlot ? (e) => { e.dataTransfer.setData(dragSlot ? "text/sx-slot" : "text/sx-uid", dragSlot || dragUid); e.dataTransfer.effectAllowed = "move"; } : undefined}
+      draggable={!!(dragUid || dragSlot)} onDragStart={dragUid || dragSlot ? (e) => { e.dataTransfer.setData(dragSlot ? "text/sx-slot" : "text/sx-uid", dragSlot || dragUid); e.dataTransfer.effectAllowed = "move"; window.dispatchEvent(new CustomEvent("sx-drag", { detail: dragSlot ? "bag" : item?.slot || "none" })); } : undefined}
+      onDragEnd={dragUid || dragSlot ? () => window.dispatchEvent(new CustomEvent("sx-drag", { detail: null })) : undefined}
       style={{ width: size, height: size, borderColor: col, boxShadow: item?.rarity && item.rarity !== "common" ? `inset 0 0 12px ${col}55` : undefined }}>
       {artFor(id, item) ? <img src={`/items/${artFor(id, item)}.webp`} alt="" draggable={false} className="item-art" /> : <I size={size * 0.5} color={col} strokeWidth={1.6} />}
       {qty > 1 && <span className="item-qty">{qty}</span>}

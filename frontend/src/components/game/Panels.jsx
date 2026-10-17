@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { CharPreview, eqString } from "./Appearance";
 import { Plus, Lock, Check } from "lucide-react";
 import { useStore, togglePanel } from "../../game/store";
 import { Panel, ItemIcon, ItemTip, Hover, AbIcon, inst, cantUse } from "./ui";
@@ -8,45 +9,71 @@ import { sfx } from "../../game/audio";
 const DOLL = {
   head: ["Head", 58, 58, 270, 50], chest: ["Chest", 58, 150, 270, 160], main: ["Main hand", 58, 245, 191, 272], legs: ["Legs", 58, 335, 250, 330], feet: ["Boots", 58, 425, 250, 438],
   amulet: ["Amulet", 482, 58, 270, 96], hands: ["Hands", 482, 150, 349, 272], off: ["Off hand", 482, 245, 349, 272], belt: ["Belt", 482, 335, 270, 245],
-  ring1: ["Ring 1", 150, 300, 191, 272], ring2: ["Ring 2", 150, 365, 191, 272], ring3: ["Ring 3", 150, 430, 191, 272],
-  ring4: ["Ring 4", 390, 300, 349, 272], ring5: ["Ring 5", 390, 365, 349, 272], ring6: ["Ring 6", 390, 430, 349, 272],
+  ring1: ["Ring 1", 145, 285, 191, 272], ring2: ["Ring 2", 145, 360, 191, 272], ring3: ["Ring 3", 145, 435, 191, 272],
+  ring4: ["Ring 4", 395, 285, 349, 272], ring5: ["Ring 5", 395, 360, 349, 272], ring6: ["Ring 6", 395, 435, 349, 272],
 };
-const ARM = "M214 108 Q196 116 192 150 L182 228 Q178 250 186 262 L196 262 Q200 248 204 230 L216 160 Z";
-const LEG = "M226 250 L268 250 L264 340 L262 428 L238 428 L232 340 Z";
-const mirror = { transform: "translate(540 0) scale(-1 1)" };
 
-function Silhouette({ me }) {
+const RAR = { common: 1, uncommon: 1.12, rare: 1.28, epic: 1.5, legendary: 1.8 };
+export function gearScore(me, items) {
+  let total = 0;
+  for (const e of Object.values(me.equipment || {})) {
+    const it = e && items[e.item]; if (!it) continue;
+    const vals = [...Object.entries(it.stats || {}), ...Object.entries(e.props || {})].reduce((a, [k, v]) => a + (k === "max_hp" || k === "max_mp" ? v / 10 : v), 0);
+    total += ((it.lvl || 1) * 2 + vals + (it.armor || 0) + (it.dmg ? (it.dmg[0] + it.dmg[1]) * 0.75 : 0)) * (RAR[it.rarity] || 1);
+  }
+  return Math.round(total);
+}
+
+function useDragSlot() {
+  const [hot, setHot] = useState(null);
+  useEffect(() => { const f = (e) => setHot(e.detail); window.addEventListener("sx-drag", f); return () => window.removeEventListener("sx-drag", f); }, []);
+  return hot;
+}
+
+function DollLines({ me }) {
   return (
     <svg className="doll-svg" viewBox="0 0 540 470" aria-hidden="true">
-      <defs><linearGradient id="dollg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#3a2e1e" /><stop offset="1" stopColor="#1a140e" /></linearGradient></defs>
       {Object.entries(DOLL).map(([slot, [, bx, by, ax, ay]]) => <line key={slot} x1={bx} y1={by} x2={ax} y2={ay} className={`doll-line ${me.equipment[slot] ? "on" : ""}`} />)}
-      <g className="doll-body" fill="url(#dollg)">
-        <circle cx="270" cy="58" r="28" /><rect x="258" y="84" width="24" height="18" />
-        <path d="M222 104 Q270 94 318 104 L330 120 L318 210 Q312 236 316 250 L224 250 Q228 236 222 210 L210 120 Z" />
-        <path d={ARM} /><path d={ARM} {...mirror} /><circle cx="191" cy="272" r="9" /><circle cx="349" cy="272" r="9" />
-        <path d={LEG} /><path d={LEG} {...mirror} /><ellipse cx="250" cy="438" rx="18" ry="8" /><ellipse cx="290" cy="438" rx="18" ry="8" />
-      </g>
     </svg>
   );
 }
 
+function GearScore({ me, items }) {
+  const gs = gearScore(me, items), [shown, setShown] = useState(gs), [bump, setBump] = useState(0);
+  useEffect(() => {
+    if (gs === shown) return;
+    setBump(gs > shown ? 1 : -1);
+    const id = setInterval(() => setShown((v) => { const step = Math.max(1, Math.round(Math.abs(gs - v) / 6)); const n = v < gs ? Math.min(gs, v + step) : Math.max(gs, v - step); if (n === gs) clearInterval(id); return n; }), 30);
+    const t = setTimeout(() => setBump(0), 900);
+    return () => { clearInterval(id); clearTimeout(t); };
+  }, [gs]); // eslint-disable-line react-hooks/exhaustive-deps
+  return <div className={`gear-score ${bump > 0 ? "up" : bump < 0 ? "down" : ""}`} data-testid="gear-score">Gear Score <b>{shown.toLocaleString()}</b></div>;
+}
+
 export function Equipment({ data, net, me }) {
+  const hot = useDragSlot();
+  const eq = eqString(me.equipment, me.look);
+  const match = (slot) => hot === slot || (hot === "ring" && slot.startsWith("ring"));
   return (
-    <div className="equip-doll" data-testid="equipment-grid">
-      <Silhouette me={me} />
-      {Object.entries(DOLL).map(([slot, [label, bx, by]]) => {
-        const e = me.equipment[slot], it = e && data.items[e.item];
-        const drop = (ev) => { ev.preventDefault(); ev.currentTarget.classList.remove("drop-hot"); const uid = ev.dataTransfer.getData("text/sx-uid"); if (uid) { sfx("click"); net.send({ t: "equip", uid, slot }); } };
-        return (
-          <div key={slot} className="equip-slot" style={{ left: `${(bx / 540) * 100}%`, top: `${(by / 470) * 100}%` }} data-testid={`equip-drop-${slot}`} onDragOver={(ev) => { ev.preventDefault(); ev.currentTarget.classList.add("drop-hot"); }} onDragLeave={(ev) => ev.currentTarget.classList.remove("drop-hot")} onDrop={drop}>
-            {e ? <Hover tip={<ItemTip id={e.item} item={inst(it, e)} equipped extra={<div className="tip-meta">Click or drag into your bag to unequip</div>} />}>
-              <ItemIcon id={e.item} item={it} size={56} testid={`equip-slot-${slot}`} dragSlot={slot} onClick={() => { sfx("click"); net.send({ t: "unequip", slot }); }} />
-            </Hover> : <div className="item-icon empty" style={{ width: 56, height: 56 }} data-testid={`equip-slot-${slot}`} />}
-            <em>{label}</em>
-          </div>
-        );
-      })}
-    </div>
+    <>
+      <div className={`equip-doll ${hot ? "dragging" : ""}`} data-testid="equipment-grid">
+        <CharPreview cls={me.cls} eq={eq} items={data.items} spin={false} zoomable={false} className="doll-preview" testid="equipment-character-preview" />
+        <DollLines me={me} />
+        {Object.entries(DOLL).map(([slot, [label, bx, by]]) => {
+          const e = me.equipment[slot], it = e && data.items[e.item];
+          const drop = (ev) => { ev.preventDefault(); ev.currentTarget.classList.remove("drop-hot"); const uid = ev.dataTransfer.getData("text/sx-uid"); if (uid) { sfx("click"); net.send({ t: "equip", uid, slot }); } };
+          return (
+            <div key={slot} className={`equip-slot ${hot && match(slot) ? "slot-hot" : hot && hot !== "bag" ? "slot-dim" : ""}`} style={{ left: `${(bx / 540) * 100}%`, top: `${(by / 470) * 100}%` }} data-testid={`equip-drop-${slot}`} onDragOver={(ev) => { ev.preventDefault(); ev.currentTarget.classList.add("drop-hot"); }} onDragLeave={(ev) => ev.currentTarget.classList.remove("drop-hot")} onDrop={drop}>
+              {e ? <Hover tip={<ItemTip id={e.item} item={inst(it, e)} equipped extra={<div className="tip-meta">Click or drag into your bag to unequip</div>} />}>
+                <ItemIcon id={e.item} item={it} size={56} testid={`equip-slot-${slot}`} dragSlot={slot} onClick={() => { sfx("click"); net.send({ t: "unequip", slot }); }} />
+              </Hover> : <div className="item-icon empty" style={{ width: 56, height: 56 }} data-testid={`equip-slot-${slot}`} />}
+              <em>{label}</em>
+            </div>
+          );
+        })}
+      </div>
+      <GearScore me={me} items={data.items} />
+    </>
   );
 }
 

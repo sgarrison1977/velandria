@@ -321,3 +321,16 @@ input { font-family: inherit; }
 @media (max-width: 900px) { .inv-panel { width: auto; } .inv-panel .inv-grid { grid-template-columns: repeat(5, 58px); } .inv-panel .equip-doll .item-icon { width: 44px !important; height: 44px !important; } }
 .equip-doll { width: min(100%, calc(52vh * 1.149)); margin: 0 auto 12px; }
 .inv-panel .equip-doll .item-icon { width: 50px !important; height: 50px !important; }
+.doll-preview { position: absolute; left: 28%; right: 28%; top: 0; bottom: 0; }
+.doll-preview canvas { width: 100%; height: 100%; display: block; cursor: grab; }
+.equip-doll .doll-svg { pointer-events: none; }
+.equip-doll .equip-slot { transition: opacity .15s, transform .15s; }
+.equip-doll.dragging .equip-slot.slot-dim { opacity: 0.35; }
+.equip-doll .equip-slot.slot-hot { transform: translate(-50%, -50%) scale(1.1); }
+.equip-doll .equip-slot.slot-hot .item-icon { box-shadow: 0 0 0 2px var(--gold), 0 0 16px #ffcf5aaa; animation: slotPulse 0.9s ease-in-out infinite; }
+@keyframes slotPulse { 50% { box-shadow: 0 0 0 2px #ffe08a, 0 0 26px #ffcf5a; } }
+.gear-score { text-align: center; font-family: var(--serif); color: var(--muted); font-size: 15px; letter-spacing: .06em; margin: -4px 0 12px; }
+.gear-score b { color: var(--gold); font-size: 22px; margin-left: 6px; transition: color .3s; }
+.gear-score.up b { color: #7aff9a; text-shadow: 0 0 12px #7aff9a88; } .gear-score.down b { color: #ff7a6a; }
+.inv-panel .equip-doll .item-icon { width: 46px !important; height: 46px !important; }
+.equip-doll .equip-slot em { display: block; text-align: center; line-height: 1.1; }

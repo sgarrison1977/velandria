@@ -9,7 +9,7 @@ export const defaultEquip = (c) => c ? { main: { item: c.weapon }, off: c.offhan
 export const randomLook = (opts) => Object.fromEntries(Object.entries(opts).map(([k, v]) => [k, v[Math.floor(Math.random() * v.length)]]));
 export const firstLook = (opts) => Object.fromEntries(Object.entries(opts).map(([k, v]) => [k, k === "skin" ? v[2] : k === "hair" ? v[1] : v[0]]));
 
-export function CharPreview({ cls, eq, items }) {
+export function CharPreview({ cls, eq, items, spin = true, zoomable = true, className = "look-preview", testid = "appearance-preview" }) {
   const ref = useRef(), st = useRef({});
   useEffect(() => {
     const S = st.current, cv = ref.current, r = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true });
@@ -28,7 +28,7 @@ export function CharPreview({ cls, eq, items }) {
     const down = (e) => { drag = e.clientX; }, up = () => { drag = null; };
     const move = (e) => { if (drag !== null) { holder.rotation.y += (e.clientX - drag) * 0.012; drag = e.clientX; } };
     cv.addEventListener("pointerdown", down); window.addEventListener("pointerup", up); window.addEventListener("pointermove", move);
-    const loop = () => { const now = performance.now(), dt = Math.min(0.05, (now - last) / 1000); last = now; if (st.current.rig) animateRig(st.current.rig, {}, dt, now / 1000); if (drag === null) holder.rotation.y += dt * 0.25; r.render(scene, cam); raf = requestAnimationFrame(loop); };
+    const loop = () => { const now = performance.now(), dt = Math.min(0.05, (now - last) / 1000); last = now; if (st.current.rig) animateRig(st.current.rig, {}, dt, now / 1000); if (drag === null && spin) holder.rotation.y += dt * 0.25; r.render(scene, cam); raf = requestAnimationFrame(loop); };
     loop();
     return () => { cancelAnimationFrame(raf); cv.removeEventListener("pointerdown", down); window.removeEventListener("pointerup", up); window.removeEventListener("pointermove", move); S.rig?.dispose?.(); r.dispose(); };
   }, []);
@@ -38,9 +38,9 @@ export function CharPreview({ cls, eq, items }) {
     s.rig = buildPlayer(cls, eq, items); s.holder.add(s.rig.root);
   }, [cls, eq, items]);
   return (
-    <div className="look-preview" data-testid="appearance-preview">
+    <div className={className} data-testid={testid}>
       <canvas ref={ref} />
-      <button type="button" className="btn ghost look-zoom" data-testid="appearance-zoom-btn" onClick={() => { st.current.close = !st.current.close; st.current.zoom(); }}>Zoom face</button>
+      {zoomable && <button type="button" className="btn ghost look-zoom" data-testid="appearance-zoom-btn" onClick={() => { st.current.close = !st.current.close; st.current.zoom(); }}>Zoom face</button>}
     </div>
   );
 }

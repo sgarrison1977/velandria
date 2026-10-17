@@ -127,7 +127,7 @@ class Player:
                                               "inventory", "equipment", "quests", "binds", "hp", "mp", "marks")} | {"x": round(self.x, 2), "z": round(self.z, 2)}
 
     def self_view(self):
-        return self.to_doc() | dict(id=self.id, max_hp=self.max_hp, max_mp=self.max_mp, tot=self.tot, armor=self.armor, attack_interval=self.attack_interval,
+        return self.to_doc() | dict(id=self.id, look=self.look, max_hp=self.max_hp, max_mp=self.max_mp, tot=self.tot, armor=self.armor, attack_interval=self.attack_interval,
                                     range=self.range, crit=round(self.crit, 3), dmg=[self.dmg_lo, self.dmg_hi], buffs={k: round(v[1] - now(), 1) for k, v in self.buffs.items()},
                                     cds={k: round(v - now(), 2) for k, v in self.cds.items() if v > now()})
 
