@@ -816,13 +816,14 @@ class Game:
             p.rot = math.atan2(m.x - p.x, m.z - p.z)
         if k in ("melee", "ranged", "dash"):
             p.last_attack = t
+            delay = math.hypot(p.dash[0] - p.x, p.dash[1] - p.z) / DASH_SPEED if k == "dash" and p.dash else 0
             for i in range(ab.get("hits", 1)):
                 crit = rnd.random() < p.crit
                 dmg = self.weapon_dmg(p, ab) * (COMBAT["crit_mult"] if crit else 1)
-                if i == 0:
+                if i == 0 and not delay:
                     self.damage_monster(m, dmg, p, "phys", crit)
                 else:
-                    self.sched.append(dict(t=t + i * ab["gap"], pid=p.id, mid=m.id, dmg=dmg, crit=crit, dtype="phys", ab=ab_id))
+                    self.sched.append(dict(t=t + delay + i * ab.get("gap", 0), pid=p.id, mid=m.id, dmg=dmg, crit=crit, dtype="phys", ab=ab_id))
         elif k == "spell":
             crit = rnd.random() < p.crit
             dmg = self.spell_dmg(p, ab) * (COMBAT["crit_mult"] if crit else 1)
