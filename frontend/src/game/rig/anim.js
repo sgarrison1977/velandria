@@ -62,6 +62,14 @@ function humanoidAnim(rig, a, dt, t, moving) {
     armL.el.rotation.x = -0.25 * c; armR.el.rotation.x = -0.25 * c;
     torso.rotation.x = rig.lean - 0.1 * c; head.rotation.x = -0.15 * c;
   }
+  if (a.spin > 0) {
+    const q = 1 - a.spin, e = q < 0.5 ? 2 * q * q : 1 - (-2 * q + 2) ** 2 / 2, env = Math.sin(q * Math.PI);
+    body.rotation.y = e * Math.PI * 2;
+    armR.sh.rotation.set(-0.35, 0, lerp(armR.sh.rotation.z, 1.45, env)); armR.el.rotation.x = -0.1;
+    armL.sh.rotation.set(-0.2, 0, lerp(armL.sh.rotation.z, -1.2, env)); armL.el.rotation.x = -0.2;
+    torso.rotation.x = rig.lean + 0.15 * env; torso.rotation.z = -0.12 * env;
+    legL.knee.rotation.x = legR.knee.rotation.x = 0.35 * env; body.position.y = -0.06 * env;
+  }
   if (a.hurt > 0) { torso.rotation.x -= a.hurt * 0.18; head.rotation.x -= a.hurt * 0.2; }
   if (rig.cape) rig.cape.rotation.x = lerp(rig.cape.rotation.x, (moving ? 0.3 : 0.06) + Math.sin(t * 2.3 + rig.seed) * 0.04 + Math.abs(sw) * 0.06, Math.min(1, dt * 5));
   if (rig.wings) rig.wings.forEach((w, i) => { w.rotation.y = (i ? -1 : 1) * (0.5 + Math.sin(t * 9) * 0.35); });
@@ -73,6 +81,7 @@ export function animateRig(rig, a, dt, t) {
   a.phase = (a.phase || 0) + dt * (moving ? sp : 0);
   a.atk = Math.max(0, (a.atk || 0) - dt * 2.4);
   a.cast = Math.max(0, (a.cast || 0) - dt * 2);
+  a.spin = Math.max(0, (a.spin || 0) - dt * 2.1);
   a.hurt = Math.max(0, (a.hurt || 0) - dt * 4);
   const sw = moving ? Math.sin(a.phase) : 0;
   if (a.dead) {
