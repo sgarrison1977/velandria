@@ -1476,6 +1476,17 @@ class Game:
                 p.target, p.queued, p.pending = None, None, None
                 if not self.path_to(p, float(x), float(z), limit=6000 if msg.get("hold") else 25000) and not msg.get("hold"):
                     err = "You can't reach that spot."
+        elif t == "unstuck":
+            tt = now()
+            if p.dead_until:
+                return
+            if tt < getattr(p, "unstuck_at", 0):
+                return p.send({"t": "err", "msg": f"You can use Unstuck again in {int(p.unstuck_at - tt) + 1}s."})
+            p.unstuck_at = tt + 60
+            town = min(SAFE_ZONES, key=lambda s: (s["x"] - p.x) ** 2 + (s["z"] - p.z) ** 2)
+            p.x, p.z = town["x"] + rnd.uniform(-4, 4), town["z"] + rnd.uniform(-8, -5)
+            p.path, p.target, p.queued, p.pending, p.dash, p.dirty = [], None, None, None, None, True
+            p.send({"t": "sys", "msg": f"You have been freed and returned to the safe square of {TOWN_NAMES[town['town']]}."})
         elif t == "stop":
             p.path, p.target, p.queued, p.pending = [], None, None, None
             if msg.get("action") and p.buffs.pop("invis", None):

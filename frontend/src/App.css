@@ -372,3 +372,5 @@ input { font-family: inherit; }
 .ui-scale input { flex: 1; margin: 0 10px; } .ui-scale b { color: var(--gold); min-width: 48px; }
 html, body, body *, canvas { cursor: var(--cur, auto) !important; }
 input[type="text"], input[type="email"], input[type="password"], input:not([type]), textarea { cursor: text !important; }
+.exit-btn.stuck-btn { right: 318px; }
+@media (max-width: 900px) { .exit-btn.stuck-btn { right: 240px; } }

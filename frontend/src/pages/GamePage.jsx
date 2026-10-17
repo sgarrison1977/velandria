@@ -115,7 +115,7 @@ export default function GamePage() {
         <Chat net={n} />
         <div className="bottom"><XpBar data={data} /></div>
         <MenuBar onLogout={logout} />
-        <ExitButton onLogout={logout} />
+        <ExitButton netRef={net} onLogout={logout} />
         <BuffBar data={data} />
         <MarkPicker net={n} engine={e} />
         <Toasts /><Banners />

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Backpack, User, Sparkles, Map as MapIcon, ScrollText, Settings as Cog, Coins, LogOut, Trophy } from "lucide-react";
+import { Backpack, User, Sparkles, Map as MapIcon, ScrollText, Settings as Cog, Coins, LogOut, Trophy, LifeBuoy } from "lucide-react";
 import { useStore, setState, togglePanel } from "../../game/store";
 import { Bar, Panel, Hover, AbIcon } from "./ui";
 import { sfx } from "../../game/audio";
@@ -100,10 +100,11 @@ export function MenuBar({ onLogout }) {
   );
 }
 
-export function ExitButton({ onLogout }) {
+export function ExitButton({ onLogout, netRef }) {
   const open = useStore((s) => s.exitMenu);
   return (
     <>
+      <button type="button" className="exit-btn stuck-btn" data-testid="unstuck-btn" title="Stuck in a wall? Return to the nearest town (60s cooldown)" onMouseDown={(e) => e.stopPropagation()} onClick={() => { sfx("click"); netRef?.current?.send({ t: "unstuck" }); }}><LifeBuoy size={14} /> Stuck</button>
       <button type="button" className="exit-btn" data-testid="exit-game-btn" onMouseDown={(e) => e.stopPropagation()} onClick={() => setState({ exitMenu: true })}><LogOut size={14} /> Exit</button>
       {open && <div className="exit-modal" data-testid="exit-menu" onMouseDown={(e) => e.stopPropagation()}>
         <h3>Leave Realms of Velanthra?</h3>
