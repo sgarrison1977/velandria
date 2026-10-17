@@ -63,7 +63,7 @@ export function Chat({ net }) {
           </div>
         ))}
       </div>
-      <input ref={inp} data-testid="chat-input" maxLength={200} value={text} placeholder={conn === "online" ? "Press Enter to chat · /w Name whisper · /p party · Esc to cancel" : "Disconnected"}
+      <input ref={inp} data-testid="chat-input" maxLength={200} value={text} placeholder={conn === "online" ? "Press Enter to chat · /w Name whisper · /p party · /who online · Esc to cancel" : "Disconnected"}
         onFocus={() => setOpen(true)} onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => { e.stopPropagation(); if (e.key === "Enter") send(); if (e.key === "Escape") { setText(""); setOpen(false); inp.current.blur(); } }} />
     </div>

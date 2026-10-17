@@ -1378,6 +1378,10 @@ class Game:
             p.marks[mk.group(1)] = [round(p.x, 1), round(p.z, 1)]
             p.dirty = True
             return p.send({"t": "sys", "msg": f"Mark {mk.group(1)} set here ({round(p.x)}, {round(p.z)}). Creare Porta can now open a portal to it.", "kind": "quest"})
+        if text.lower().strip() in ("/who", "/online", "/players"):
+            ps = sorted(self.players.values(), key=lambda x: (-x.level, x.name.lower()))
+            names = ", ".join(f"{x.name} (Lv {x.level} {x.cls.title()}{', away' if x.linkdead_at else ''})" for x in ps)
+            return p.send({"t": "sys", "msg": f"{len(ps)} hero{'es' if len(ps) != 1 else ''} online: {names}"})
         if text.startswith("/p "):
             if not getattr(p, "party", None):
                 return p.send({"t": "err", "msg": "You are not in a party."})
