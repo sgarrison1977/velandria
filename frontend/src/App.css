@@ -349,3 +349,5 @@ input { font-family: inherit; }
 .lb-you { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #c99a2e44; }
 .gs-rank { margin-left: 12px; background: none; border: 1px solid var(--edge2); color: var(--gold); font-size: 12px; padding: 2px 8px; cursor: pointer; transition: border-color .15s; }
 .gs-rank:hover { border-color: var(--gold); }
+.lb-panel { left: 24px; top: 96px; transform: none; width: min(500px, calc(100vw - 920px)); min-width: 340px; background: #120e0b; box-shadow: 0 12px 40px #000c; z-index: 30; }
+@media (max-width: 1100px) { .lb-panel { left: 50%; transform: translateX(-50%); width: min(500px, 96vw); z-index: 40; } }
