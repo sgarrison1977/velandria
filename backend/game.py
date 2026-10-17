@@ -512,6 +512,9 @@ class Game:
     def damage_monster(self, m, raw, p, dtype, crit=False):
         if m.dead_until:
             return
+        if p is not None and p.buffs.pop("invis", None):
+            p.dirty = True
+            p.send({"t": "sys", "msg": "You attacked — Contra Visus fades and you are visible again."})
         res = m.d["resist"].get("magic" if dtype in ("magic", "poison") else "phys", 1.0)
         armor = 0 if dtype != "phys" else m.d["armor"]
         dmg = max(1, round(raw * (1 - armor / (armor + COMBAT["armor_k"])) * res))

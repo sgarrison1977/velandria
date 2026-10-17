@@ -86,7 +86,7 @@ ABILITIES = {
     "robur": dict(name="Robur", cls=ALL_CLS, level=5, cost=15, cd=0, kind="buff", buff="str", value=5, per_level=0.25, dur=CHARGE_SECS, charge=True,
                   desc="Charge spell: +5 Strength (+0.25 per level) for 5 minutes."),
     "contra_visus": dict(name="Contra Visus", cls=ALL_CLS, level=5, cost=20, cd=0, kind="buff", buff="invis", value=1, dur=CHARGE_SECS, charge=True,
-                         desc="Charge spell: monsters cannot see or attack you for 5 minutes. Use Stop Action to reappear."),
+                         desc="Charge spell: monsters cannot see or attack you for 5 minutes. Attacking or damaging anything breaks it, as does Stop Action."),
     "pergere_trans": dict(name="Pergere Trans", cls=CASTERS, level=8, cost=15, cd=0, range=12, kind="blink",
                           desc="Teleport up to 12m to the spot under your cursor."),
     "creare_porta": dict(name="Creare Porta", cls=ALL_CLS, level=10, cost=30, cd=0, range=8, kind="portal",
