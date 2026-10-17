@@ -246,7 +246,7 @@ export class Engine {
     else { o.add(sprite(color, size * 1.6)); o.add(new THREE.Mesh(new THREE.IcosahedronGeometry(size * 0.25, 1), new THREE.MeshBasicMaterial({ color: "#fff" }))); }
     const from = new THREE.Vector3(src.x, this.groundY(src.x, src.z) + 1.3, src.z);
     const d = Math.hypot(tgt.x - src.x, tgt.z - src.z);
-    this.addFx(o, Math.max(0.28, d / (arrow ? 24 : 15)), (t) => {
+    this.addFx(o, Math.max(0.12, d / (arrow ? 38 : 26)), (t) => {
       const to = new THREE.Vector3(tgt.x, this.groundY(tgt.x, tgt.z) + tgt.height * 0.55, tgt.z);
       o.position.lerpVectors(from, to, t); o.position.y += Math.sin(t * Math.PI) * (arrow ? 0.6 : 0.3); o.lookAt(to);
     }, done);
