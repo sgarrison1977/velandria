@@ -3,7 +3,8 @@ import asyncio, time, math, random, uuid, json, logging, re
 from datetime import datetime, timezone
 from game_data import (STORAGE_SLOTS, ITEMS, MONSTERS, ABILITIES, CLASSES, NPCS, MERCHANTS, QUESTS, XP_TABLE, MAX_LEVEL, INV_SLOTS, TICK, COMBAT,
                        PLAYER_SPEED, PICKUP_RANGE, NPC_RANGE, LOOT_OWNER_SECS, LOOT_EXPIRE_SECS, ACTIONS, RESTOCK_SECS, sell_price, default_binds, EXTRA_ROLLS, BONUS_LOOT, WAYSTONE_COST, roll_props, random_gear, RANDOM_GEAR_CHANCE)
-from world import PORTALS, World, in_safe, SAFE_ZONES
+from world import PORTALS, World, in_safe, SAFE_ZONES, PIT_ROOMS
+from game_data import PIT_CHAMPION_KILLS
 
 log = logging.getLogger("game")
 rnd = random.Random()
@@ -11,6 +12,8 @@ VIEW_R2 = 85 ** 2
 LINKDEAD_SECS = 15
 PARTY_MAX, PARTY_SHARE_R, PARTY_XP_BONUS = 5, 60.0, 0.15
 SKILL_POINTS_PER_LEVEL = 3
+DASH_SPEED = 24.0
+GLOBAL_CD = 0.7
 ATTR_POINTS_PER_LEVEL = 3
 PORTAL_SECS = 10
 RING_SLOTS = [f"ring{i}" for i in range(1, 7)]
@@ -57,6 +60,7 @@ class Player:
         self.path, self.target, self.pending, self.queued = [], None, None, None
         self.last_attack, self.cds, self.buffs, self.dots = 0, {}, {}, []
         self.dead_until, self.rot, self.moving, self.repath = 0, 0.0, False, 0
+        self.dash, self.next_cast = None, 0
         self.chat_times, self.last_save, self.linkdead_at = [], now(), None
         self.dirty, self.regen_acc, self.rewarded = True, 0.0, set()
         self.marks = doc.get("marks") or {}
@@ -156,6 +160,7 @@ class Game:
                 self.monsters[mid] = Monster(mid, s["monster"], s, self.world)
         self.task = None
         self.tick_ms = 0
+        self.pit_kills, self.champ_n, self.spawn_q = {1: 0, 2: 0, 3: 0, 4: 0}, 0, []
 
     # ------------- lifecycle
     def start(self):
@@ -231,6 +236,11 @@ class Game:
             self.tick_player(p, dt, t)
         for m in self.monsters.values():
             self.tick_monster(m, dt, t)
+        for mid in [k for k, m in self.monsters.items() if m.d.get("champion") and m.dead_until and t > m.dead_until]:
+            del self.monsters[mid]
+        while self.spawn_q:
+            c = self.spawn_q.pop()
+            self.monsters[c.id] = c
         self.tick_sched(t)
         for gid in [g for g, v in self.gates.items() if t > v["expires"]]:
             del self.gates[gid]
@@ -332,6 +342,15 @@ class Game:
             mult = COMBAT["safe_regen_mult"] if in_safe(p.x, p.z) else 1.0
             p.hp = min(p.max_hp, p.hp + (COMBAT["hp_regen_base"] + p.tot["sta"] * COMBAT["hp_regen_per_sta"]) * mult + p.tot.get("hp_regen", 0))
             p.mp = min(p.max_mp, p.mp + (COMBAT["mp_regen_base"] + p.tot["wis"] * COMBAT["mp_regen_per_wis"]) * mult + p.tot.get("mp_regen", 0))
+        if p.dash:
+            tx, tz = p.dash
+            d, step = math.hypot(tx - p.x, tz - p.z), DASH_SPEED * dt
+            if d <= step:
+                p.x, p.z, p.dash = tx, tz, None
+            else:
+                p.x, p.z = p.x + (tx - p.x) / d * step, p.z + (tz - p.z) / d * step
+            p.moving, p.dirty = True, True
+            return
         if p.pending:
             kind, oid = p.pending
             obj = self.loot.get(oid) if kind == "loot" else NPCS.get(oid)
@@ -393,7 +412,7 @@ class Game:
     def tick_monster(self, m, dt, t):
         d = m.d
         if m.dead_until:
-            if t > m.dead_until:
+            if t > m.dead_until and not d.get("champion"):
                 m.respawn()
             return
         if m.dots:
@@ -516,6 +535,8 @@ class Game:
         m.hp, m.dead_until, m.died_at, m.path, m.target, m.dots = 0, t + m.d["respawn"], t, [], None, []
         killer = self.players.get(max(m.dmg_by, key=m.dmg_by.get)) if m.dmg_by else None
         self.fx(m.x, m.z, {"t": "fx", "k": "death", "tgt": m.id})
+        if m.type.startswith("pit_") and not m.d.get("champion"):
+            self.pit_kill(m)
         if not killer:
             return
         kill_key = f"{m.id}:{m.died_at}"
@@ -543,7 +564,12 @@ class Game:
             g = random_gear(m.d["level"], rnd)
             if g:
                 drops.append((g, -1))
-        drops = drops[:16 if m.d.get("boss") else 8]
+        if m.d.get("champion"):
+            drops += [(g, -1) for g in (random_gear(m.d["level"], rnd) for _ in range(3)) if g]
+            drops.append(("gold", rnd.randint(*m.d["gold"]) * 5))
+        drops = drops[:16 if m.d.get("boss") or m.d.get("champion") else 8]
+        if m.d.get("champion"):
+            self.broadcast_sys(f"{killer.name} has slain the Wave Champion {m.d['name']}!")
         if m.d.get("boss"):
             self.broadcast_sys(f"{killer.name} has slain {m.d['name']}! The Hollow Deep falls silent... for now.")
         for i, (item, qty) in enumerate(drops):
@@ -626,6 +652,8 @@ class Game:
             return f"Requires level {ab['level']}."
         if p.mp < ab["cost"]:
             return "Not enough mana."
+        if now() < p.next_cast or p.dash:
+            return None
         k = ab["kind"]
         if k == "portal":
             dest = p.marks.get(str(mark))
@@ -698,11 +726,13 @@ class Game:
             return "No clear path to run."
         fx0 = [round(p.x, 2), round(p.z, 2)]
         p.mp -= ab["cost"]
-        p.x, p.z, p.rot, p.path, p.dirty = nx, nz, math.atan2(ux, uz), [], True
+        p.next_cast = now() + GLOBAL_CD
+        p.dash, p.rot, p.path, p.dirty = (nx, nz), math.atan2(ux, uz), [], True
         self.fx(p.x, p.z, {"t": "fx", "k": "cast", "src": p.id, "ab": ab_id, "tgt": None, "fx0": fx0, "x": round(nx, 2), "z": round(nz, 2)})
         return None
 
     def cast_miss(self, p, ab_id, pt):
+        p.next_cast = now() + GLOBAL_CD
         ab = ABILITIES[ab_id]
         if in_safe(p.x, p.z):
             return "You cannot fight from within a safe square."
@@ -759,6 +789,7 @@ class Game:
     def do_cast(self, p, ab_id, m, center=None, dest=None):
         ab = ABILITIES[ab_id]
         t = now()
+        p.next_cast = t + GLOBAL_CD
         if p.mp < ab["cost"]:
             return "Not enough mana."
         if m and in_safe(p.x, p.z):
@@ -769,7 +800,7 @@ class Game:
             back = 1.2 + m.d["radius"]
             nx, nz = m.x - (m.x - p.x) / d * back, m.z - (m.z - p.z) / d * back
             if d > back and self.world.walkable(nx, nz):
-                p.x, p.z = nx, nz
+                p.dash = (nx, nz)
             p.path = []
         p.mp -= ab["cost"]
         cfx = {"t": "fx", "k": "cast", "src": p.id, "ab": ab_id, "tgt": m.id if m else None}
@@ -1313,6 +1344,17 @@ class Game:
         p.dirty = True
 
     # ------------- chat
+    def pit_kill(self, m):
+        tier = min(range(1, 5), key=lambda i: abs(PIT_ROOMS[i]["x"] - m.spawn["x"]))
+        self.pit_kills[tier] += 1
+        if self.pit_kills[tier] % PIT_CHAMPION_KILLS or any(c.type == f"pit_champion_{tier}" and not c.dead_until for c in list(self.monsters.values()) + self.spawn_q):
+            return
+        rm, self.champ_n = PIT_ROOMS[tier], self.champ_n + 1
+        mid = f"champ{self.champ_n}"
+        c = Monster(mid, f"pit_champion_{tier}", dict(x=rm["x"], z=rm["z"], r=4, monster=f"pit_champion_{tier}", n=1), self.world)
+        self.spawn_q.append(c)
+        self.broadcast_sys(f"After {self.pit_kills[tier]} kills, the Wave Champion {c.d['name']} (Lv {c.d['level']}) rises in {rm['name']}!")
+
     def broadcast_sys(self, msg):
         for p in self.players.values():
             p.send({"t": "chat", "m": dict(kind="system", text=msg, ts=datetime.now(timezone.utc).isoformat())})

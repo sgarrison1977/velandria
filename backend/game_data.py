@@ -318,6 +318,14 @@ for _b in ["giant_spider", "skeleton", "orc_warrior", "dark_cultist", "forest_tr
     MONSTERS["pit_" + _b] = _pit(_b)
 for _b, _l in [("hollow_shade", 66), ("death_knight", 72), ("abyssal_fiend", 80)]:
     MONSTERS[f"pit_{_b}_{_l}"] = _pit(_b, _l)
+PIT_CHAMPION_KILLS = 100
+PIT_CHAMPIONS = {1: ("orc_warrior", 18, "Gorrak the Unbroken"), 2: ("forest_troll", 38, "Mossjaw the Devourer"),
+                 3: ("death_knight", 62, "Ser Vaelric the Hollow"), 4: ("abyssal_fiend", 88, "Azgharoth, Pit Tyrant")}
+for _t, (_b, _l, _n) in PIT_CHAMPIONS.items():
+    _c = _pit(_b, _l)
+    _c.update(name=_n, hp=_c["hp"] * 8, xp=_c["xp"] * 6, dmg=[round(d * 1.5) for d in _c["dmg"]], armor=round(_c["armor"] * 1.3),
+              radius=round(_c["radius"] * 1.4, 2), model_scale=1.45, champion=True, respawn=8, leash=26)
+    MONSTERS[f"pit_champion_{_t}"] = _c
 
 # Gold scales with monster level: [lo, hi] = GOLD_SCALE * level^GOLD_EXP
 GOLD_SCALE, GOLD_EXP = (2.0, 5.0), 1.45

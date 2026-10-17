@@ -80,7 +80,7 @@ export default function GamePage() {
       if (!action) return;
       e.preventDefault();
       const n = net.current;
-      if (action.startsWith("ability:")) { const ab = action.slice(8); if (!st.me.abilities.includes(ab)) { toast(`${data.abilities[ab].name} is locked.`, "error"); return; } const ad = data.abilities[ab], hov = eng.current?.hover;
+      if (action.startsWith("ability:")) { if (e.repeat) return; const ab = action.slice(8); if (!st.me.abilities.includes(ab)) { toast(`${data.abilities[ab].name} is locked.`, "error"); return; } const ad = data.abilities[ab], hov = eng.current?.hover;
         const id = ad.kind === "melee" ? eng.current?.targetId : hov?.kind === "monster" && !hov.anim.dead ? hov.id : null;
         if (ad.kind === "portal") { setState({ markPick: true }); return; }
         const gp = ad.kind !== "melee" ? eng.current?.pointerGround() : null;
