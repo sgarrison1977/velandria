@@ -362,3 +362,11 @@ input { font-family: inherit; }
 .merchant .item-icon { width: 52px !important; height: 52px !important; }
 .storage-panel { width: min(1180px, calc(100vw - 20px)); }
 .lb-panel { width: min(560px, 96vw); }
+:root { --pz: 1.25; }
+.panel { zoom: var(--pz); max-height: calc((100vh - 120px) / var(--pz)); }
+.inv-panel { width: min(1180px, calc((100vw - 48px) / var(--pz))); max-height: calc((100vh - 90px) / var(--pz)); top: 50px; right: 20px; }
+.merchant { width: min(1180px, calc(97vw / var(--pz))); }
+.storage-panel { width: min(1180px, calc((100vw - 20px) / var(--pz))); }
+.lb-panel { width: min(560px, calc(96vw / var(--pz))); }
+@media (max-width: 1500px) { .inv-cols { grid-template-columns: 1fr; } .inv-left .equip-doll { width: min(100%, calc((60vh - 60px) / var(--pz) * 1.149)); margin: 0 auto 10px; } }
+.ui-scale input { flex: 1; margin: 0 10px; } .ui-scale b { color: var(--gold); min-width: 48px; }

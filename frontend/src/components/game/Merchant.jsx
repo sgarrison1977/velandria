@@ -63,6 +63,9 @@ export function defaultBinds(data, cls) {
   return b;
 }
 
+export const applyUiScale = (v) => { localStorage.setItem("sx_ui_scale", v); document.documentElement.style.setProperty("--pz", v); };
+applyUiScale(Number(localStorage.getItem("sx_ui_scale") || 1.25));
+
 export function SettingsPanel({ data, net, engine }) {
   const me = useStore((s) => s.me), capture = useStore((s) => s.capture);
   const [tab, setTab] = useState("keys");
@@ -70,6 +73,7 @@ export function SettingsPanel({ data, net, engine }) {
   const [msg, setMsg] = useState("");
   const [aud, setAud] = useState(audioCfg());
   const [q, setQ] = useState(localStorage.getItem("sx_quality") || "high");
+  const [pz, setPz] = useState(Number(localStorage.getItem("sx_ui_scale") || 1.25));
   const bref = useRef(binds); bref.current = binds;
   useEffect(() => { if (me) setBinds(me.binds); }, [me?.binds]); // eslint-disable-line
   useEffect(() => {
@@ -143,6 +147,7 @@ export function SettingsPanel({ data, net, engine }) {
       </div>}
       {tab === "gfx" && <div className="audio-set">
         {["high", "medium", "low"].map((k) => <label key={k} className="row"><input type="radio" name="q" data-testid={`gfx-${k}`} checked={q === k} onChange={() => { setQ(k); localStorage.setItem("sx_quality", k); engine?.setQuality(k); }} /> {k[0].toUpperCase() + k.slice(1)} quality</label>)}
+        <label className="row ui-scale">Window size <input type="range" min="0.8" max="1.8" step="0.05" value={pz} data-testid="settings-ui-scale" onChange={(e) => { const v = Number(e.target.value); setPz(v); applyUiScale(v); }} /> <b data-testid="settings-ui-scale-value">{Math.round(pz * 100)}%</b></label>
         <p className="hint">Middle-mouse drag rotates the camera · mouse wheel zooms.</p>
       </div>}
     </Panel>
