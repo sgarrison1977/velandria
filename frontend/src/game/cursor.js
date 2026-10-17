@@ -1,19 +1,27 @@
-// draws the gauntlet-style arrow cursor to a PNG data URL and installs it as --cur
+// draws a sword cursor (tip at top-left = click point) to a PNG data URL and installs it as --cur
 export function installCursor() {
-  const K = 1.45, c = document.createElement("canvas"); c.width = c.height = 48;
+  const S = 36, c = document.createElement("canvas"); c.width = c.height = S;
   const g = c.getContext("2d");
-  g.scale(K, K);
-  const arrow = new Path2D("M2 2 L2 24 L8 18.5 L12.5 28 L17 26 L12.6 16.8 L20.5 16.5 Z");
-  g.save(); g.translate(1.2, 1.2); g.fillStyle = "rgba(10,6,2,0.55)"; g.fill(arrow); g.restore();
-  const m = g.createLinearGradient(2, 2, 20, 28);
-  m.addColorStop(0, "#fff2c4"); m.addColorStop(0.35, "#d8a83e"); m.addColorStop(0.7, "#8a5a1a"); m.addColorStop(1, "#4a2e0c");
-  g.save(); g.shadowColor = "rgba(255,214,120,0.9)"; g.shadowBlur = 4; g.lineWidth = 3.2; g.lineJoin = "round"; g.strokeStyle = "#fff4d0"; g.stroke(arrow); g.restore();
-  g.fillStyle = m; g.fill(arrow);
-  g.lineWidth = 1.5; g.lineJoin = "round"; g.strokeStyle = "#1a1006"; g.stroke(arrow);
-  const st = g.createLinearGradient(0, 5, 0, 20); st.addColorStop(0, "rgba(207,212,220,0.6)"); st.addColorStop(1, "rgba(90,94,102,0.6)");
-  g.fillStyle = st; g.fill(new Path2D("M3.6 5.5 L3.6 19.5 L7.6 15.8 L16 15.4 Z"));
-  g.strokeStyle = "rgba(255,248,220,0.8)"; g.lineWidth = 0.9; g.beginPath(); g.moveTo(3, 3.2); g.lineTo(10, 10); g.stroke();
-  const gem = g.createRadialGradient(6.8, 12.6, 0, 7.4, 13.2, 2.4); gem.addColorStop(0, "#ffffff"); gem.addColorStop(0.4, "#5ab8ff"); gem.addColorStop(1, "#123a6a");
-  g.fillStyle = gem; g.beginPath(); g.arc(7.4, 13.2, 2.3, 0, Math.PI * 2); g.fill(); g.lineWidth = 0.8; g.strokeStyle = "#1a1006"; g.stroke();
-  document.documentElement.style.setProperty("--cur", `url(${c.toDataURL("image/png")}) 3 3, auto`);
+  g.translate(2, 2); g.rotate(-Math.PI / 4); g.translate(0, 0);
+  // local frame: sword points up along -y from origin (tip at 0,0)
+  const blade = new Path2D("M0 0 L3.2 5 L3.2 26 L-3.2 26 L-3.2 5 Z");
+  const guard = new Path2D("M-9 26 Q0 24 9 26 L9 29.5 Q0 28 -9 29.5 Z");
+  const grip = new Path2D("M-1.9 29.5 L1.9 29.5 L1.9 38 L-1.9 38 Z");
+  g.translate(0, 0); g.save(); g.scale(1, 1);
+  g.lineJoin = "round";
+  for (const p of [blade, guard, grip]) { g.lineWidth = 3; g.strokeStyle = "rgba(255,244,208,0.85)"; g.stroke(p); }
+  g.beginPath(); g.arc(0, 40.5, 3.4, 0, Math.PI * 2); g.lineWidth = 3; g.stroke();
+  const bl = g.createLinearGradient(-3, 0, 3, 0); bl.addColorStop(0, "#8a909a"); bl.addColorStop(0.45, "#ffffff"); bl.addColorStop(0.55, "#c8ced8"); bl.addColorStop(1, "#5a5e66");
+  g.fillStyle = bl; g.fill(blade);
+  g.strokeStyle = "#7a808a"; g.lineWidth = 0.8; g.beginPath(); g.moveTo(0, 6); g.lineTo(0, 24); g.stroke();
+  const gd = g.createLinearGradient(0, 24, 0, 30); gd.addColorStop(0, "#fff2c4"); gd.addColorStop(0.5, "#d8a83e"); gd.addColorStop(1, "#6a4210");
+  g.fillStyle = gd; g.fill(guard);
+  g.fillStyle = "#4a2a14"; g.fill(grip);
+  g.strokeStyle = "#2a160a"; g.lineWidth = 0.7; for (let y = 31; y < 38; y += 2) { g.beginPath(); g.moveTo(-1.9, y); g.lineTo(1.9, y + 1); g.stroke(); }
+  g.beginPath(); g.arc(0, 40.5, 3.2, 0, Math.PI * 2); g.fillStyle = gd; g.fill();
+  g.lineWidth = 1.1; g.strokeStyle = "#140c06";
+  for (const p of [blade, guard, grip]) g.stroke(p);
+  g.beginPath(); g.arc(0, 40.5, 3.2, 0, Math.PI * 2); g.stroke();
+  g.restore();
+  document.documentElement.style.setProperty("--cur", `url(${c.toDataURL("image/png")}) 2 2, auto`);
 }

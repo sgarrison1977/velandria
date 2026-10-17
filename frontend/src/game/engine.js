@@ -318,7 +318,7 @@ export class Engine {
       if (e?.kind === "loot") { this.net.send({ t: "pickup", id: e.id }); return; }
       if (e?.kind === "npc" && !e.ambient) { this.net.send({ t: "npc", id: e.id }); return; }
       const p = this.groundPoint();
-      if (p) { this.net.send({ t: "move", x: +p.x.toFixed(2), z: +p.z.toFixed(2) }); this.marker.position.set(p.x, this.groundY(p.x, p.z) + 0.08, p.z); this.marker.visible = true; this.markerT = 0; }
+      if (p) { this.net.send({ t: "move", x: +p.x.toFixed(2), z: +p.z.toFixed(2) }); }
       this.hold = { t0: performance.now(), last: performance.now(), dir: false };
     };
     const ctx = (ev) => {
