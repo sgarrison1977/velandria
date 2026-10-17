@@ -18,6 +18,10 @@ const glowTex = (() => {
   return new THREE.CanvasTexture(c);
 })();
 const sprite = (color, size) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); s.scale.setScalar(size); return s; };
+const AB_SFX = { ignis: "fire", flamma_ventus: "fire", agredi: "arcane", multi_vis_nex: "arcane", radius: "zap", venenum: "poison", tabes_viscera: "poison",
+  minor_mederi: "heal", minor_sanatio: "heal", teuri: "buff", velocitas: "buff", robur: "buff", contra_visus: "buff", creare_porta: "portal", pergere_trans: "portal",
+  attack_run: "dash", multi_shot: "bow", arrow_barrage: "bow", double_stab: "swing", spin_attack: "swing", power_strike: "heavy", cleave: "swing" };
+const growlFor = (type) => /skeleton|wraith|ghoul|knight|colossus|shade|cultist|king/.test(type) ? "growl_undead" : /golem|fiend|troll|champion|brood/.test(type) ? "roar" : /wolf|spider|crawler|imp/.test(type) ? "growl_beast" : null;
 const AB_COLOR = { arcane_bolt: "#7fb8ff", flame_burst: "#ff7a2a", aimed_shot: "#ffd36b", venom_arrow: "#7aff5a", power_strike: "#ffe0a0", cleave: "#ffc080", minor_heal: "#7aff9a", iron_guard: "#9ac8ff", quickstep: "#c8f0ff", whirlwind: "#ffc080", earthshatter: "#d8a060", frost_nova: "#a8e8ff", meteor_storm: "#ff5a1a", volley: "#ffd36b", multishot: "#ffe08a",
   agredi: "#7fb8ff", minor_mederi: "#7aff9a", minor_sanatio: "#c8ff7a", double_stab: "#ffe0a0", attack_run: "#ffb070", spin_attack: "#ffc080", multi_shot: "#ffe08a",
   arrow_barrage: "#ffd36b", ignis: "#ff6a1a", multi_vis_nex: "#a0d0ff", radius: "#e8f4ff", venenum: "#7aff5a", flamma_ventus: "#ff7a2a", tabes_viscera: "#a8ff5a",
@@ -109,6 +113,7 @@ export class Engine {
       let e = this.entities.get(id);
       if (e && e.anim.dead && st !== 2) { this.removeEntity(e); e = null; }
       if (!e) e = this.addEntity(id, "monster", { type, name: this.data.monsters[type].name, level: this.data.monsters[type].level, x, z, rot });
+      if (aggro && !e.aggro && st !== 2 && this.me && Math.hypot(x - this.me.x, z - this.me.z) < 18) { const gr = growlFor(type); if (gr) sfx(gr); }
       Object.assign(e, { tx: x, tz: z, trot: rot, hp, max: mhp, aggro });
       e.anim.moving = st === 1; e.anim.dead = st === 2;
     }
@@ -147,7 +152,7 @@ export class Engine {
       case "attack": case "mattack":
         if (src) { src.anim.atk = 1; if (f.style !== "melee") src.anim.cast = 0; }
         if (src && tgt && f.style !== "melee") this.projectile(src, tgt, f.style === "arrow" ? "#e8d8b0" : f.style === "spell" ? "#b05cff" : "#7fb8ff", f.style === "arrow");
-        if (near(src)) sfx(f.style === "melee" ? "swing" : f.style === "arrow" ? "bow" : "zap");
+        if (near(src)) { sfx(f.style === "melee" ? "swing" : f.style === "arrow" ? "bow" : "zap"); if (src.kind === "monster" && Math.random() < 0.22) { const gr = growlFor(src.type || ""); if (gr) sfx(gr); } }
         if (f.miss && tgt) this.number(tgt, "miss", "#bbb");
         break;
       case "dmg": if (tgt) { tgt.anim.hurt = 1; tgt.lastHit = performance.now(); this.number(tgt, f.v, f.crit ? "#ffcf3a" : f.dt === "poison" ? "#8aff5a" : f.dt === "magic" ? "#9ac8ff" : "#fff", f.crit); if (near(tgt)) sfx(f.crit ? "crit" : "hit"); } break;
@@ -174,7 +179,7 @@ export class Engine {
     const gl = sprite(c, 3); gl.position.y = 1.2; root.add(gl);
     root.position.set(x, this.groundY(x, z), z); this.scene.add(root);
     const e = { id, kind: "gate", name: `Portal (${owner})`, x, z, tx: x, tz: z, rot: 0, trot: 0, anim: {}, grp: root, rig: { root, height: 2.4, gate: swirl, disc, timer }, hp: 0, max: 0 };
-    this.entities.set(id, e); this.shock(x, z, c, 3); sfx("spell");
+    this.entities.set(id, e); this.shock(x, z, c, 3); sfx("portal");
     return e;
   }
   castFx(src, tgt, ab) {
@@ -182,7 +187,7 @@ export class Engine {
     const melee = ["power_strike", "cleave", "whirlwind", "earthshatter", "double_stab", "attack_run", "spin_attack"].includes(ab);
     src.anim.cast = melee ? 0 : 1;
     if (melee) src.anim.atk = 1;
-    if (Math.hypot(src.x - (this.me?.x || 0), src.z - (this.me?.z || 0)) < 30) sfx(melee ? "heavy" : ab === "minor_heal" ? "heal" : "spell");
+    if (Math.hypot(src.x - (this.me?.x || 0), src.z - (this.me?.z || 0)) < 30) sfx(AB_SFX[ab] || (melee ? "heavy" : "arcane"));
     if (ab === "whirlwind") { this.shock(src.x, src.z, c, 6); this.shock(src.x, src.z, "#fff0d0", 3.5); }
     if (ab === "frost_nova") { this.shock(src.x, src.z, c, 7); this.burst(src, c, 30, 3); }
     if (ab === "earthshatter" && tgt) { this.shock(tgt.x, tgt.z, c, 6); if (src.id === this.meId) this.shake = 0.35; }

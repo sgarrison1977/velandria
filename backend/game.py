@@ -56,6 +56,7 @@ class Player:
                   "equipment", "quests", "binds", "x", "z", "hp", "mp"):
             setattr(self, k, doc[k])
         self.look = doc.get("look") or {}
+        self.home = doc.get("home")
         self.ws, self.queue = ws, asyncio.Queue(maxsize=400)
         self.path, self.target, self.pending, self.queued = [], None, None, None
         self.last_attack, self.cds, self.buffs, self.dots = 0, {}, {}, []
@@ -124,7 +125,7 @@ class Player:
 
     def to_doc(self):
         return {k: getattr(self, k) for k in ("name", "cls", "level", "xp", "gold", "attrs", "attr_points", "skill_points", "abilities",
-                                              "inventory", "equipment", "quests", "binds", "hp", "mp", "marks")} | {"x": round(self.x, 2), "z": round(self.z, 2)}
+                                              "inventory", "equipment", "quests", "binds", "hp", "mp", "marks", "home")} | {"x": round(self.x, 2), "z": round(self.z, 2)}
 
     def self_view(self):
         return self.to_doc() | dict(id=self.id, look=self.look, max_hp=self.max_hp, max_mp=self.max_mp, tot=self.tot, armor=self.armor, attack_interval=self.attack_interval,
@@ -307,7 +308,7 @@ class Game:
     def tick_player(self, p, dt, t):
         if p.dead_until:
             if t > p.dead_until:
-                town = min(SAFE_ZONES, key=lambda s: (s["x"] - p.x) ** 2 + (s["z"] - p.z) ** 2)
+                town = self.home_zone(p)
                 p.x, p.z = town["x"] + rnd.uniform(-4, 4), town["z"] + rnd.uniform(-8, -5)
                 p.hp, p.mp, p.dead_until, p.path = p.max_hp * 0.6, p.max_mp * 0.6, 0, []
                 p.send({"t": "sys", "msg": f"You awaken in the safe square of {TOWN_NAMES[town['town']]}."})
@@ -1014,7 +1015,9 @@ class Game:
             text = "A heavy iron-bound trunk. Everything inside is shared by all characters on your account."
             opts.append(dict(id="storage", label="Open storage"))
         if n.get("waystone"):
-            text = "The runes flare at your touch. Where would you go?"
+            text = f"The runes flare at your touch. Your home is {TOWN_NAMES.get(p.home, 'not set — you return to the nearest town')}. Where would you go?"
+            if p.home != n["town"]:
+                opts.append(dict(id="sethome", label=f"Make {TOWN_NAMES[n['town']]} my home town"))
             for z in SAFE_ZONES:
                 if z["town"] != n["town"]:
                     opts.append(dict(id=f"travel:{z['town']}", label=f"Travel to {TOWN_NAMES[z['town']]} ({self.travel_cost(n, z)} gold)"))
@@ -1191,6 +1194,13 @@ class Game:
             p.hp, p.mp, p.dots, p.dirty = p.max_hp, p.max_mp, [], True
             self.fx(p.x, p.z, {"t": "fx", "k": "heal", "tgt": p.id, "v": 0})
             return p.send({"t": "sys", "msg": f"{n['name']} restores you fully."})
+        if action == "sethome" and n.get("waystone"):
+            p.home, p.dirty = n["town"], True
+            asyncio.create_task(self.save(p))
+            self.fx(p.x, p.z, {"t": "fx", "k": "heal", "tgt": p.id, "v": 0})
+            p.send({"t": "sys", "msg": f"{TOWN_NAMES[n['town']]} is now your home. You will return here when you fall or use Stuck.", "kind": "quest"})
+            self.npc_dialog(p, npc_id)
+            return None
         if action.startswith("travel:") and n.get("waystone"):
             z = next((z for z in SAFE_ZONES if z["town"] == action[7:] and z["town"] != n["town"]), None)
             if not z:
@@ -1294,8 +1304,9 @@ class Game:
             return "That cannot be equipped."
         if it.get("cls") and p.cls not in it["cls"]:
             return f"Only {', '.join(c.capitalize() for c in it['cls'])}s can use that."
-        if p.level < it.get("lvl", 1):
-            return f"Requires level {it['lvl']}."
+        req = s.get("lvl", it.get("lvl", 1))
+        if p.level < req:
+            return f"Requires level {req}."
         slot = it["slot"]
         if slot == "ring":
             slot = want if want in RING_SLOTS else next((r for r in RING_SLOTS if r not in p.equipment), RING_SLOTS[0])
@@ -1348,6 +1359,10 @@ class Game:
         p.dirty = True
 
     # ------------- chat
+    def home_zone(self, p):
+        z = next((z for z in SAFE_ZONES if z["town"] == p.home), None)
+        return z or min(SAFE_ZONES, key=lambda s: (s["x"] - p.x) ** 2 + (s["z"] - p.z) ** 2)
+
     def pit_kill(self, m):
         tier = min(range(1, 5), key=lambda i: abs(PIT_ROOMS[i]["x"] - m.spawn["x"]))
         self.pit_kills[tier] += 1
@@ -1483,7 +1498,7 @@ class Game:
             if tt < getattr(p, "unstuck_at", 0):
                 return p.send({"t": "err", "msg": f"You can use Unstuck again in {int(p.unstuck_at - tt) + 1}s."})
             p.unstuck_at = tt + 60
-            town = min(SAFE_ZONES, key=lambda s: (s["x"] - p.x) ** 2 + (s["z"] - p.z) ** 2)
+            town = self.home_zone(p)
             p.x, p.z = town["x"] + rnd.uniform(-4, 4), town["z"] + rnd.uniform(-8, -5)
             p.path, p.target, p.queued, p.pending, p.dash, p.dirty = [], None, None, None, None, True
             p.send({"t": "sys", "msg": f"You have been freed and returned to the safe square of {TOWN_NAMES[town['town']]}."})

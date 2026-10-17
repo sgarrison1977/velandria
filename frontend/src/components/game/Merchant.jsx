@@ -40,7 +40,7 @@ export function MerchantWindow({ data, net }) {
               const it = data.items[s.item], price = it.price > 0 && it.type !== "quest" ? Math.max(1, Math.floor(it.price * data.sell_ratio)) : 0;
               return (
                 <div key={s.uid} className="mrow" data-testid={`sell-row-${s.item}`}>
-                  <Hover tip={<ItemTip id={s.item} item={inst(it, s)} me={me} />}><ItemIcon id={s.item} item={it} qty={s.qty} size={38} locked={cantUse(it, me)} /></Hover>
+                  <Hover tip={<ItemTip id={s.item} item={inst(it, s)} me={me} />}><ItemIcon id={s.item} item={it} qty={s.qty} size={38} locked={cantUse(inst(it, s), me)} /></Hover>
                   <div className="mrow-info"><b style={{ color: RARITY_COLOR[it.rarity] }}>{it.name}</b><small>{it.desc || it.type}</small></div>
                   <span className="price">{price ? `${price}g` : "—"}</span>
                   <button type="button" className="btn ghost" disabled={!price} data-testid={`sell-btn-${s.uid}`} onClick={() => net.send({ t: "sell", npc: m.npc, uid: s.uid, qty: 1 })}>Sell</button>

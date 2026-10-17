@@ -120,11 +120,11 @@ export function Hover({ tip, children }) {
 }
 
 export const inst = (item, s) => {
-  if (!item || !s?.props) return item;
+  if (!item || (!s?.props && s?.lvl == null)) return item;
   const stats = { ...(item.stats || {}) };
   let armor = item.armor || 0;
-  for (const [k, v] of Object.entries(s.props)) { if (k === "armor") armor += v; else stats[k] = (stats[k] || 0) + v; }
-  return { ...item, name: s.pname || item.name, stats, armor, props: s.props };
+  for (const [k, v] of Object.entries(s.props || {})) { if (k === "armor") armor += v; else stats[k] = (stats[k] || 0) + v; }
+  return { ...item, name: s.pname || item.name, stats, armor, props: s.props, lvl: s.lvl ?? item.lvl };
 };
 const AB_ICONS = {
   agredi: [Wand2, "#9ac8ff", "#1a1a5a"], minor_mederi: [HeartPulse, "#9affb0", "#0a3a1a"], minor_sanatio: [Droplet, "#c8ff9a", "#1a3a0a"],

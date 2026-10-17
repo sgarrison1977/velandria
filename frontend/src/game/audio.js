@@ -32,9 +32,33 @@ const SOUNDS = {
   error: (c, t) => tone(c, t, 0.18, "square", 140, 120, 0.07),
   open: (c, t) => nz(c, t, 0.12, "bandpass", 500, 1500, 0.1, 3),
 };
+// recorded-style clips in /public/sfx; variants picked at random, synth fallback while loading
+const CLIPS = { step: ["step1", "step2", "step3"], swing: ["swing1", "swing2"], hit: ["hit1", "hit2"] };
+const GAIN = { step: 0.35, click: 0.5, open: 0.6, loot: 0.7, swing: 0.8, levelup: 0.9, growl_beast: 0.7, growl_undead: 0.7, roar: 0.8, error: 0.6 };
+const FILES = ["step1", "step2", "step3", "swing1", "swing2", "hit1", "hit2", "crit", "heavy", "bow", "hurt", "mdeath", "death", "heal", "arcane", "fire", "frost",
+  "poison", "portal", "zap", "buff", "loot", "coin", "levelup", "click", "error", "open", "growl_beast", "growl_undead", "roar", "dash"];
+const bufs = {};
+let loading = false;
+function loadClips(c) {
+  if (loading) return; loading = true;
+  for (const f of FILES) fetch(`/sfx/${f}.mp3`).then((r) => r.arrayBuffer()).then((a) => c.decodeAudioData(a)).then((b) => { bufs[f] = b; }).catch(() => {});
+}
+const lastPlay = {};
 export function sfx(name) {
   if (cfg.muted) return;
-  const c = ac(); if (!c || !SOUNDS[name]) return;
+  const c = ac(); if (!c) return;
+  loadClips(c);
+  const opts = CLIPS[name] || [name], file = opts[Math.floor(Math.random() * opts.length)], b = bufs[file];
+  if (b) {
+    const now = c.currentTime;
+    if (now - (lastPlay[name] || 0) < 0.045) return;
+    lastPlay[name] = now;
+    const src = c.createBufferSource(), g = c.createGain();
+    src.buffer = b; src.playbackRate.value = 0.94 + Math.random() * 0.12; g.gain.value = GAIN[name] ?? 1;
+    src.connect(g); g.connect(master); src.start(now + 0.005);
+    return;
+  }
+  if (!SOUNDS[name]) return;
   try { SOUNDS[name](c, c.currentTime + 0.01); } catch (e) { /* ignore */ }
 }
-sfx.unlock = () => ac();
+sfx.unlock = () => { const c = ac(); if (c) loadClips(c); };

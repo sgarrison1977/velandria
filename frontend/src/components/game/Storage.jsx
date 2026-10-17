@@ -28,7 +28,7 @@ export function StorageWindow({ net, data }) {
           <div className="storage-grid" data-testid="storage-grid">
             {cells.map((s, i) => s ? (
               <Hover key={s.uid} tip={<ItemTip id={s.item} item={inst(data.items[s.item], s)} me={me} extra={<div className="tip-meta">Click to move to your bag</div>} />}>
-                <ItemIcon id={s.item} item={data.items[s.item]} qty={s.qty} size={42} testid={`storage-slot-${i}`} locked={cantUse(data.items[s.item], me)} onClick={(e) => move("storage_take", s, e)} />
+                <ItemIcon id={s.item} item={data.items[s.item]} qty={s.qty} size={42} testid={`storage-slot-${i}`} locked={cantUse(inst(data.items[s.item], s), me)} onClick={(e) => move("storage_take", s, e)} />
               </Hover>
             ) : <div key={`e${i}`} className="item-icon empty" style={{ width: 42, height: 42 }} />)}
           </div>
