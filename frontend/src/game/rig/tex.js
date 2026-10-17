@@ -66,7 +66,11 @@ export function mat(kind, color, extra = {}) {
   const b = BASE[kind] || BASE.plain, o = { color, roughness: b.roughness, metalness: b.metalness, ...extra };
   if (DRAW[kind]) { const t = getTex(kind); o.map = t; o.bumpMap = t; o.bumpScale = b.bump; }
   if (kind === "metal") o.roughnessMap = getTex("metal");
-  const m = new THREE.MeshStandardMaterial(o);
+  const PHYS = { skin: { sheen: 0.15, sheenRoughness: 0.6, sheenColor: new THREE.Color("#ffb0a0"), clearcoat: 0.05, clearcoatRoughness: 0.7 },
+    cloth: { sheen: 0.8, sheenRoughness: 0.75, sheenColor: new THREE.Color(color).lerp(new THREE.Color("#ffffff"), 0.35) },
+    hair: { sheen: 0.6, sheenRoughness: 0.35, sheenColor: new THREE.Color(color).lerp(new THREE.Color("#fff4e0"), 0.5), anisotropy: 0.6 },
+    leather: { clearcoat: 0.25, clearcoatRoughness: 0.45 }, fur: { sheen: 0.7, sheenRoughness: 0.8, sheenColor: new THREE.Color(color).lerp(new THREE.Color("#ffffff"), 0.4) } }[kind];
+  const m = PHYS ? new THREE.MeshPhysicalMaterial({ ...o, ...PHYS }) : new THREE.MeshStandardMaterial(o);
   if (SHINY.has(kind) || o.metalness > 0.5) { m.userData.shiny = true; if (envTex) { m.envMap = envTex; m.envMapIntensity = 0.55; } }
   return (mats[key] = m);
 }

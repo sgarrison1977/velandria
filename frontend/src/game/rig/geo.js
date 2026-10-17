@@ -17,9 +17,10 @@ const gauss = (x, c, w) => Math.exp(-(((x - c) / w) ** 2));
 export function limb(r1, r2, len, bulge = 0, at = 0.3, seg = 14) {
   const k = [r1, r2, len, bulge, at].map((n) => n.toFixed(3)).join(",");
   return G("limb" + k, () => {
-    const pts = [[0, r1 * 0.55]];
-    for (let i = 0; i <= 10; i++) { const t = i / 10; pts.push([r1 + (r2 - r1) * t + bulge * gauss(t, at, 0.28), -t * len]); }
-    pts.push([0, -len - r2 * 0.5]);
+    const pts = [];
+    for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI / 2; pts.push([Math.sin(a) * r1, Math.cos(a) * r1 * 0.9]); }
+    for (let i = 0; i <= 12; i++) { const t = i / 12; pts.push([r1 + (r2 - r1) * t + bulge * gauss(t, at, 0.28), -t * len]); }
+    for (let i = 1; i <= 5; i++) { const a = (i / 5) * Math.PI / 2; pts.push([Math.cos(a) * r2, -len - Math.sin(a) * r2 * 0.9]); }
     return new THREE.LatheGeometry(V2(pts), seg, Math.PI);
   });
 }
@@ -83,12 +84,18 @@ export const longHairBack = () => G("longback", () => {
   const g = new THREE.CylinderGeometry(0.11, 0.13, 0.3, 20, 6, true, Math.PI * 0.55, Math.PI * 0.9);
   return sculpt(g, (v) => { const a = Math.atan2(v.x, v.z); const k = 1 + Math.sin(a * 11) * 0.06; v.x *= k; v.z *= k; v.z -= (0.15 - v.y) * 0.15; });
 });
-export const beardGeo = (full) => G("beard" + full, () => {
-  const g = full ? new THREE.SphereGeometry(0.115, 24, 16, Math.PI * 0.12, Math.PI * 0.76, Math.PI * 0.5, Math.PI * 0.5) : new THREE.SphereGeometry(0.12, 24, 12, Math.PI * 0.08, Math.PI * 0.84, Math.PI * 0.6, Math.PI * 0.4);
-  if (!full) return sculpt(g, (v) => { const x = v.x / 0.12, y = v.y / 0.12, z = v.z / 0.12; let sx = 0.84, sz = 1; const j = Math.min(1, Math.max(0, -y)); sx *= 1 - j * 0.28; sz *= 1 + j * 0.12; v.set(x * sx * 0.12, y * 1.08 * 0.12, z * sz * 0.12); });
-  return sculpt(g, (v) => { const a = Math.atan2(v.x, v.z); v.x *= 0.82; v.z *= 1.06; if (v.y < -0.06) v.y *= full ? 1.9 : 1.15; const k = 1 + Math.sin(a * 13 + v.y * 60) * 0.04; v.x *= k; v.z *= k; });
+// beard hugging the jaw: stays below the nose in front, rises to sideburns at the sides
+export const beardGeo = (full) => G("beard2" + full, () => {
+  const R = 0.124, g = new THREE.SphereGeometry(R, 26, 16, Math.PI * 0.1, Math.PI * 0.8, Math.PI * 0.45, Math.PI * 0.55);
+  return sculpt(g, (v) => {
+    const f = Math.max(0, v.z / (Math.hypot(v.x, v.z) || 1)), maxY = R * (-0.05 - 0.38 * f * f);
+    if (v.y > maxY) { const rr = Math.sqrt(Math.max(0, R * R - maxY * maxY)), cur = Math.hypot(v.x, v.z) || 1; v.x *= rr / cur; v.z *= rr / cur; v.y = maxY; }
+    const j = Math.min(1, Math.max(0, -v.y / R));
+    v.x *= 0.86 * (1 - j * 0.24); v.z *= 0.98 + j * 0.1; v.y *= 1.08;
+    if (full && v.y < -0.075) { v.y = -0.075 + (v.y + 0.075) * 1.9; v.z += (-0.075 - v.y) * 0.25 * f; }
+    const a = Math.atan2(v.x, v.z), k = 1 + Math.sin(a * 13 + v.y * 60) * 0.03; v.x *= k; v.z *= k;
+  });
 });
-
 // skirt / robe hem: open cone with folds from waist (y=0) downward
 export function skirtGeo(r1, r2, len, folds = 9, tatter = false) {
   return G(`skirt${r1}${r2}${len}${folds}${tatter}`, () => {

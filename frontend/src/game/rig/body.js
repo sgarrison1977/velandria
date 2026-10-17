@@ -21,6 +21,36 @@ const thumb = (sd) => tube("thumb" + sd, [[0, 0, 0], [-sd * 0.006, -0.02, 0.016]
 const OUT = { plate: "metal", mail: "chain", leather: "leather", fur: "fur", scale: "scale" };
 const outfit = (style, c) => mat(OUT[style] || "cloth", c);
 
+const faceMats = {};
+// painted face map on sphere UVs (front of face at u=0.25): socket shade, blush, lips, stubble
+function faceMat(skin, stubble) {
+  const key = skin + stubble;
+  if (faceMats[key]) return faceMats[key];
+  const W = 256, H = 128, cv = document.createElement("canvas"); cv.width = W; cv.height = H; const g = cv.getContext("2d");
+  g.fillStyle = "#f2f2f2"; g.fillRect(0, 0, W, H);
+  const blob = (u, v, r, col) => { const gr = g.createRadialGradient(u * W, v * H, 0, u * W, v * H, r * W); gr.addColorStop(0, col); gr.addColorStop(1, "rgba(0,0,0,0)"); g.fillStyle = gr; g.fillRect(0, 0, W, H); };
+  if (stubble) { const c = new THREE.Color(stubble), rgb = `${(c.r * 255) | 0},${(c.g * 255) | 0},${(c.b * 255) | 0}`; for (let i = 0; i < 1400; i++) { const u = 0.25 + (Math.random() - 0.5) * 0.36, v = 0.6 + Math.random() * 0.4; if (Math.abs(u - 0.25) < 0.03 && v < 0.66) continue; g.fillStyle = `rgba(${rgb},${0.25 + Math.random() * 0.35})`; g.fillRect(u * W, v * H, 1.2, 1.2); } }
+  for (const sd of [-1, 1]) { blob(0.25 + sd * 0.06, 0.47, 0.045, "rgba(90,40,30,0.35)"); blob(0.25 + sd * 0.09, 0.58, 0.05, "rgba(220,90,80,0.22)"); blob(0.25 + sd * 0.055, 0.42, 0.04, "rgba(60,30,20,0.2)"); }
+  blob(0.25, 0.68, 0.035, "rgba(190,80,70,0.3)");
+  blob(0.25, 0.86, 0.12, "rgba(60,40,30,0.18)");
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
+  const m = mat("skin", skin).clone(); m.map = t;
+  return (faceMats[key] = m);
+}
+
+let shellTex = null;
+const hairShell = (c) => {
+  if (!shellTex) {
+    const cv = document.createElement("canvas"); cv.width = cv.height = 128; const g = cv.getContext("2d");
+    g.fillStyle = "#000"; g.fillRect(0, 0, 128, 128);
+    for (let i = 0; i < 260; i++) { const x = Math.random() * 128, w = 0.6 + Math.random() * 1.4, h = 30 + Math.random() * 98; g.fillStyle = `rgba(255,255,255,${0.5 + Math.random() * 0.5})`; g.fillRect(x, Math.random() * (128 - h * 0.5), w, h); }
+    shellTex = new THREE.CanvasTexture(cv); shellTex.wrapS = shellTex.wrapT = THREE.RepeatWrapping; shellTex.repeat.set(3, 1);
+  }
+  if (!shellMats[c]) { shellMats[c] = mat("hair", c).clone(); Object.assign(shellMats[c], { alphaMap: shellTex, alphaTest: 0.45, side: THREE.DoubleSide, sheen: 0.15 }); shellMats[c].color.multiplyScalar(0.85); }
+  return shellMats[c];
+};
+const shellMats = {};
+
 export function bake(root) {
   const baked = [];
   root.traverse((g) => {
@@ -43,7 +73,7 @@ export function bake(root) {
 }
 
 function hand(par, sd, m, o) {
-  mesh(palmGeo(), m, 0, -0.045, 0, par);
+  mesh(palmGeo(), m, 0, -0.045, 0, par).scale.setScalar(1.1);
   for (let i = 0; i < 4; i++) mesh(finger(sd), m, -sd * 0.006, -0.08, -0.021 + i * 0.014, par).scale.setScalar(i === 3 ? 0.85 : 1);
   mesh(thumb(sd), m, -sd * 0.012, -0.035, 0.026, par);
   if (o.claws) for (let i = 0; i < 4; i++) mesh(cone(0.008, 0.05, 5), mat("bone", "#d8d0b8"), -sd * 0.035, -0.12, -0.021 + i * 0.014, par, 0, 0, sd * 2.4);
@@ -78,27 +108,38 @@ function headParts(head, o, skinM, hc) {
     mesh(cone(0.012, 0.03, 3), mat("plain", "#050403"), 0, hc - 0.025, 0.112, head, Math.PI, 0, 0);
   } else {
     const hk = ["goblin", "brute", "angular", "round", "narrow"].includes(kind) ? kind : "human";
-    mesh(headGeo(hk), skinM, 0, hc, 0, head);
+    mesh(headGeo(hk), o.body === "bare" && hk === "brute" ? skinM : faceMat(o.skin || "#c9a084", o.beardStyle === "stubble" ? o.beard : null), 0, hc, 0, head);
     const eyeM = o.eyes ? glowMat(o.eyes, 2.6) : mat("plain", o.iris || "#3a4a5a", { roughness: 0.15 });
     for (const sd of [-1, 1]) {
-      mesh(sph(0.0155, 12, 8), o.eyes ? eyeM : mat("plain", "#ece6dc", { roughness: 0.2 }), sd * 0.04, hc + 0.012, 0.1, head).scale.set(1.1, 0.72, 0.6);
-      if (!o.eyes) mesh(sph(0.0085, 10, 6), eyeM, sd * 0.04, hc + 0.012, 0.107, head);
-      mesh(box(0.046, 0.011, 0.018), mat("hair", o.beard || hairC), sd * 0.042, hc + 0.037, 0.106, head, 0.2, 0, -sd * (o.eyes ? -0.25 : 0.14));
+      mesh(sph(0.0155, 14, 10), o.eyes ? eyeM : mat("plain", "#e4d8cb", { roughness: 0.08 }), sd * 0.04, hc + 0.012, 0.1, head).scale.set(1.1, 0.72, 0.6);
+      if (!o.eyes) { mesh(cyl(0.0072, 0.0072, 0.002, 14), eyeM, sd * 0.04, hc + 0.011, 0.1085, head, Math.PI / 2, 0, 0); mesh(cyl(0.0032, 0.0032, 0.002, 10), mat("plain", "#050505", { roughness: 0.05 }), sd * 0.04, hc + 0.011, 0.1095, head, Math.PI / 2, 0, 0); }
+      mesh(dome(0.0172, 0.5), skinM, sd * 0.04, hc + 0.0125, 0.0995, head, -0.2, 0, 0).scale.set(1.18, 0.55, 0.78);
+      mesh(box(0.03, 0.0025, 0.004), mat("hair", "#1a120c"), sd * 0.04, hc + 0.0158, 0.1068, head, 0, 0, sd * 0.08);
+      mesh(box(0.042, 0.0075, 0.012), mat("hair", o.beard || hairC), sd * 0.042, hc + 0.035, 0.106, head, 0.25, 0, -sd * (o.eyes ? -0.25 : 0.12));
       if (o.ears) mesh(tube("pear" + sd, [[0, 0, 0], [sd * 0.05, 0.025, -0.02], [sd * 0.12, 0.06, -0.045]], 0.024, 8), skinM, sd * 0.095, hc, -0.01, head);
       else mesh(earGeo(), skinM, sd * 0.1, hc - 0.002, -0.008, head, 0, sd * 0.25, 0);
       if (o.tusks) mesh(cone(0.012, 0.06, 6), mat("bone", "#e8e0c0"), sd * 0.04, hc - 0.06, 0.1, head, -0.25, 0, -sd * 0.15);
     }
     mesh(noseGeo(), skinM, 0, hc - 0.01, 0.106, head).scale.setScalar(kind === "goblin" ? 1.6 : kind === "brute" ? 1.2 : 0.82);
-    mesh(box(0.042, 0.008, 0.012), mat("skin", "#8a5a50"), 0, hc - 0.052, 0.107, head);
-    mesh(box(0.038, 0.01, 0.012), mat("skin", "#9a6458"), 0, hc - 0.062, 0.104, head);
+    if (o.beardStyle !== "full" || !o.beard) {
+    const lipM = mat("skin", new THREE.Color(o.skin || "#c9a084").lerp(new THREE.Color("#9a4a44"), 0.4).getStyle());
+    mesh(G("lipU", () => new THREE.CapsuleGeometry(0.0045, 0.028, 4, 10)), lipM, 0, hc - 0.05, 0.105, head, 0, 0, Math.PI / 2).scale.set(1, 1, 0.7);
+    mesh(G("lipL", () => new THREE.CapsuleGeometry(0.0055, 0.024, 4, 10)), lipM, 0, hc - 0.059, 0.103, head, 0, 0, Math.PI / 2).scale.set(1, 1, 0.75);
+    mesh(box(0.034, 0.0018, 0.004), mat("plain", "#3a1a16"), 0, hc - 0.0545, 0.108, head);
+    }
+    for (const sd of [-1, 1]) mesh(sph(0.0085, 8, 6), skinM, sd * 0.012, hc - 0.031, 0.106, head).scale.set(1, 0.8, 0.9);
   }
-  if (o.beard && o.beardStyle === "full") mesh(beardGeo(true), mat("hair", o.beard), 0, hc - 0.005, 0.004, head);
-  else if (o.beard) mesh(beardGeo(false), mat("skin", new THREE.Color(o.skin || "#c9a084").lerp(new THREE.Color(o.beard), 0.35).getStyle(), { transparent: true, opacity: 0.5 }), 0, hc - 0.002, 0.0, head).scale.setScalar(1.035);
+  if (o.beard && o.beardStyle === "full") {
+    mesh(beardGeo(true), mat("hair", o.beard), 0, hc, 0.002, head);
+  }
+
   const hideHair = ["great", "hood", "nasal", "cap"].includes(helm);
   if (o.hairStyle !== "bald" && kind !== "skull" && !hideHair) {
     const style = o.hairStyle || "short";
     mesh(hairGeo(style), hairM, 0, hc + 0.012, -0.008, head);
-    if (style === "long") mesh(longHairBack(), hairM, 0, hc - 0.1, -0.012, head);
+    mesh(hairGeo(style), hairShell(hairC), 0, hc + 0.013, -0.009, head).scale.setScalar(1.045);
+    if (style !== "bald") for (let i = 0; i < 5; i++) { const x = -0.06 + i * 0.03; mesh(tube(`fr${style}${i}`, [[0, 0, 0], [0.01, -0.012, 0.012], [0.024, -0.03, 0.016]], 0.011, 8), hairM, x, hc + 0.075 - Math.abs(x) * 0.25, 0.095 - Math.abs(x) * 0.2, head, -0.1, 0, -0.1); }
+    if (style === "long") { mesh(longHairBack(), hairM, 0, hc - 0.1, -0.012, head); }
     if (style === "tail") mesh(tube("ptail", [[0, 0, 0], [0, -0.05, -0.04], [0, -0.15, -0.06], [0, -0.24, -0.05]], 0.03, 10), hairM, 0, hc + 0.04, -0.11, head);
   } else if (hideHair && (helm === "nasal" || helm === "cap") && o.hairStyle === "long") mesh(longHairBack(), hairM, 0, hc - 0.1, -0.012, head);
   if (o.mohawk) mesh(tube("mhk", [[0, 0.1, 0.07], [0, 0.135, 0], [0, 0.11, -0.08], [0, 0.05, -0.12]], 0.022, 12, false), mat("hair", o.mohawk), 0, hc, 0, head).scale.x = 0.5;
@@ -240,8 +281,8 @@ export function humanoid(o) {
 
   const torso = grp(0, 0.96, 0, body); rig.torso = torso; rig.lean = o.hunch ? 0.35 : 0;
   torsoLayers(torso, o, w, topM, skinM);
-  mesh(limb(bone ? 0.02 : 0.05 * Math.sqrt(w), bone ? 0.02 : 0.056 * Math.sqrt(w), 0.15, 0, 0.5, 12), skinM, 0, 0.76, -0.005, torso);
-  const head = grp(0, 0.72, 0, torso); rig.head = head;
+  mesh(limb(bone ? 0.02 : 0.054 * Math.sqrt(w), bone ? 0.02 : 0.062 * Math.sqrt(w), 0.15, 0, 0.5, 14), skinM, 0, 0.76, -0.005, torso);
+  const head = grp(0, 0.705, 0.005, torso); rig.head = head;
   head.scale.setScalar(o.headScale || 1);
   headParts(head, o, skinM, 0.1);
 
