@@ -101,7 +101,9 @@ export function InventoryPanel({ data, net }) {
   const use = (slot) => { sfx("click"); net.send({ t: "use", uid: slot.uid }); };
   return (
     <Panel title="Inventory & Equipment" testid="inventory-panel" className="inv-panel" onClose={() => togglePanel("inventory", false)}>
-      <Equipment data={data} net={net} me={me} />
+      <div className="inv-cols">
+      <div className="inv-left"><Equipment data={data} net={net} me={me} /></div>
+      <div className="inv-right">
       <div className="inv-head"><span>Bag <b data-testid="inventory-count">{me.inventory.length}/{data.inv_slots}</b></span><span className="gold-t" data-testid="inventory-gold">{me.gold.toLocaleString()} gold</span></div>
       <InventoryGrid data={data} me={me} net={net} onSlot={(x) => setSel(x.uid)} onRight={use} />
       {s && <div className="inv-detail" data-testid="inventory-detail">
@@ -111,6 +113,8 @@ export function InventoryPanel({ data, net }) {
           {it.type !== "quest" && <button type="button" className="btn ghost" data-testid="inventory-destroy-btn" onClick={() => { net.send({ t: "destroy", uid: s.uid }); setSel(null); }}>Discard</button>}
         </div>
       </div>}
+      </div>
+      </div>
     </Panel>
   );
 }
