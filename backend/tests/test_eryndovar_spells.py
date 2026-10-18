@@ -1,5 +1,5 @@
 # Eryndovar iteration: 4 classes, class spell lists, unlocks, charge buffs, stop action, marks/portal, blink, combat no-cd, random loot props
-import asyncio, json, os, random, string, sys, time
+import asyncio, json, os, random, string, sys
 import pytest, requests, websockets
 from pymongo import MongoClient
 from dotenv import load_dotenv

@@ -1,0 +1,19 @@
+{
+  "summary": "Backend-only testing of the drop-item feature, the bounty board and the 6 new bosses, run against the public URL. All 7 tests passed. Static data checked: GET /api/game/data returns 9 bounties with every required field, an 11-item bounty_shop whose items all exist, the 5 board NPCs with kind 'board', and the 6 new bosses with boss/bounty true, a slam dict and levels in 15-70. GET /api/game/status shows 1806 monsters. Bounty board over WS: npc board_semel returns a bounty view (9 bounties, all available; 11 shop items; 0 tokens). Accept sets the bounty to active; accepting again gives an error. Turn-in before the kill gives 'That bounty is not complete.' Buying hunters_signet with 0 tokens gives 'You need 3 Bounty Tokens.' Buying a non-shop item gives an error. An unknown bounty gives 'Unknown bounty.' A far board (board_sunhollow) gives 'You are too far from a Bounty Board.' The active state is still there after reconnecting. Abandon sets it back to available; abandoning again gives an error. Drop over WS: a bad uid gives an error. A real drop removes the item from inventory, sends 'You drop ...', and a second player sees it in the snapshot loot list as claimable and picks it up right away. Boss kill / turn-in reward was not redone, as instructed (main agent's in-process test covers it). Frontend was only code-reviewed (data-testids, drop handler, 'bounty' case); nothing was run in a browser.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": ["/app/backend/tests/test_bounty_drop.py", "/app/test_reports/pytest/bounty_drop.xml"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "drop_item has no rate limit or cap on how many items a player can have on the ground. A client could spam drops to grow self.loot and snapshot size; items vanish after 300s, but consider a per-player cap or cooldown.",
+    "game.py is about 1910 lines; consider splitting out the bounty/loot/merchant modules.",
+    "The old backend.err.log has stale SyntaxError/ImportError tracebacks from earlier hot reloads. The backend is serving correctly now."
+  ],
+  "updated_files": ["/app/backend/tests/test_bounty_drop.py"],
+  "success_rate": {"backend": "100%", "frontend": "not tested (backend only requested)"},
+  "test_credentials": "Admin griblin / Casey123! used only for cleanup. Throwaway bountytest_*@test.io accounts were registered and then deleted.",
+  "seed_data_creation": "None left behind. All throwaway bountytest_ accounts were deleted (checked: 0 remain).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "test_bounty_drop.py reuses the Client/API helpers from test_admin_live.py. Snapshot loot entries are lists: [id, item, qty, x, z, mine, pname]. New characters spawn within range of board_semel. Account deletion right after a WS disconnect can briefly fail, so the fixture retries 20x2s; double-check that no bountytest_ accounts are left over."
+}

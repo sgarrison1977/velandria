@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="7" time="24.398" timestamp="2026-10-18T22:04:27.295904+00:00" hostname="agent-env-c614ce74-6be5-4c82-8a22-d92732ed1ac2"><testcase classname="tests.test_bounty_drop.TestData" name="test_bounties" time="0.585" /><testcase classname="tests.test_bounty_drop.TestData" name="test_bounty_shop" time="0.000" /><testcase classname="tests.test_bounty_drop.TestData" name="test_board_npcs" time="0.000" /><testcase classname="tests.test_bounty_drop.TestData" name="test_new_bosses" time="0.000" /><testcase classname="tests.test_bounty_drop.TestData" name="test_status_monsters" time="0.197" /><testcase classname="tests.test_bounty_drop.TestBountyWS" name="test_flow" time="5.116" /><testcase classname="tests.test_bounty_drop.TestDropWS" name="test_drop_and_pickup_other_player" time="18.903"><failure message="AttributeError: 'list' object has no attribute 'get'">test_bounty_drop.py:188: in test_drop_and_pickup_other_player
+    snap = cb.wait_for(lambda m: m.get("t") == "s" and any(l.get("item") == slot["item"] for l in m.get("l") or []), timeout=8)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+test_admin_live.py:69: in wait_for
+    if pred(m):
+       ^^^^^^^
+test_bounty_drop.py:188: in &lt;lambda&gt;
+    snap = cb.wait_for(lambda m: m.get("t") == "s" and any(l.get("item") == slot["item"] for l in m.get("l") or []), timeout=8)
+                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+test_bounty_drop.py:188: in &lt;genexpr&gt;
+    snap = cb.wait_for(lambda m: m.get("t") == "s" and any(l.get("item") == slot["item"] for l in m.get("l") or []), timeout=8)
+                                                           ^^^^^
+E   AttributeError: 'list' object has no attribute 'get'</failure></testcase></testsuite></testsuites>
