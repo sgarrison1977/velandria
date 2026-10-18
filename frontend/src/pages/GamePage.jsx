@@ -112,7 +112,7 @@ export default function GamePage() {
     <div className="game" data-testid="game-root">
       <canvas ref={canvas} className="game-canvas" data-testid="game-canvas" />
       <div ref={overlay} className="overlay" />
-      {!ready && <div className="loading" data-testid="loading-screen"><h1 className="logo">Realms of Velanthra</h1><div className="spinner" /><p>{step}</p></div>}
+      {!ready && <div className="loading" data-testid="loading-screen"><h1 className="logo">Velandria</h1><div className="spinner" /><p>{step}</p></div>}
       {ready && data && <div className="hud">
         <PlayerFrame data={data} />
         <TargetFrame data={data} />

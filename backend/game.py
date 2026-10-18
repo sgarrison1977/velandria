@@ -1,4 +1,4 @@
-"""Authoritative real-time game simulation for Realms of Velanthra."""
+"""Authoritative real-time game simulation for Velandria."""
 import asyncio, time, math, random, uuid, json, logging, re
 from datetime import datetime, timezone
 from game_data import (STORAGE_SLOTS, ITEMS, MONSTERS, ABILITIES, CLASSES, NPCS, MERCHANTS, QUESTS, XP_TABLE, MAX_LEVEL, INV_SLOTS, TICK, COMBAT,

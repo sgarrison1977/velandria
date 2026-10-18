@@ -28,7 +28,7 @@ export function WorldMap({ engine }) {
     return () => clearInterval(i);
   }, [engine, inset]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
-    <Panel title="Map of Velanthra" testid="world-map" className="worldmap" onClose={() => togglePanel("map", false)}>
+    <Panel title="Map of Velandria" testid="world-map" className="worldmap" onClose={() => togglePanel("map", false)}>
       <canvas ref={ref} width={engine?.world.w || 1100} height={engine?.world.oh || 400} data-testid="world-map-canvas" style={{ cursor: "crosshair" }}
         onClick={(e) => { const c = ref.current, r = c.getBoundingClientRect(); const p = engine?.mapToWorld((e.clientX - r.left) * c.width / r.width, (e.clientY - r.top) * c.height / r.height); if (p) { engine.setWaypoint({ x: Math.round(p.x), z: Math.round(p.z) }); draw(); } }}
         onContextMenu={(e) => { e.preventDefault(); engine?.setWaypoint(null); draw(); }} />

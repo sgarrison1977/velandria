@@ -53,7 +53,7 @@ export default function CharacterSelect() {
       <div className="title-bg" style={{ backgroundImage: `linear-gradient(90deg, #0a0806f2 0%, #0a0806cc 60%, #0a0806aa 100%), url(${process.env.PUBLIC_URL}/title-bg.jpg)` }} />
       <div className="char-wrap">
         <div className="char-top">
-          <h1 className="logo small">Realms of Velanthra</h1>
+          <h1 className="logo small">Velandria</h1>
           <button type="button" className="btn ghost" data-testid="account-logout-btn" onClick={() => { localStorage.removeItem("sx_token"); nav("/"); }}><LogOut size={14} /> Log out</button>
         </div>
         <h2 className="sect">Your Characters</h2>

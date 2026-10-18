@@ -79,7 +79,7 @@ def public_char(c):
 
 @api.get("/")
 async def root():
-    return {"game": "Realms of Velanthra", "online": len(game.players) if game else 0}
+    return {"game": "Velandria", "online": len(game.players) if game else 0}
 
 
 @api.post("/auth/register")
@@ -257,7 +257,7 @@ async def startup():
     game = Game(db)
     _world_json = json.dumps(game.world.client_payload(), separators=(",", ":"))
     game.start()
-    log.info("Realms of Velanthra world ready: %d monsters, %d trees", len(game.monsters), len(game.world.trees))
+    log.info("Velandria world ready: %d monsters, %d trees", len(game.monsters), len(game.world.trees))
 
 
 @app.on_event("shutdown")

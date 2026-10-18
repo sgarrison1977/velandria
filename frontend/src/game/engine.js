@@ -466,7 +466,7 @@ export class Engine {
     if (best) return best.r.name;
     if (z > this.world.oh) return this.dungeonAt(x)?.name || "The Hollow Deep";
     const rd = this.terrain.sample(this.terrain.RD, x, z), ox = this.world.ox || 0, oz = this.world.oz || 0;
-    if (this.world.ox && this.terrain.coast(x, z) > -40) return "The Velanthran Coast";
+    if (this.world.ox && this.terrain.coast(x, z) > -40) return "The Velandrian Coast";
     x -= ox; z -= oz;
     if (x < -10) return "The Western Shores";
     if (x > 1610) return "The Eastern Shores";

@@ -107,7 +107,7 @@ export function ExitButton({ onLogout, netRef }) {
     <>
       <button type="button" className="exit-btn" data-testid="exit-game-btn" onMouseDown={(e) => e.stopPropagation()} onClick={() => setState({ exitMenu: true })}><LogOut size={14} /> Exit</button>
       {open && <div className="exit-modal" data-testid="exit-menu" onMouseDown={(e) => e.stopPropagation()}>
-        <h3>Leave Realms of Velanthra?</h3>
+        <h3>Leave Velandria?</h3>
         <p>Your character, items and progress are saved automatically.</p>
         <button type="button" className="btn" data-testid="exit-to-characters-btn" onClick={() => onLogout(false)}>Character Select</button>
         <button type="button" className="btn" data-testid="exit-to-main-btn" onClick={() => onLogout(true)}>Main Screen (log out)</button>

@@ -1,4 +1,4 @@
-# Realms of Velanthra (formerly Suminex / Eryndovar) — PRD
+# Velandria (formerly Suminex / Eryndovar) — PRD
 
 ## Original problem statement
 Build SUMINEX: a fully playable browser-based real-time multiplayer dark-fantasy MMORPG (Xenimus-inspired feel, original assets). Angled top-down 3D (Three.js), persistent accounts/characters, live multiplayer, real combat, 10 enemy types, loot, inventory/equipment, merchants, leveling to 100 (L2=200, L3=1000 cumulative XP), attributes (Str/Sta/Wis/Int/Dex), 6+ abilities, keybinds, world chat, safe zones (server enforced), two towns (Titus — formerly Semel — and Elderglen) linked by a long forest road, minimap/world map, quests, audio.
@@ -82,3 +82,4 @@ Later requests: hold-to-walk toward pointer; ranged/spell abilities fire at the 
 - Titus Gravefields (World._graveyard, global 285,582, 72x50): iron-fenced graveyard with gate, 150 headstones, 2 mausoleums, dead trees, braziers; trail from Titus south gate; 100 skeletons lv 2-15 (restless_bones 2, skeleton 5, grave_warden 9, crypt_knight 13, boss sexton_of_bones 15) — tougher toward the south; all base=skeleton (counts for skeleton quests).
 - XP bar doubled (24px). Rising Dead: graveyard spawns have rise=True → 1.3s emerge (no AI), snapshot field 11, client dirt burst + sink-in rise anim. Quest q_sexton (kind 'crypt'): Gravekeeper Morrow in Titus; Sexton drops sexton_key while active; crypt_w/crypt_e door NPCs unlock one-time chest (rare+ lv<=15 gear w/ props + 1500 gold); turn-in 4000 XP; once per character.
 - Quest q_barrowking (requires q_sexton): Morrow → slay Morvath the Barrow King (Titus Barrows) — grave_iron_crown drops straight to bag (quest 'drop' flag); reward 8000 XP, 2500 gold + guaranteed epic lv<=15 class gear with props (reward.gear). Kill matching now accepts exact monster type as well as base.
+- Game renamed to Velandria (Jun 2026).

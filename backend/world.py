@@ -1,4 +1,4 @@
-"""Deterministic world layout + collision grid + pathfinding for Realms of Velanthra."""
+"""Deterministic world layout + collision grid + pathfinding for Velandria."""
 import math, random, base64, heapq
 import numpy as np
 
