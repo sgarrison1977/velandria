@@ -248,6 +248,11 @@ async def startup():
     await db.login_attempts.create_index("identifier")
     await db.chat.create_index("ts")
     await db.meta.update_one({"_id": "schema"}, {"$set": {"version": 1}}, upsert=True)
+    from world import GOH, OLD_GOH
+    if not await db.meta.find_one({"_id": "map_south_sea"}):
+        r = await db.characters.update_many({"z": {"$gt": OLD_GOH}}, {"$inc": {"z": GOH - OLD_GOH}})
+        await db.meta.update_one({"_id": "map_south_sea"}, {"$set": {"shift": GOH - OLD_GOH, "moved": r.modified_count}}, upsert=True)
+        log.info("Map south-sea migration: moved %d dungeon characters", r.modified_count)
     game = Game(db)
     _world_json = json.dumps(game.world.client_payload(), separators=(",", ":"))
     game.start()

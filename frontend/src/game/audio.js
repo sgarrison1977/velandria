@@ -31,6 +31,20 @@ export const music = {
   refresh() { if (current && tracks[current]) tracks[current].volume = musicVol(); },
   stop() { current = null; for (const a of Object.values(tracks)) { a.pause(); } },
 };
+// positional ambience loops (e.g. surf near beaches); level 0..1 eased per frame
+const amb = {};
+export const ambient = {
+  set(name, level) {
+    let a = amb[name];
+    if (!a) { if (level <= 0) return; a = amb[name] = { el: new Audio(`/sfx/${name}.mp3`), v: 0 }; a.el.loop = true; a.el.volume = 0; }
+    const target = cfg.muted ? 0 : level * cfg.vol * 0.55;
+    a.v += (target - a.v) * 0.04;
+    a.el.volume = Math.max(0, Math.min(1, a.v));
+    if (a.v > 0.003 && a.el.paused) { const n = performance.now(); if (n - (a.retry || 0) > 1500) { a.retry = n; a.el.play().catch(() => {}); } }
+    else if (a.v <= 0.003 && !a.el.paused) a.el.pause();
+  },
+  stop() { for (const a of Object.values(amb)) { a.el.pause(); a.v = 0; } },
+};
 function ac() {
   if (!ctx) { const C = window.AudioContext || window.webkitAudioContext; if (!C) return null; ctx = new C(); master = ctx.createGain(); master.gain.value = cfg.muted ? 0 : cfg.vol; master.connect(ctx.destination); }
   if (ctx.state === "suspended") ctx.resume();

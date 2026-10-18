@@ -59,3 +59,13 @@ Later requests: hold-to-walk toward pointer; ranged/spell abilities fire at the 
 - Note: no Whirlwind ability exists (only Spin Attack).
 - DONE (untested): Loot filter (Settings→Loot Filter, LootFilter.jsx, server Game.loot_wanted), dim/hide unwanted ground loot, server-side auto-loot (p.autoloot, 1.8m), loot despawn 60s. Legendary drop: golden light pillar + "legendary" chime. Background music (public/music town/wild/dungeon.mp3 via fal elevenlabs/music, scripts/gen_music.py), crossfaded by area, Music volume slider in Settings→Audio.
 - DONE (untested in-game): World is now an island continent — world.py authors content in LOCAL coords then `_globalize()` pastes onto a 1920x920 grid (OX=OZ=160, overworld OH=720, dungeon band below). `coast(u,v)` (mirrored in world3d Terrain.coast) defines wavy rounded shoreline; ocean blocked, beaches, ocean plane, extra wild land + vegetation + spawns on outer lands. All module coords (SAFE_ZONES, PORTALS, REGIONS, rooms, DUNGEONS, LAKES, NPCS pos) translated once (_SHIFTED). DB characters/marks migrated (db.meta world_shift). New coords: Titus ≈ (250,360). Use world.to_global() when adding new hardcoded local coords.
+
+## Update — Saltmere Harbor, Offshore Isles, Cave Entrances, Surf (Jun 2026)
+- World grid now 1920 x 1160 (GOH=960 overworld incl. 400-unit southern sea; dungeons below). One-time DB migration `meta.map_south_sea` shifted dungeon characters by +240 z.
+- Saltmere Harbor (5th town, global 1080,582): palisade, harbor houses, docks/piers, boats, ferry, fish racks, Fishmonger Marta (harbor_fish shop: grilled trout, smoked eel, salted cod, potions), healer, trunk, waystone.
+- Offshore Isles (Isle of Thorns, Wrecker's Atoll, Drowned Spire, linked by sandbars): Ferryman Odo charges 1000 gold; Bosun Kell returns free. Lv 27-35 isle monsters (reef_crawler, drowned_corsair, tidecursed_wraith, coral_colossus, boss captain_blackbrine), 3 treasure chests (15-min per-player cooldown), pearls loot.
+- Dungeon entrances render as rocky torch-lit cave mouths (portal.face); exits are daylight stair tunnels.
+- Sea shader with foam waves rolling to every shore + positional surf.mp3 ambience.
+- Stuck button moved into the Exit/logout popup. World map: dungeons hidden by default (click "Show dungeons"), aspect-correct marker placement.
+- Fixed inland low terrain being flooded by the sea plane.
+- /gallery?set=world&x=&z=&d= — isolated 3D world preview (no login) for verification; /gallery?set=isles for new models.

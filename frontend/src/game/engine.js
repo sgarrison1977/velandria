@@ -4,7 +4,7 @@ import { buildStructures, animateStructures } from "./structures";
 import { buildMonster, buildNpc, buildPlayer, buildLoot, proxy, animateGlow, animateRig, setInvis, SHIMMER, RARITY } from "./models";
 import { getState, setState } from "./store";
 import { lootWanted } from "../components/game/LootFilter";
-import { sfx, music } from "./audio";
+import { sfx, music, ambient } from "./audio";
 import { setEnv } from "./rig/tex";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
@@ -71,11 +71,12 @@ export class Engine {
     this.running = true; this.fpsAcc = []; this.loop();
   }
   dispose() {
-    music.stop(); this.running = false; window.removeEventListener("resize", this.resize); this.unbind?.(); this.renderer.dispose(); this.overlay.innerHTML = ""; }
+    music.stop(); ambient.stop(); this.running = false; window.removeEventListener("resize", this.resize); this.unbind?.(); this.renderer.dispose(); this.overlay.innerHTML = ""; }
   resize = () => { const w = this.canvas.clientWidth, h = this.canvas.clientHeight; this.renderer.setSize(w, h, false); if (this.composer) { this.composer.setPixelRatio(this.renderer.getPixelRatio()); this.composer.setSize(w, h); this.bloom.resolution.set(w / 2, h / 2); } this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); };
   groundY(x, z) {
     let h = this.terrain.height(x, z);
     for (const b of this.world.bridges) if (Math.hypot(b.x - x, b.z - z) < 5.5) h = Math.max(h, 0.42);
+    for (const d of this.world.docks || []) if (Math.abs(x - d.x) <= d.w / 2 + 0.3 && Math.abs(z - d.z) <= d.d / 2 + 0.3) h = Math.max(h, 0.56);
     return h;
   }
 
@@ -464,7 +465,7 @@ export class Engine {
       if (e.rig.gate) { const f = Math.max(0.02, Math.min(1, (e.endAt - performance.now() / 1000) / (e.total || 10))); e.rig.timer.scale.setScalar(f); e.rig.timer.material.color.set(f < 0.3 ? "#ff5a5a" : "#e0c8ff"); e.rig.gate.rotation.y = this.yaw || 0; e.rig.disc.rotation.z = t * 2; e.rig.disc.material.opacity = 0.4 + 0.2 * Math.sin(t * 4); continue; }
       if (e.pillar) { const k = 0.7 + 0.3 * Math.sin(t * 3 + e.x); e.pillar.core.material.opacity = 0.85 * k; e.pillar.glow.material.opacity = 0.3 * k; e.pillar.glow.scale.set(1 + 0.15 * k, 1, 1 + 0.15 * k); }
       if (e.rig.body) { if (e.rig.invisOn) SHIMMER.uniforms.uTime.value = t; e.rig.root.rotation.y = e.rot; animateRig(e.rig, e.anim, dt, t); if (e.rig.shimmer) animateGlow(e.rig, t); }
-      else if (e.kind === "npc") { if (e.rig.kind === "prop" && e.npcKind !== "trunk") e.rig.root.rotation.y = t * 0.3; }
+      else if (e.kind === "npc") { if (e.rig.kind === "prop" && e.npcKind !== "trunk" && e.npcKind !== "chest") e.rig.root.rotation.y = t * 0.3; }
       else { e.rig.root.rotation.y = t * 1.2; e.rig.root.position.y = 0.05 + Math.sin(t * 2.5 + e.x) * 0.05; }
     }
     const me = this.entities.get(this.meId);
@@ -477,6 +478,7 @@ export class Engine {
       for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) { const key = `${cx + i},${cz + j}`; if (!this.discovered.has(key)) { this.discovered.add(key); this.discDirty = true; } }
       const reg = this.regionAt(me.x, me.z);
       if (reg !== this.lastRegion) { this.lastRegion = reg; setState({ region: reg }); }
+      if (this.world.ox && me.z < this.world.oh) { const cd = this.terrain.coast(me.x, me.z); ambient.set("surf", cd < -45 ? 0 : Math.min(1, (45 + cd) / 40)); } else ambient.set("surf", 0);
       music.play(me.z > this.world.oh ? "dungeon" : this.world.safe_zones.some((s) => Math.hypot(s.x - me.x, s.z - me.z) < 70) ? "town" : "wild");
       const wp = this.waypoint;
       if (wp && Math.hypot(wp.x - me.x, wp.z - me.z) < 4) { this.setWaypoint(null); sfx("loot"); }
@@ -550,7 +552,7 @@ export class Engine {
     const t = this._mapT; if (!t) return null;
     const ir = this._inset;
     for (const r of ir || []) if (px >= r.x && px <= r.x + r.w && pz >= r.y && pz <= r.y + r.h) return { x: r.d.x0 + (px - r.x) / r.s, z: r.d.z0 + (pz - r.y) / r.s };
-    return { x: t.sx + px / t.scale, z: t.sz + pz / t.scale };
+    return { x: t.sx + (px - (t.offX || 0)) / t.scale, z: t.sz + (pz - (t.offY || 0)) / t.scale };
   }
   drawMap(ctx, w, h, opts = {}) {
     const W = this.world.w, H = this.world.h, src = this.terrain.mapCanvas;
@@ -559,11 +561,11 @@ export class Engine {
     if (opts.radius) { sw = shh = opts.radius * 2; sx = me.x - opts.radius; sz = me.z - opts.radius; }
     else if (me.z > this.world.oh) { const d = this.dungeonAt(me.x) || { x0: 370, z0: 452, w: 380 }; sx = d.x0; sz = d.z0; sw = d.w; shh = d.w * h / w; }
     else shh = this.world.oh;
-    const scale = w / sw;
-    if (!opts.radius) { this._mapT = { sx, sz, scale }; this._inset = null; }
-    ctx.fillStyle = "#0b0d0c"; ctx.fillRect(0, 0, w, h);
-    ctx.drawImage(src, sx * 2, sz * 2, sw * 2, shh * 2, 0, 0, w, h);
-    const P = (x, z) => [(x - sx) * scale, (z - sz) * scale];
+    const scale = Math.min(w / sw, h / shh), offX = (w - sw * scale) / 2, offY = (h - shh * scale) / 2;
+    if (!opts.radius) { this._mapT = { sx, sz, scale, offX, offY }; this._inset = null; }
+    ctx.fillStyle = "#0e2a36"; ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(src, sx * 2, sz * 2, sw * 2, shh * 2, offX, offY, sw * scale, shh * scale);
+    const P = (x, z) => [offX + (x - sx) * scale, offY + (z - sz) * scale];
     ctx.fillStyle = "rgba(12,22,14,0.5)";
     if (!opts.radius) for (const [x, z] of this.world.trees) { if (Math.random() < 0.35) { const [px, pz] = P(x, z); ctx.fillRect(px, pz, 1.2, 1.2); } }
     ctx.fillStyle = "#3f6a7a";

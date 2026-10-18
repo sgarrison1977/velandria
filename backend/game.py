@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from game_data import (STORAGE_SLOTS, ITEMS, MONSTERS, ABILITIES, CLASSES, NPCS, MERCHANTS, QUESTS, XP_TABLE, MAX_LEVEL, INV_SLOTS, TICK, COMBAT,
                        PLAYER_SPEED, PICKUP_RANGE, NPC_RANGE, LOOT_OWNER_SECS, LOOT_EXPIRE_SECS, ACTIONS, RESTOCK_SECS, sell_price, default_binds, EXTRA_ROLLS, BONUS_LOOT, WAYSTONE_COST, roll_props, random_gear, RANDOM_GEAR_CHANCE)
 from world import PORTALS, World, in_safe, SAFE_ZONES, PIT_ROOMS, to_global
-from game_data import PIT_CHAMPION_KILLS
+from game_data import PIT_CHAMPION_KILLS, FERRY_COST, FERRY_DEST, CHEST_COOLDOWN
 
 log = logging.getLogger("game")
 rnd = random.Random()
@@ -18,7 +18,7 @@ ATTR_POINTS_PER_LEVEL = 3
 PORTAL_SECS = 10
 RING_SLOTS = [f"ring{i}" for i in range(1, 7)]
 LOOT_ALL_R = 8.0
-TOWN_NAMES = {"semel": "Titus", "elderglen": "Elderglen", "ironhold": "Ironhold", "sunhollow": "Sunhollow"}
+TOWN_NAMES = {"semel": "Titus", "elderglen": "Elderglen", "ironhold": "Ironhold", "sunhollow": "Sunhollow", "harbor": "Saltmere Harbor", "isles": "the Isle of Thorns"}
 
 
 def now():
@@ -567,6 +567,10 @@ class Game:
         for lv, item, chance in BONUS_LOOT:
             if m.d["level"] >= lv and rnd.random() < chance:
                 drops.append((item, 1))
+        if m.d.get("isle") and rnd.random() < 0.35:
+            g = random_gear(m.d["level"], rnd)
+            if g:
+                drops.append((g, -1))
         if rnd.random() < RANDOM_GEAR_CHANCE * (2 if m.d.get("boss") else 1):
             g = random_gear(m.d["level"], rnd)
             if g:
@@ -578,7 +582,7 @@ class Game:
         if m.d.get("champion"):
             self.broadcast_sys(f"{killer.name} has slain the Wave Champion {m.d['name']}!")
         if m.d.get("boss"):
-            self.broadcast_sys(f"{killer.name} has slain {m.d['name']}! " + ("The Titus Barrows fall silent... for now." if m.d.get("barrow") else "The Hollow Deep falls silent... for now."))
+            self.broadcast_sys(f"{killer.name} has slain {m.d['name']}! " + ("The Titus Barrows fall silent... for now." if m.d.get("barrow") else "The tides of the Offshore Isles grow calm... for now." if m.d.get("isle") else "The Hollow Deep falls silent... for now."))
         for i, (item, qty) in enumerate(drops):
             a = i * 2.1 + rnd.uniform(0, 1)
             lx, lz = m.x + math.cos(a) * (0.6 + 0.4 * i), m.z + math.sin(a) * (0.6 + 0.4 * i)
@@ -1055,8 +1059,19 @@ class Game:
             if p.home != n["town"]:
                 opts.append(dict(id="sethome", label=f"Make {TOWN_NAMES[n['town']]} my home town"))
             for z in SAFE_ZONES:
-                if z["town"] != n["town"]:
+                if z["town"] != n["town"] and z.get("waystone", True):
                     opts.append(dict(id=f"travel:{z['town']}", label=f"Travel to {TOWN_NAMES[z['town']]} ({self.travel_cost(n, z)} gold)"))
+        if n.get("ferry") == "isles":
+            text = f"Passage to the Offshore Isles costs {FERRY_COST} gold. Rare beasts and old treasure out there — and the trip home is free."
+            opts.append(dict(id="ferry", label=f"Sail to the Offshore Isles ({FERRY_COST} gold)"))
+        elif n.get("ferry") == "harbor":
+            text = "Had your fill of the isles? Hop aboard — the ride back to Saltmere is on the house."
+            opts.append(dict(id="ferry", label="Sail back to Saltmere Harbor (free)"))
+        if n.get("chest"):
+            left = getattr(p, "chest_cd", {}).get(npc_id, 0) - now()
+            text = f"The chest lies empty. It will refill in about {int(left // 60) + 1} min." if left > 0 else "Salt-crusted iron bands hold the lid shut. Something glints inside."
+            if left <= 0:
+                opts.append(dict(id="chest", label="Pry open the chest"))
         if n.get("merchant"):
             opts.append(dict(id="trade", label="Trade"))
         if n.get("healer"):
@@ -1238,7 +1253,7 @@ class Game:
             self.npc_dialog(p, npc_id)
             return None
         if action.startswith("travel:") and n.get("waystone"):
-            z = next((z for z in SAFE_ZONES if z["town"] == action[7:] and z["town"] != n["town"]), None)
+            z = next((z for z in SAFE_ZONES if z["town"] == action[7:] and z["town"] != n["town"] and z.get("waystone", True)), None)
             if not z:
                 return "Unknown destination."
             cost = self.travel_cost(n, z)
@@ -1252,6 +1267,22 @@ class Game:
                 if mm.target == p.id:
                     mm.target = None
             return p.send({"t": "trade", "msg": f"The waystone carries you to {TOWN_NAMES[z['town']]} (-{cost} gold)."})
+        if action == "ferry" and n.get("ferry"):
+            out = n["ferry"] == "isles"
+            if out and p.gold < FERRY_COST:
+                return f"You need {FERRY_COST} gold for passage to the isles."
+            if out:
+                p.gold -= FERRY_COST
+            dx, dz = FERRY_DEST[n["ferry"]]
+            self.teleport(p, dx + rnd.uniform(-1.5, 1.5), dz + rnd.uniform(-1, 1))
+            return p.send({"t": "trade", "msg": f"The ferry carries you across the waves to the Offshore Isles (-{FERRY_COST} gold)." if out else "The ferry carries you back to Saltmere Harbor."})
+        if action == "chest" and n.get("chest"):
+            cds = p.__dict__.setdefault("chest_cd", {})
+            if cds.get(npc_id, 0) > now():
+                return "The chest is empty for now."
+            cds[npc_id] = now() + CHEST_COOLDOWN
+            self.open_chest(p, n)
+            return p.send({"t": "sys", "msg": f"You pry open the {n['name']}! Treasure spills onto the sand.", "kind": "quest"})
         if action.startswith("accept:"):
             qid = action[7:]
             req = QUESTS.get(qid, {}).get("requires")
@@ -1284,6 +1315,25 @@ class Game:
             asyncio.create_task(self.save(p))
             return None
         return "Nothing happens."
+
+    def open_chest(self, p, n):
+        lvl, t = n["chest"], now()
+        drops = [("gold", rnd.randint(lvl * 25, lvl * 45)), ("sea_pearl", 1)]
+        drops += [(g, -1) for g in (random_gear(lvl, rnd) for _ in range(rnd.randint(1, 2))) if g]
+        if rnd.random() < 0.25:
+            drops.append(("black_pearl", 1))
+        if rnd.random() < 0.1:
+            drops.append((rnd.choice(["ring_vampire", "soulreaver_blade", "void_staff", "stormcaller_bow", "dreadknight_helm"]), 1))
+        cx, cz = n["pos"]
+        for i, (item, qty) in enumerate(drops):
+            a = i * 2.1 + rnd.uniform(0, 1)
+            lx, lz = cx + math.cos(a) * (1.2 + 0.4 * i), cz + math.sin(a) * (1.2 + 0.4 * i)
+            if not self.world.walkable(lx, lz):
+                lx, lz = p.x, p.z
+            props, pname = (None, None) if item == "gold" else roll_props(item, lvl, rnd, force=qty == -1)
+            lid = "l" + uid()
+            self.loot[lid] = dict(id=lid, item=item, qty=max(1, qty), props=props, pname=pname, x=round(lx, 2), z=round(lz, 2), owner=p.id,
+                                  party=getattr(p, "party", None), owner_until=t + LOOT_OWNER_SECS, expires=t + LOOT_EXPIRE_SECS)
 
     def merchant_view(self, mk, npc_id):
         return {"t": "merchant", "npc": npc_id, "mk": mk, "name": MERCHANTS[mk]["name"],

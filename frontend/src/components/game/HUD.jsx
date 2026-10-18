@@ -104,13 +104,13 @@ export function ExitButton({ onLogout, netRef }) {
   const open = useStore((s) => s.exitMenu);
   return (
     <>
-      <button type="button" className="exit-btn stuck-btn" data-testid="unstuck-btn" title="Stuck in a wall? Return to the nearest town (60s cooldown)" onMouseDown={(e) => e.stopPropagation()} onClick={() => { sfx("click"); netRef?.current?.send({ t: "unstuck" }); }}><LifeBuoy size={14} /> Stuck</button>
       <button type="button" className="exit-btn" data-testid="exit-game-btn" onMouseDown={(e) => e.stopPropagation()} onClick={() => setState({ exitMenu: true })}><LogOut size={14} /> Exit</button>
       {open && <div className="exit-modal" data-testid="exit-menu" onMouseDown={(e) => e.stopPropagation()}>
         <h3>Leave Realms of Velanthra?</h3>
         <p>Your character, items and progress are saved automatically.</p>
         <button type="button" className="btn" data-testid="exit-to-characters-btn" onClick={() => onLogout(false)}>Character Select</button>
         <button type="button" className="btn" data-testid="exit-to-main-btn" onClick={() => onLogout(true)}>Main Screen (log out)</button>
+        <button type="button" className="btn" data-testid="unstuck-btn" title="Stuck in a wall? Return to your home town (60s cooldown)" onClick={() => { sfx("click"); netRef?.current?.send({ t: "unstuck" }); setState({ exitMenu: false }); }}><LifeBuoy size={14} /> I'm Stuck — return to town</button>
         <button type="button" className="btn ghost" data-testid="exit-cancel-btn" onClick={() => setState({ exitMenu: false })}>Return to game</button>
       </div>}
     </>

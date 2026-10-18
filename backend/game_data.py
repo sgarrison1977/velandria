@@ -217,7 +217,12 @@ ITEMS = {
     # consumables
     "hp_potion": dict(name="Healing Potion", type="consumable", rarity="common", full="hp", price=30, stack=50, desc="Restores all of your health."),
     "mp_potion": dict(name="Mana Potion", type="consumable", rarity="common", full="mp", price=30, stack=50, desc="Restores all of your mana."),
+    "grilled_trout": dict(name="Grilled Trout", type="consumable", rarity="common", full="hp", price=28, stack=50, desc="Fresh off the Saltmere docks. Restores all of your health."),
+    "smoked_eel": dict(name="Smoked Eel", type="consumable", rarity="common", full="mp", price=28, stack=50, desc="Oily and strangely invigorating. Restores all of your mana."),
+    "salted_cod": dict(name="Salted Cod", type="consumable", rarity="uncommon", heal=600, mana=300, price=45, stack=50, desc="Sailor's rations. Restores 600 health and 300 mana."),
     # materials / vendor goods
+    "sea_pearl": M("Sea Pearl", "rare", 120, "Lustrous and cold. Fishmongers pay well for these."),
+    "black_pearl": M("Black Pearl", "epic", 650, "A pearl dark as a moonless tide. Worth a fortune."),
     "spider_silk": M("Spider Silk", "common", 2, "Sticky strands. Merchants buy it."),
     "imp_horn": M("Imp Horn", "common", 3, "Curled and faintly warm."),
     "wolf_pelt": M("Wolf Pelt", "common", 6, "Thick grey fur."),
@@ -333,6 +338,20 @@ for _t, (_b, _l, _n) in PIT_CHAMPIONS.items():
               radius=round(_c["radius"] * 1.4, 2), model_scale=1.45, champion=True, respawn=8, leash=26)
     MONSTERS[f"pit_champion_{_t}"] = _c
 
+# Offshore Isles: rare level 25-35 sea monsters with richer loot
+_ISLE_LOOT = [("sea_pearl", 0.35), ("hp_potion", 0.3), ("black_pearl", 0.03), ("ring_vampire", 0.03), ("broodsilk_cloak", 0.04), ("wraith_staff", 0.03),
+              ("bloodthorn_bow", 0.03), ("golemstone_plate", 0.03), ("soulreaver_blade", 0.015)]
+for _k, _b, _l, _n, _x in [("reef_crawler", "cave_crawler", 27, "Reefback Crawler", {}), ("drowned_corsair", "skeleton", 30, "Drowned Corsair", {}),
+                           ("tidecursed_wraith", "shadow_wraith", 33, "Tidecursed Wraith", {}), ("coral_colossus", "stone_golem", 35, "Coral Colossus", {}),
+                           ("captain_blackbrine", "death_knight", 35, "Captain Blackbrine", dict(boss=True, respawn=420, model_scale=1.35))]:
+    _c = _pit(_b, _l)
+    _c.pop("base")
+    _c.update({"name": _n, "respawn": 70, "leash": 20, "isle": True, "loot": list(_ISLE_LOOT), **_x})
+    if _x.get("boss"):
+        _c.update(hp=_c["hp"] * 6, xp=_c["xp"] * 6, dmg=[round(d * 1.3) for d in _c["dmg"]], gold_mult=6, radius=round(_c["radius"] * 1.3, 2),
+                  loot=_ISLE_LOOT + [("black_pearl", 0.5), ("ring_ancients", 0.12), ("dreadknight_helm", 0.25), ("stormcaller_bow", 0.2), ("void_staff", 0.2)])
+    MONSTERS[_k] = _c
+
 # Gold scales with monster level: [lo, hi] = GOLD_SCALE * level^GOLD_EXP
 GOLD_SCALE, GOLD_EXP = (2.0, 5.0), 1.45
 for _m in MONSTERS.values():
@@ -378,7 +397,21 @@ NPCS = {
     "v3": dict(name="Tobin", role="Child of Titus", town="semel", pos=[95, 186], kind="child", ambient=True),
     "v4": dict(name="Wren the Weaver", role="Villager", town="elderglen", pos=[985, 230], kind="villager", ambient=True),
     "v5": dict(name="Moss", role="Elderglen Forester", town="elderglen", pos=[1020, 215], kind="villager", ambient=True),
+    # Saltmere Harbor + Offshore Isles (global coords)
+    "marta": dict(name="Marta Brine", role="Fishmonger", town="harbor", pos=[1070, 577], kind="fishmonger", merchant="harbor_fish", glob=True),
+    "coralie": dict(name="Sister Coralie", role="Healer", town="harbor", pos=[1090, 588], kind="healer", healer=True, glob=True),
+    "trunk_harbor": dict(name="Saltmere Storage Trunk", role="Account Storage", town="harbor", pos=[1088, 575], kind="trunk", storage=True, glob=True),
+    "ws_harbor": dict(name="Saltmere Waystone", role="Waystone · Fast Travel", town="harbor", pos=[1080, 571], kind="waystone", waystone=True, glob=True),
+    "odo": dict(name="Ferryman Odo", role="Ferry to the Offshore Isles", town="harbor", pos=[1086, 650], kind="sailor", ferry="isles", glob=True),
+    "kell": dict(name="Bosun Kell", role="Ferry to Saltmere Harbor", town="isles", pos=[1003, 771], kind="sailor", ferry="harbor", glob=True),
+    "v8": dict(name="Pell", role="Saltmere Fisher", town="harbor", pos=[1076, 600], kind="villager", ambient=True, glob=True),
+    "chest_thorns": dict(name="Barnacled Chest", role="Sunken Treasure", town="isles", pos=[1010, 826], kind="chest", chest=34, glob=True),
+    "chest_atoll": dict(name="Corsair's Hoard", role="Pirate Treasure", town="isles", pos=[1240, 864], kind="chest", chest=38, glob=True),
+    "chest_spire": dict(name="Drowned Reliquary", role="Ancient Treasure", town="isles", pos=[764, 876], kind="chest", chest=36, glob=True),
 }
+FERRY_COST = 1000
+FERRY_DEST = {"isles": (1000.0, 777.0), "harbor": (1080.0, 612.0)}
+CHEST_COOLDOWN = 900
 
 MERCHANTS = {
     "semel_arms": dict(name="Brannoc's Forge", stock=[("leather_belt", -1), ("iron_sword", 5), ("oak_staff", -1), ("hunting_bow", -1), ("ember_staff", 2), ("wooden_shield", -1),
@@ -399,6 +432,7 @@ MERCHANTS = {
     "sun_curios": dict(name="Lysandra's Curios", stock=[("ring_vigor", -1), ("ring_focus", -1), ("ring_vampire", 2), ("cultist_amulet", 3), ("amulet_dawn", 2),
                                                        ("fiendhide_boots", 1), ("soulreaver_blade", 1), ("void_staff", 1), ("stormcaller_bow", 1)]),
     "elder_goods": dict(name="Fenn's Provisions", stock=[("hp_potion", -1), ("mp_potion", -1)]),
+    "harbor_fish": dict(name="Brine & Barrel Fishmongers", stock=[("grilled_trout", -1), ("smoked_eel", -1), ("salted_cod", -1), ("hp_potion", -1), ("mp_potion", -1)]),
 }
 SELL_RATIO = 0.4
 RESTOCK_SECS = 300

@@ -21,14 +21,14 @@ function gableRoof(w, d, h, m) {
 function semelHouse(b) {
   const g = new THREE.Group();
   const big = b.kind === "hall" || b.kind === "chapel";
-  const iron = b.style === "iron";
-  const wh = big ? 5.2 : 3.6, plaster = M(iron ? (b.kind === "smithy" ? "#5e5c58" : "#807d76") : b.kind === "smithy" ? "#8a7d6a" : "#cdbb93"), beam = M(iron ? "#2a2826" : "#3b2a1c"), stone = M(iron ? "#4e4b47" : "#6d675e");
+  const iron = b.style === "iron", hb = b.style === "harbor";
+  const wh = big ? 5.2 : 3.6, plaster = M(hb ? "#e4ddcc" : iron ? (b.kind === "smithy" ? "#5e5c58" : "#807d76") : b.kind === "smithy" ? "#8a7d6a" : "#cdbb93"), beam = M(hb ? "#3a4652" : iron ? "#2a2826" : "#3b2a1c"), stone = M(hb ? "#8a8478" : iron ? "#4e4b47" : "#6d675e");
   box(b.w, 0.8, b.d, stone, 0, 0.4, 0, g);
   box(b.w - 0.2, wh, b.d - 0.2, plaster, 0, 0.8 + wh / 2, 0, g);
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) box(0.35, wh, 0.35, beam, sx * (b.w / 2 - 0.1), 0.8 + wh / 2, sz * (b.d / 2 - 0.1), g);
   for (const sz of [-1, 1]) { box(b.w, 0.3, 0.3, beam, 0, 0.8 + wh, sz * (b.d / 2 - 0.05), g); box(b.w, 0.22, 0.25, beam, 0, 0.8 + wh * 0.5, sz * (b.d / 2 - 0.05), g); }
   for (let x = -b.w / 2 + 2; x < b.w / 2 - 1; x += 2.2) for (const sz of [-1, 1]) { const br = box(0.18, wh * 0.55, 0.2, beam, x, 0.8 + wh * 0.26, sz * (b.d / 2 - 0.02), g); br.rotation.z = 0.6; }
-  const roof = gableRoof(b.w, b.d, big ? 3.6 : 2.6, M(iron ? "#2e3640" : b.kind === "chapel" ? "#3d4a5a" : "#5a2e22"));
+  const roof = gableRoof(b.w, b.d, big ? 3.6 : 2.6, M(hb ? (b.kind === "hall" ? "#7a3a2a" : "#2e5a72") : iron ? "#2e3640" : b.kind === "chapel" ? "#3d4a5a" : "#5a2e22"));
   roof.position.y = 0.8 + wh; g.add(roof);
   const win = M("#ffcf7a", { emissive: WARM, emissiveIntensity: 1.4 });
   for (let x = -b.w / 2 + 1.6; x < b.w / 2 - 1; x += 2.6) for (const sz of [-1, 1]) {
@@ -40,7 +40,8 @@ function semelHouse(b) {
   else if (b.kind !== "chapel") cyl(0.35, 0.4, 2, 5, stone, -b.w / 4, 0.8 + wh + 1.6, -b.d / 4, g);
   if (b.kind === "chapel") { box(2.4, 6, 2.4, M("#a99a7c"), 0, 0.8 + wh + 2.6, -b.d / 2 + 1.5, g); cone(2.0, 3.5, 4, M("#3d4a5a"), 0, 0.8 + wh + 7.3, -b.d / 2 + 1.5, g).rotation.y = Math.PI / 4; }
   if (b.name) { const s = box(2.2, 0.8, 0.12, M("#4a3020"), 0, 3.6, b.d / 2 + 0.45, g); s.name = "sign"; }
-  if (b.kind === "hall") for (const x of [-3, 3]) box(0.9, 2.4, 0.06, M("#7a1f1f"), x, 3.2, b.d / 2 + 0.1, g);
+  if (b.kind === "hall") for (const x of [-3, 3]) box(0.9, 2.4, 0.06, M(hb ? "#2a5a7a" : "#7a1f1f"), x, 3.2, b.d / 2 + 0.1, g);
+  if (hb && b.kind === "shop") { for (let i = 0; i < 3; i++) { const f = fish(M("#9ab0b8", { metalness: 0.4, roughness: 0.4 })); f.position.set(-1 + i, 3.1, b.d / 2 + 0.5); f.rotation.z = Math.PI / 2; g.add(f); } }
   return g;
 }
 
@@ -85,6 +86,42 @@ function ruinBuilding(b) {
   return g;
 }
 
+function fish(m) {
+  const f = new THREE.Group(), body = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), m); body.scale.set(1.8, 0.7, 0.45); f.add(body);
+  const tail = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.3, 4), m); tail.rotation.z = Math.PI / 2; tail.position.x = -0.48; tail.scale.set(1, 1, 0.3); f.add(tail);
+  return f;
+}
+function hull(g, L, W, wood, trim) {
+  const sh = new THREE.Shape(); sh.moveTo(-L / 2, 0); sh.quadraticCurveTo(-L / 2, W / 2, -L / 6, W / 2); sh.lineTo(L / 4, W / 2); sh.quadraticCurveTo(L / 2, W / 3, L / 2 + 0.4, 0);
+  sh.quadraticCurveTo(L / 2, -W / 3, L / 4, -W / 2); sh.lineTo(-L / 6, -W / 2); sh.quadraticCurveTo(-L / 2, -W / 2, -L / 2, 0);
+  const geo = new THREE.ExtrudeGeometry(sh, { depth: 0.9, bevelEnabled: true, bevelSize: 0.25, bevelThickness: 0.3, bevelSegments: 2 }); geo.rotateX(Math.PI / 2); geo.translate(0, 0.55, 0);
+  const h = new THREE.Mesh(geo, wood); h.scale.y = 1; g.add(h);
+  box(L * 0.8, 0.1, W * 0.8, M("#7a5a3a"), 0, 0.42, 0, g);
+  box(L * 0.85, 0.12, 0.12, trim, 0, 0.62, W / 2 + 0.05, g); box(L * 0.85, 0.12, 0.12, trim, 0, 0.62, -W / 2 - 0.05, g);
+}
+function caveMouth(g, p) {
+  const rock = M("#5a554d"), dark = M("#3e3a35"), moss = M("#4a5a32");
+  const back = new THREE.Mesh(new THREE.DodecahedronGeometry(6.2, 1), rock); back.scale.set(1.25, 0.85, 0.9); back.position.set(0, 1.4, -6.5); g.add(back);
+  for (const sx of [-1, 1]) {
+    const cheek = new THREE.Mesh(new THREE.DodecahedronGeometry(2.6, 1), dark); cheek.scale.set(0.9, 1.5, 1.2); cheek.position.set(sx * 4.1, 1.8, -2.6); cheek.rotation.set(0.2, sx * 0.4, sx * 0.15); g.add(cheek);
+    const boulder = new THREE.Mesh(new THREE.DodecahedronGeometry(1.1, 0), rock); boulder.position.set(sx * 4.9, 0.5, -0.4); boulder.rotation.y = sx; g.add(boulder);
+  }
+  const lintel = new THREE.Mesh(new THREE.DodecahedronGeometry(2.4, 1), rock); lintel.scale.set(2.0, 0.75, 1.1); lintel.position.set(0, 4.6, -2.6); g.add(lintel);
+  const mossCap = new THREE.Mesh(new THREE.DodecahedronGeometry(2.2, 1), moss); mossCap.scale.set(2.1, 0.35, 1.0); mossCap.position.set(0, 5.6, -2.9); g.add(mossCap);
+  const arch = new THREE.Shape(); arch.moveTo(-2.3, 0); arch.lineTo(-2.3, 2.2); arch.quadraticCurveTo(-2.1, 4.0, 0, 4.1); arch.quadraticCurveTo(2.1, 4.0, 2.3, 2.2); arch.lineTo(2.3, 0); arch.lineTo(-2.3, 0);
+  const hole = new THREE.Mesh(new THREE.ShapeGeometry(arch, 10), new THREE.MeshBasicMaterial({ color: "#020101" })); hole.scale.set(1.15, 1.1, 1); hole.position.set(0, -0.05, -1.0); g.add(hole);
+  const tunnel = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 1.6, 5, 12, 1, true, -Math.PI / 2, Math.PI), new THREE.MeshBasicMaterial({ color: "#030202", side: THREE.BackSide }));
+  tunnel.rotation.x = Math.PI / 2; tunnel.position.set(0, 0.5, -3.7); g.add(tunnel);
+  for (let i = 0; i < 4; i++) { const st = box(4.2 - i * 0.5, 0.25, 0.9, M("#4a463f"), 0, -0.1 - i * 0.22, -0.4 - i * 0.85, g); st.rotation.x = 0.04; }
+  for (let i = 0; i < 6; i++) { const r = new THREE.Mesh(new THREE.DodecahedronGeometry(0.35 + (i % 3) * 0.18, 0), dark); r.position.set((i - 2.5) * 1.6, 0.15, 1.2 + (i % 2) * 0.8); g.add(r); }
+  for (const sx of [-1, 1]) {
+    cyl(0.07, 0.09, 1.9, 5, M("#3a2a1a"), sx * 2.85, 0.95, -0.3, g);
+    const f = cone(0.2, 0.5, 6, M("#ffb347", { emissive: "#ff6a00", emissiveIntensity: 3, transparent: true, opacity: 0.9 }), sx * 2.85, 2.1, -0.3, g); f.name = "flame";
+  }
+  const pl = new THREE.PointLight("#ff8a3a", 12, 10, 1.6); pl.position.set(0, 2.2, 1.6); pl.name = "flicker"; g.add(pl);
+  const fog = new THREE.Mesh(new THREE.CircleGeometry(2.0, 16), new THREE.MeshBasicMaterial({ color: "#1a1512", transparent: true, opacity: 0.55, depthWrite: false })); fog.rotation.x = -Math.PI / 2; fog.position.set(0, 0.06, -0.6); g.add(fog);
+  g.rotation.y = Math.atan2(p.face[0], p.face[1]);
+}
 function prop(p, terrain, lights) {
   const g = new THREE.Group();
   const st = M("#77726a"), wood = M("#4e3826"), iron = M("#2e2e30", { metalness: 0.6, roughness: 0.4 });
@@ -162,6 +199,16 @@ function prop(p, terrain, lights) {
       break; }
     case "pillar": { cyl(0.55, 0.65, p.h, 8, M("#77736a"), 0, p.h / 2, 0, g); box(1.4, 0.4, 1.4, M("#6a665c"), 0, 0.2, 0, g); break; }
     case "portal": {
+      if (p.face) { caveMouth(g, p); break; }
+      if (p.z > 0) {
+        const rock = M("#3e3a35");
+        for (let i = 0; i < 7; i++) { const a = (i / 6) * Math.PI; const r = new THREE.Mesh(new THREE.DodecahedronGeometry(1.0 + (i % 2) * 0.3, 0), rock); r.position.set(Math.cos(a) * 2.6, Math.sin(a) * 3.2, -0.6); g.add(r); }
+        for (let i = 0; i < 4; i++) box(3.4, 0.3, 0.8, M("#55504a"), 0, 0.15 + i * 0.35, -1 - i * 0.7, g);
+        const shaft = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 2.6, 14, 16, 1, true), new THREE.MeshBasicMaterial({ color: "#fff0c8", transparent: true, opacity: 0.12, side: THREE.DoubleSide, depthWrite: false }));
+        shaft.position.set(0, 7, -1.5); g.add(shaft);
+        const pl = new THREE.PointLight("#ffe8b0", 22, 12, 1.4); pl.position.set(0, 4, -1); g.add(pl);
+        break;
+      }
       const ring = new THREE.Mesh(new THREE.TorusGeometry(1.6, 0.16, 8, 32), M("#8a6aff", { emissive: "#7a4aff", emissiveIntensity: 2.4 }));
       ring.rotation.x = -Math.PI / 2; ring.position.y = 0.12; ring.name = "spin"; g.add(ring);
       const disc = new THREE.Mesh(new THREE.CircleGeometry(1.5, 32), new THREE.MeshBasicMaterial({ color: "#6a3aff", transparent: true, opacity: 0.45, depthWrite: false }));
@@ -183,9 +230,37 @@ function prop(p, terrain, lights) {
       box(4, 0.6, 4, stn, 0, 0.3, 0, g); box(2.2, 1.2, 2, stn, 0, 1.2, 0, g); box(0.5, 4.5, 2.4, stn, 0.9, 2.8, 0, g);
       for (const sz of [-1.1, 1.1]) { box(1.8, 0.4, 0.3, stn, 0, 2.0, sz, g); cone(0.2, 1.2, 4, gold, 0.9, 5.6, sz, g); }
       box(0.15, 1, 1, M("#b060ff", { emissive: "#8a3aff", emissiveIntensity: 2 }), 0.62, 4.2, 0, g).name = "pulse"; break; }
+    case "dock": {
+      const plank = M("#6a4c30"), post = M("#3e2c1c");
+      const along = p.d > p.w, L = along ? p.d : p.w, Wd = along ? p.w : p.d;
+      for (let i = 0; i < L / 0.6; i++) { const b = box(along ? Wd : 0.55, 0.12, along ? 0.55 : Wd, M(i % 3 ? "#6a4c30" : "#5e4228"), along ? 0 : -L / 2 + i * 0.6 + 0.3, 0.5, along ? -L / 2 + i * 0.6 + 0.3 : 0, g); b.receiveShadow = true; }
+      for (let i = 0; i <= L / 3; i++) for (const s of [-1, 1]) { const o = -L / 2 + i * 3; cyl(0.16, 0.18, 2.6, 6, post, along ? s * (Wd / 2 - 0.1) : o, -0.6, along ? o : s * (Wd / 2 - 0.1), g); }
+      for (const s of [-1, 1]) box(along ? 0.12 : L, 0.1, along ? L : 0.12, plank, along ? s * (Wd / 2) : 0, 1.3, along ? 0 : s * (Wd / 2), g);
+      g.position.set(p.x, 0, p.z); return g; }
+    case "boat": case "ferry": {
+      const big = p.kind === "ferry", wood = M(big ? "#5a3a22" : ["#6a4a2a", "#4a5a6a", "#7a3a2a"][Math.floor(p.x) % 3]), trim = M(big ? "#c9a24e" : "#e4ddcc");
+      hull(g, big ? 9 : 4.6, big ? 3.2 : 1.8, wood, trim);
+      if (big) {
+        cyl(0.14, 0.18, 7, 6, M("#3e2c1c"), 0.6, 4, 0, g);
+        const sail = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 4.2, 4, 4), M("#e8dcc0", { side: THREE.DoubleSide })); sail.position.set(0.6, 4.6, 0); sail.rotation.y = Math.PI / 2; sail.name = "sail"; g.add(sail);
+        box(2.2, 1.0, 2.0, M("#4a3020"), -2.6, 1.0, 0, g); lantern(WARM, 4.6, 1.4, 0);
+      } else { for (const s of [-1, 1]) { const oar = cyl(0.04, 0.04, 2.4, 4, M("#7a5a3a"), 0, 0.7, s * 1.0, g); oar.rotation.x = s * 1.1; } }
+      g.rotation.y = -(p.rot || 0); g.position.set(p.x, -0.6, p.z); g.name = "bob"; return g; }
+    case "wreck": {
+      const wood = M("#3a3026");
+      hull(g, 8, 3, wood, M("#2a221a")); g.children.forEach((c) => { c.rotation.z += 0.0; });
+      cyl(0.14, 0.18, 4.5, 6, wood, 0.8, 2.2, 0, g).rotation.z = 0.5;
+      for (let i = 0; i < 5; i++) box(0.2, 1.4, 0.2, wood, -3 + i * 1.3, 1.2, 1.4, g).rotation.x = 0.3;
+      g.rotation.set(0.25, -(p.rot || 0), 0.18); g.position.set(p.x, terrain.height(p.x, p.z) - 0.2, p.z); return g; }
+    case "fish_rack": {
+      for (const sx of [-1.2, 1.2]) cyl(0.07, 0.08, 2.2, 5, wood, sx, 1.1, 0, g);
+      box(2.6, 0.08, 0.08, wood, 0, 2.1, 0, g);
+      for (let i = 0; i < 5; i++) { const f = fish(M(["#9ab0b8", "#b0a080", "#8a9aa0"][i % 3], { metalness: 0.3, roughness: 0.5 })); f.position.set(-1 + i * 0.5, 1.75, 0); f.rotation.z = Math.PI / 2; g.add(f); }
+      break; }
+    case "crates": { for (let i = 0; i < 3; i++) { const c = box(0.9, 0.9, 0.9, M(i % 2 ? "#7a5a36" : "#6a4a2a"), (i - 1) * 0.6, 0.45 + (i === 1 ? 0.9 : 0), (i % 2) * 0.3, g); c.rotation.y = i * 0.4; } break; }
     default: return null;
   }
-  g.position.set(p.x, terrain.height(p.x, p.z), p.z);
+  g.position.set(p.x, p.dock ? 0.55 : terrain.height(p.x, p.z), p.z);
   return g;
 }
 
@@ -196,7 +271,7 @@ export function buildStructures(world, terrain, scene) {
     const town = world.towns[b.town || (b.style === "semel" ? "semel" : "elderglen")] || world.towns.elderglen;
     const dx = town[0] - b.x, dz = town[1] - b.z, side = Math.abs(dx) > Math.abs(dz);
     const bb = b.style !== "ruin" && side ? { ...b, w: b.d, d: b.w } : b;
-    const g = b.style === "semel" || b.style === "iron" ? semelHouse(bb) : b.style === "elder" || b.style === "sun" ? elderHut(bb) : ruinBuilding(bb);
+    const g = b.style === "semel" || b.style === "iron" || b.style === "harbor" ? semelHouse(bb) : b.style === "elder" || b.style === "sun" ? elderHut(bb) : ruinBuilding(bb);
     if (b.style !== "ruin") g.rotation.y = side ? (dx > 0 ? Math.PI / 2 : -Math.PI / 2) : (dz > 0 ? 0 : Math.PI);
     g.position.set(b.x, terrain.height(b.x, b.z) - 0.1, b.z);
     root.add(g);
@@ -215,7 +290,7 @@ export function buildStructures(world, terrain, scene) {
     const g = prop(p, terrain, lights);
     if (g) { root.add(g); g.traverse((o) => { if (o.name) animated.push(o); }); }
   }
-  for (const [town, style] of [["semel", "semel"], ["elderglen", "elder"], ["ironhold", "semel"], ["sunhollow", "elder"]]) {
+  for (const [town, style] of [["semel", "semel"], ["elderglen", "elder"], ["ironhold", "semel"], ["sunhollow", "elder"], ["harbor", "semel"]]) {
     if (!world.towns[town]) continue;
     const [x, z] = world.towns[town];
     const m = new THREE.Mesh(new THREE.PlaneGeometry(44, 44), new THREE.MeshStandardMaterial({ map: plazaTexture(style), roughness: 0.9, polygonOffset: true, polygonOffsetFactor: -2 }));
@@ -240,5 +315,7 @@ export function animateStructures(list, t) {
     else if (o.name === "pulse") o.material.emissiveIntensity = 1 + Math.sin(t * 2) * 0.6;
     else if (o.name === "spin") o.rotation.z = t * 0.8;
     else if (o.name === "ember") o.material.emissiveIntensity = 1.6 + Math.sin(t * 5) * 0.6;
+    else if (o.name === "bob") { o.position.y = -0.6 + Math.sin(t * 1.3 + o.position.x) * 0.12; o.rotation.z = Math.sin(t * 1.1 + o.position.z) * 0.05; }
+    else if (o.name === "sail") o.scale.x = 1 + Math.sin(t * 1.7) * 0.04;
   }
 }

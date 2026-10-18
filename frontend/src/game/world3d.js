@@ -70,7 +70,19 @@ export class Terrain {
   coast(x, z) {
     const u = x - (this.w.ox || 0), v = z - (this.w.oz || 0), qx = Math.abs(u - 800) - 720, qy = Math.abs(v - 200) - 120;
     const d = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - 150;
-    return d + 26 * Math.sin(u * 0.0105 + v * 0.006) + 16 * Math.sin(u * 0.023 - v * 0.017 + 1.7) + 8 * Math.sin(u * 0.057 + v * 0.049 + 0.6) + 4 * Math.sin(u * 0.13 - v * 0.11 + 2.1);
+    const main = d + 26 * Math.sin(u * 0.0105 + v * 0.006) + 16 * Math.sin(u * 0.023 - v * 0.017 + 1.7) + 8 * Math.sin(u * 0.057 + v * 0.049 + 0.6) + 4 * Math.sin(u * 0.13 - v * 0.11 + 2.1);
+    return Math.min(main, this.isle(x, z));
+  }
+  isle(x, z) {
+    const I = this.w.isles; if (!I) return 999;
+    const wb = 4 * Math.sin(x * 0.09 + z * 0.07) + 2.5 * Math.sin(x * 0.21 - z * 0.17 + 1.3);
+    let d = 999;
+    for (const i of I) d = Math.min(d, Math.hypot(x - i.x, z - i.z) - i.r + wb);
+    for (const [a, b] of this.w.isle_bars || []) {
+      const A = I[a], B = I[b], dx = B.x - A.x, dz = B.z - A.z, t = Math.max(0, Math.min(1, ((x - A.x) * dx + (z - A.z) * dz) / (dx * dx + dz * dz)));
+      d = Math.min(d, Math.hypot(x - A.x - t * dx, z - A.z - t * dz) - 8 + wb * 0.15);
+    }
+    return d;
   }
   height(x, z) {
     if (z > this.w.oh - 3) return this.caveHeight(x, z);
@@ -86,6 +98,7 @@ export class Terrain {
     h *= smooth(1, 14, rd) * 0.85 + 0.15 * (rd < 0 ? 0 : 1);
     if (rd < 1) h *= 0.15;
     h *= this.townFactor(x, z);
+    if (h < 0) h = -0.3 * (1 - Math.exp(h / 0.3));
     if (sd < 7) h = mix(h, mix(-1.0, h, smooth(1.5, 7, sd)), smooth(0.5, 3.5, rd));
     const lk = this.lake(x, z);
     if (lk < 1.4) h = mix(-1.3, h, smooth(0.8, 1.4, lk));
@@ -387,10 +400,43 @@ function grassTexture() {
   return t;
 }
 
+// shore-distance field baked once; the sea shader rolls foam bands toward the beaches with it
+function seaMaterial(world, terrain) {
+  const S = 4, tw = Math.ceil(world.w / S), th = Math.ceil(world.oh / S), data = new Uint8Array(tw * th * 4);
+  for (let j = 0; j < th; j++) for (let i = 0; i < tw; i++) {
+    const cd = terrain.coast(i * S + S / 2, j * S + S / 2), k = (j * tw + i) * 4;
+    data[k] = Math.max(0, Math.min(255, (cd + 8) * 4)); data[k + 3] = 255;
+  }
+  const tex = new THREE.DataTexture(data, tw, th, THREE.RGBAFormat); tex.magFilter = tex.minFilter = THREE.LinearFilter; tex.needsUpdate = true;
+  const mat = new THREE.MeshStandardMaterial({ color: "#16465e", roughness: 0.12, metalness: 0.35, transparent: true, opacity: 0.9, emissive: "#06202c" });
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.uShore = { value: tex }; sh.uniforms.uSize = { value: new THREE.Vector2(tw * S, th * S) }; sh.uniforms.uTime = windUniform;
+    sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec2 vSea;")
+      .replace("#include <begin_vertex>", "#include <begin_vertex>\nvSea = (modelMatrix * vec4(position, 1.0)).xz;");
+    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec2 vSea;\nuniform sampler2D uShore;\nuniform vec2 uSize;\nuniform float uTime;")
+      .replace("#include <color_fragment>", `#include <color_fragment>
+        vec2 suv = vSea / uSize;
+        float cd = (suv.x < 0.0 || suv.y < 0.0 || suv.x > 1.0 || suv.y > 1.0) ? 60.0 : texture2D(uShore, suv).r * 63.75 - 8.0;
+        float near = 1.0 - smoothstep(0.0, 16.0, cd);
+        float wob = sin(vSea.x * 0.11 + vSea.y * 0.07) * 1.2 + sin(vSea.x * 0.031 - vSea.y * 0.047 + uTime * 0.3) * 1.8;
+        float ph = cd * 0.55 + uTime * 1.25 + wob;
+        float brk = 0.6 + 0.4 * sin(vSea.x * 0.37 + vSea.y * 0.29 + uTime * 0.5);
+        float crest = smoothstep(0.955, 0.995, sin(ph)) * near * brk;
+        float run = sin(uTime * 1.25 + wob);
+        float swash = smoothstep(-3.2, -2.2, cd) * (1.0 - smoothstep(-1.6 + run * 1.2, -0.6 + run * 1.2, cd)) * (0.35 + 0.3 * run);
+        float foam = clamp(crest * 0.55 + swash, 0.0, 0.8);
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.13, 0.36, 0.4), near * 0.45);
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.95, 0.96), foam);
+        diffuseColor.a = mix(diffuseColor.a, 0.97, foam);`)
+      .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\ntotalEmissiveRadiance += vec3(0.12, 0.14, 0.15) * foam;");
+  };
+  return mat;
+}
+
 export function buildWater(world, terrain, scene) {
   const mat = new THREE.MeshStandardMaterial({ color: "#1d3a3f", roughness: 0.08, metalness: 0.3, transparent: true, opacity: 0.86, emissive: "#0a1c20" });
   if (world.ox) {
-    const E = 2500, sea = new THREE.Mesh(new THREE.PlaneGeometry(world.w + E * 2, world.oh - 2 + E), new THREE.MeshStandardMaterial({ color: "#16465e", roughness: 0.12, metalness: 0.35, transparent: true, opacity: 0.9, emissive: "#06202c" }));
+    const E = 2500, sea = new THREE.Mesh(new THREE.PlaneGeometry(world.w + E * 2, world.oh - 2 + E), seaMaterial(world, terrain));
     sea.rotation.x = -Math.PI / 2; sea.position.set(world.w / 2, -0.55, (world.oh - 2 - E) / 2); sea.receiveShadow = true; scene.add(sea);
   }
   for (const s of world.streams) {

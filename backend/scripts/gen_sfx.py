@@ -40,6 +40,7 @@ S = {
     "moonbeam": ("ethereal moonbeam spell, shimmering celestial hum with soft crystalline chimes and a gentle airy whoosh of pale light, magical, no electric crackle", 1.4),
     "legendary": ("rare legendary treasure drop, radiant magical chime with shimmering bells and a soft heavenly choir swell", 2.2),
     "dash": ("fast heavy armored footsteps sprinting charge with cloth whoosh", 0.8),
+    "surf": ("gentle ocean waves rolling onto a sandy beach and washing back, steady seamless loop, calm surf ambience, no seagulls, no wind, no music", 20.0),
 }
 
 

@@ -6,9 +6,42 @@ W, H = 1600, 600
 OH = 400
 # the hand-authored layout above lives in "local" coords; at load it is placed on a larger island with ocean around it
 OX, OZ = 160, 160
+OZS = 400  # southern ocean margin (room for the Offshore Isles)
 LW, LH, LOH = W, H, OH
-GW, GOH = LW + 2 * OX, LOH + 2 * OZ
+GW, GOH = LW + 2 * OX, LOH + OZ + OZS
 GH = GOH + (LH - LOH)
+OLD_GOH = LOH + 2 * OZ
+# Offshore Isles + Saltmere Harbor are authored directly in global coords
+ISLES = [dict(name="Isle of Thorns", x=1000.0, z=800.0, r=34.0), dict(name="Wrecker's Atoll", x=1250.0, z=850.0, r=27.0),
+         dict(name="Drowned Spire", x=770.0, z=865.0, r=25.0)]
+ISLE_BARS = [(0, 1), (0, 2)]
+HARBOR = (1080.0, 582.0)
+HARBOR_R = (44, 28)
+HARBOR_ROAD = [(1080, 548), (1090, 520), (1098, 470), (1094, 420), (1098, 372)]
+ISLE_LANDING = (1000.0, 776.0)
+DOCKS = [dict(x=1080.0, z=630.0, w=4.0, d=46.0), dict(x=1080.0, z=651.0, w=22.0, d=4.0), dict(x=1000.0, z=757.0, w=4.0, d=28.0)]
+
+
+def _seg(px, pz, ax, az, bx, bz):
+    dx, dz = bx - ax, bz - az
+    t = np.clip(((px - ax) * dx + (pz - az) * dz) / (dx * dx + dz * dz), 0, 1)
+    return np.hypot(px - ax - t * dx, pz - az - t * dz)
+
+
+def isle_sd(x, z):
+    w = 4 * np.sin(x * 0.09 + z * 0.07) + 2.5 * np.sin(x * 0.21 - z * 0.17 + 1.3)
+    d = np.full(np.shape(x), 999.0) if np.ndim(x) else 999.0
+    for i in ISLES:
+        d = np.minimum(d, np.hypot(x - i["x"], z - i["z"]) - i["r"] + w)
+    for a, b in ISLE_BARS:
+        A, B = ISLES[a], ISLES[b]
+        d = np.minimum(d, _seg(x, z, A["x"], A["z"], B["x"], B["z"]) - 8.0 + w * 0.15)
+    return d
+
+
+def sea(x, z):
+    """global-coords signed distance to any shore (negative = land)"""
+    return np.minimum(coast(x - OX, z - OZ), isle_sd(x, z))
 
 
 _SHIFTED = False
@@ -143,11 +176,11 @@ DUNGEONS = [dict(name="The Titus Barrows", label="The Titus Barrows — beneath 
             dict(name="The Hollow Deep", label="The Hollow Deep — beneath the cave", entry="Hollow Deep", x0=370, z0=452, w=380, h=138),
             dict(name="The Proving Pits", label="The Proving Pits — grinding halls", entry="The Proving Pits", x0=880, z0=478, w=290, h=84)]
 PIT_ENTRY = (722.0, 212.0)
-PORTALS = [dict(id="hollow_in", x=518.0, z=51.0, to=(426.0, 550.0), name="Hollow Deep", msg="You descend into the Hollow Deep..."),
-           dict(id="hollow_out", x=411.0, z=562.0, to=(518.0, 45.0), name="Exit to the surface", msg="You climb back into the daylight."),
-           dict(id="barrow_in", x=BARROW_ENTRY[0], z=BARROW_ENTRY[1], to=(62.0, 468.0), name="The Titus Barrows", msg="You descend the worn stair into the Titus Barrows..."),
-           dict(id="barrow_out", x=50.0, z=468.0, to=(BARROW_ENTRY[0], BARROW_ENTRY[1] + 5), name="Exit to the surface", msg="You climb back up into the light north of Titus."),
-           dict(id="pits_in", x=PIT_ENTRY[0], z=PIT_ENTRY[1], to=(904.0, 520.0), name="The Proving Pits", msg="You descend into the Proving Pits. The horde never stops coming..."),
+PORTALS = [dict(id="hollow_in", x=518.0, z=57.0, face=(0.0, 1.0), to=(426.0, 550.0), name="Hollow Deep", msg="You descend into the Hollow Deep..."),
+           dict(id="hollow_out", x=411.0, z=562.0, to=(518.0, 62.0), name="Exit to the surface", msg="You climb back into the daylight."),
+           dict(id="barrow_in", x=BARROW_ENTRY[0], z=BARROW_ENTRY[1], face=(-1.0, 0.0), to=(62.0, 468.0), name="The Titus Barrows", msg="You descend the worn stair into the Titus Barrows..."),
+           dict(id="barrow_out", x=50.0, z=468.0, to=(BARROW_ENTRY[0] - 4, BARROW_ENTRY[1] + 3), name="Exit to the surface", msg="You climb back up into the light north of Titus."),
+           dict(id="pits_in", x=PIT_ENTRY[0], z=PIT_ENTRY[1], face=(0.0, 1.0), to=(904.0, 520.0), name="The Proving Pits", msg="You descend into the Proving Pits. The horde never stops coming..."),
            dict(id="pits_out", x=893.0, z=520.0, to=(PIT_ENTRY[0], PIT_ENTRY[1] + 5), name="Exit to the surface", msg="You climb out of the Proving Pits.")]
 PIT_TIERS = [(1, ["pit_giant_spider", "pit_skeleton", "pit_orc_warrior", "pit_dark_cultist"]),
              (2, ["pit_forest_troll", "pit_dire_wolf", "pit_broodmother", "pit_shadow_wraith", "pit_cave_crawler"]),
@@ -275,6 +308,7 @@ class World:
             self.spawns.append(dict(monster=m, x=x, z=z, r=r, n=n))
         self._scatter_spawns()
         self._globalize(rnd)
+        self._harbor()
         self.npc_block()
 
     def _globalize(self, rnd):
@@ -284,8 +318,8 @@ class World:
         nb = np.ones((GH, GW), dtype=np.uint8)
         nr = np.full((GH, GW), 99.0, dtype=np.float32)
         zz, xx = np.mgrid[0:GOH, 0:GW]
-        sea = coast(xx - OX + 0.5, zz - OZ + 0.5)
-        nb[:GOH] = (sea > -3).astype(np.uint8)
+        sd = sea(xx + 0.5, zz + 0.5)
+        nb[:GOH] = (sd > -3).astype(np.uint8)
         land = nb[OZ:OZ + LOH, OX:OX + LW]
         nb[OZ:OZ + LOH, OX:OX + LW] = np.maximum(land, b[:LOH])
         nb[GOH:, OX:OX + LW] = b[LOH:]
@@ -320,18 +354,24 @@ class World:
                 d["x0"], d["z0"] = T(d["x0"], d["z0"])
             from game_data import NPCS
             for n in NPCS.values():
-                n["pos"] = list(T(*n["pos"]))
-        dry = lambda x, z, m: coast(x - OX, z - OZ) < -m
+                if not n.get("glob"):
+                    n["pos"] = list(T(*n["pos"]))
+            SAFE_ZONES.append(dict(town="harbor", x=HARBOR[0], z=HARBOR[1], half=SAFE_HALF))
+            SAFE_ZONES.append(dict(town="isles", x=ISLE_LANDING[0], z=ISLE_LANDING[1] + 4, half=7.0, waystone=False))
+            REGIONS.extend([dict(name="Saltmere Harbor", x=HARBOR[0], z=HARBOR[1], r=48, lvl="Safe town"),
+                            ] +
+                           [dict(name=i["name"], x=i["x"], z=i["z"], r=i["r"] + 6, lvl=l) for i, l in zip(ISLES, ["25-30 Offshore", "32-35 (Rare Boss)", "32-35 (Danger)"])])
+        dry = lambda x, z, m: sea(x, z) < -m
         self.trees = [t for t in self.trees if t[1] > GOH or dry(t[0], t[1], 6)]
         self.rocks = [t for t in self.rocks if t[1] > GOH or dry(t[0], t[1], 4)]
         self.bushes = [t for t in self.bushes if t[1] > GOH or dry(t[0], t[1], 5)]
         self.grass = [t for t in self.grass if t[1] > GOH or dry(t[0], t[1], 8)]
         # wild growth on the new outer lands
-        for _ in range(26000):
+        for _ in range(34000):
             x, z = rnd.uniform(5, GW - 5), rnd.uniform(5, GOH - 5)
             if OX - 4 < x < OX + LW + 4 and OZ - 4 < z < OZ + LOH + 4:
                 continue
-            c = coast(x - OX, z - OZ)
+            c = sea(x, z)
             if c > -14 or nb[int(z), int(x)]:
                 continue
             r = rnd.random()
@@ -349,9 +389,81 @@ class World:
                 x, z = gx + rnd.uniform(-20, 20), gz + rnd.uniform(-20, 20)
                 if (OX < x < OX + LW and OZ < z < OZ + LOH) or coast(x - OX, z - OZ) > -20 or not self.walkable(x, z):
                     continue
+                if math.hypot(x - HARBOR[0], z - HARBOR[1]) < 80:
+                    continue
                 lx = min(max(x - OX, 0), LW - 1)
                 opts = next(o for lim, o in SCATTER_BANDS if lx < lim)
                 self.spawns.append(dict(monster=rnd.choice(opts), x=x, z=z, r=12, n=3))
+
+    def _harbor(self):
+        """Saltmere Harbor (5th town) and the Offshore Isles, authored in global coords"""
+        hx, hz = HARBOR
+        rx, rz = HARBOR_R
+        road = catmull(HARBOR_ROAD, 2.0)
+        self.paths.append(dict(w=2.4, hidden=False, pts=road))
+        self._stamp_dist(road, 2.4, 8)
+        rd = self.road_dist
+        def keep(v):
+            x, z = v[0], v[1]
+            if ((x - hx) / (rx + 5)) ** 2 + ((z - hz) / (rz + 5)) ** 2 <= 1:
+                return False
+            xi, zi = int(x), int(z)
+            return not (0 <= xi < W and 0 <= zi < H and rd[zi, xi] < 4.5)
+        self.trees = [v for v in self.trees if keep(v)]
+        self.rocks = [v for v in self.rocks if keep(v)]
+        self.bushes = [v for v in self.bushes if keep(v)]
+        self.grass = [v for v in self.grass if keep(v)]
+        x0, x1, z0, z1 = int(hx - rx - 30), int(hx + rx + 30), 360, int(hz + rz + 8)
+        zz, xx = np.mgrid[z0:z1, x0:x1]
+        area = ((((xx + 0.5 - hx) / (rx + 3)) ** 2 + ((zz + 0.5 - hz) / (rz + 3)) ** 2) <= 1) | (rd[z0:z1, x0:x1] < 3.4)
+        sub = self.blocked[z0:z1, x0:x1]
+        sub[area & (sea(xx + 0.5, zz + 0.5) < -3)] = 0
+        self._ring(HARBOR, rx, rz, [-math.pi / 2, math.pi / 2], "palisade")
+        B = [_rect(1056, 567, 11, 9, "shop", "harbor", town="harbor", name="Brine & Barrel Fishmongers"),
+             _rect(1105, 567, 13, 10, "hall", "harbor", town="harbor", name="The Salty Gull"),
+             _rect(1055, 598, 9, 8, "house", "harbor", town="harbor", name="Harbormaster's Office"),
+             _rect(1106, 599, 8, 8, "house", "harbor", town="harbor"), _rect(1043, 583, 7, 8, "house", "harbor", town="harbor"),
+             _rect(1118, 583, 7, 8, "house", "harbor", town="harbor")]
+        self.buildings += B
+        for bd in B:
+            self._block_rect(bd["x"], bd["z"], bd["w"], bd["d"])
+        P = self.props
+        for (x, z, k, r) in [(hx, hz, "well", 1.3), (1070, 573, "stall", 1.2), (1066, 590, "barrels", 0.8), (1094, 591, "crates", 0.9),
+                             (1067, 606, "fish_rack", 1.0), (1094, 606, "fish_rack", 1.0), (1112, 572, "barrels", 0.8), (1086, 616, "crates", 0.9),
+                             (1072, 626, "crates", 0), (1088, 644, "barrels", 0)]:
+            P.append(dict(kind=k, x=x, z=z))
+            if r:
+                self._disc(x, z, r)
+        for sx in (-1, 1):
+            for sz in (-1, 1):
+                x, z = hx + sx * (SAFE_HALF - 0.5), hz + sz * (SAFE_HALF - 0.5)
+                P.append(dict(kind="lamp", x=x, z=z)); self._disc(x, z, 0.5)
+        for (x, z) in [(1077, 612), (1083, 612), (1076, 650), (1084, 650), (996, 744), (1004, 744)]:
+            P.append(dict(kind="lamp", x=x, z=z, dock=True))
+        for d in DOCKS:
+            P.append(dict(kind="dock", **d))
+            self.blocked[int(d["z"] - d["d"] / 2):int(d["z"] + d["d"] / 2) + 1, int(d["x"] - d["w"] / 2 + 0.5):int(d["x"] + d["w"] / 2 - 0.5) + 1] = 0
+        for (x, z, rot, k) in [(1073, 640, 0.0, "boat"), (1088, 628, 0.15, "boat"), (1080, 659, math.pi / 2, "ferry"), (1066, 662, 0.6, "boat"),
+                               (1100, 646, -0.4, "boat"), (1007, 748, 0.0, "ferry")]:
+            P.append(dict(kind=k, x=x, z=z, rot=rot))
+        rr = random.Random(77)
+        for isle in ISLES:
+            for _ in range(int(isle["r"] * 2.2)):
+                a, dd = rr.uniform(0, 6.283), rr.uniform(0, isle["r"] - 8)
+                x, z = isle["x"] + math.cos(a) * dd, isle["z"] + math.sin(a) * dd
+                if sea(x, z) > -7 or self.blocked[int(z), int(x)] or math.hypot(x - ISLE_LANDING[0], z - ISLE_LANDING[1]) < 8:
+                    continue
+                if rr.random() < 0.55:
+                    self.trees.append([round(x, 1), round(z, 1), rr.choice([0, 2]), round(rr.uniform(0.8, 1.2), 2), round(rr.uniform(0, 6.28), 2)]); self._disc(x, z, 0.6)
+                else:
+                    self.bushes.append([round(x, 1), round(z, 1), round(rr.uniform(0.7, 1.3), 2), 1])
+        P.append(dict(kind="wreck", x=1262, z=838, rot=0.8)); self._disc(1262, 838, 3.0)
+        P.append(dict(kind="wreck", x=760, z=852, rot=-1.1)); self._disc(760, 852, 3.0)
+        P.append(dict(kind="sign", x=1078, z=552))
+        for (m, x, z, r, n) in [("reef_crawler", 988, 812, 11, 5), ("drowned_corsair", 1016, 806, 10, 5), ("reef_crawler", 1124, 826, 6, 2),
+                                ("drowned_corsair", 885, 833, 6, 2), ("drowned_corsair", 1243, 852, 9, 4), ("tidecursed_wraith", 1256, 862, 8, 3),
+                                ("captain_blackbrine", 1250, 848, 2, 1), ("tidecursed_wraith", 768, 864, 9, 4), ("coral_colossus", 778, 874, 7, 2)]:
+            self.spawns.append(dict(monster=m, x=float(x), z=float(z), r=r, n=n))
 
     # ---------- stamping helpers
     def _stamp_dist(self, pts, width, rad):
@@ -410,7 +522,7 @@ class World:
         for (x, z, k) in [(76, 186, "stall"), (104, 186, "stall"), (148, 194, "sign"), (88, 140, "sign"), (936, 216, "sign"),
                           (98, 260, "sign"), (382, 232, "sign"), (620, 228, "sign"), (75, 176, "anvil"), (104, 214, "barrels"),
                           (78, 214, "well"), (986, 196, "stall"), (1014, 196, "stall"), (1003, 226, "moonwell"), (110, 200, "lamp"),
-                          (130, 202, "lamp"), (960, 204, "spirit_lamp"), (1040, 214, "spirit_lamp"), (518, 60, "cave"),
+                          (130, 202, "lamp"), (960, 204, "spirit_lamp"), (1040, 214, "spirit_lamp"),
                           (300, 345, "cave_small"), (560, 150, "standing_ring")]:
             P.append(dict(kind=k, x=x, z=z))
             r = {"stall": 1.2, "anvil": 0.6, "barrels": 0.8, "well": 1.3, "moonwell": 1.6, "cave": 5.0, "sealed_gate": 3.0, "cave_small": 3.0,
@@ -447,7 +559,12 @@ class World:
                 carve(a["x"] + (c["x"] - a["x"]) * t + nx / ln * off, a["z"] + (c["z"] - a["z"]) * t + nz / ln * off, 2.8)
         P = self.props
         for pt in PORTALS:
-            P.append(dict(kind="portal", x=pt["x"], z=pt["z"], name=pt["name"]))
+            P.append(dict(kind="portal", x=pt["x"], z=pt["z"], name=pt["name"], face=pt.get("face")))
+            if pt.get("face"):
+                fx, fz = pt["face"]
+                self._disc(pt["x"] - fx * 6.5, pt["z"] - fz * 6.5, 4.6)
+                for s in (-1, 1):
+                    self._disc(pt["x"] - fx * 2.5 + fz * s * 3.6, pt["z"] - fz * 2.5 - fx * s * 3.6, 1.6)
         for k, rm in enumerate(DUNGEON_ROOMS + PIT_ROOMS + BARROW_ROOMS):
             for i in range(4):
                 a = i * math.pi / 2 + 0.7
@@ -672,4 +789,5 @@ class World:
                     streams=[[[round(a, 1), round(b, 1)] for a, b in s] for s in self.streams], bridges=self.bridges, lakes=LAKES,
                     walls=self.walls, buildings=self.buildings, props=self.props, trees=self.trees, rocks=self.rocks, bushes=self.bushes,
                     grass=self.grass, regions=REGIONS + DUNGEON_ROOMS + PIT_ROOMS + BARROW_ROOMS, dungeons=DUNGEONS, safe_zones=SAFE_ZONES, oh=OH, cave_rocks=self.cave_rocks,
-                    portals=[dict(x=p['x'], z=p['z'], name=p['name']) for p in PORTALS], towns={k: to_global(*v) for k, v in dict(semel=SEMEL, elderglen=ELDER, ironhold=IRON, sunhollow=SUNH).items()})
+                    portals=[dict(x=p['x'], z=p['z'], name=p['name']) for p in PORTALS], isles=ISLES, isle_bars=ISLE_BARS, docks=DOCKS,
+                    towns={**{k: to_global(*v) for k, v in dict(semel=SEMEL, elderglen=ELDER, ironhold=IRON, sunhollow=SUNH).items()}, "harbor": HARBOR})

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { setEnv } from "@/game/rig/tex";
+import WorldPreview from "./WorldPreview";
 import { buildPlayer, buildMonster, buildNpc, animateRig } from "@/game/models";
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -9,9 +10,15 @@ const SETS = {
   monsters: ["skeleton", "goblin_scout", "forest_bandit", "orc_warrior", "dark_cultist", "forest_troll", "crypt_ghoul", "death_knight"],
   monsters2: ["imp", "hollow_shade", "shadow_wraith", "stone_golem", "abyssal_fiend", "forest_wolf", "giant_spider", "bone_colossus"],
   npcs: ["guard", "smith", "merchant", "healer", "druid", "elder", "gilded", "villager", "child"],
+  isles: ["reef_crawler", "drowned_corsair", "tidecursed_wraith", "coral_colossus", "captain_blackbrine", "sailor", "fishmonger", "chest"],
 };
 
 export default function ModelGallery() {
+  if (new URLSearchParams(window.location.search).get("set") === "world") return <WorldPreview />;
+  return <ModelSet />;
+}
+
+function ModelSet() {
   const ref = useRef();
   useEffect(() => {
     const q = new URLSearchParams(window.location.search), set = q.get("set") || "players", dist = Number(q.get("dist") || 9), pitch = Number(q.get("pitch") || 0.35);
@@ -29,14 +36,14 @@ export default function ModelGallery() {
       if (!alive) return;
       const all = SETS[set] || SETS.players, list = q.get("only") ? q.get("only").split(",").map((k) => all[Number(k)]) : all, n = list.length, gap = set.startsWith("monsters") ? 3.2 : 1.6;
       list.forEach((it, i) => {
-        const rig = set === "players" ? buildPlayer(it[0], it[1], data.items) : set === "npcs" ? buildNpc(it) : buildMonster(it);
+        const rig = set === "players" ? buildPlayer(it[0], it[1], data.items) : set === "npcs" || (set === "isles" && ["sailor", "fishmonger", "chest"].includes(it)) ? buildNpc(it) : buildMonster(it);
         rig.root.position.x = (i - (n - 1) / 2) * gap; rig.root.rotation.y = Number(q.get("rot") || 0.35);
         scene.add(rig.root); rigs.push({ rig, a: { moving: q.get("walk") === "1" } });
       });
       const w = (n - 1) * gap; cam.position.set(0, Number(q.get("cy") || 1.2) + Math.sin(pitch) * (dist + w * 0.5), Math.cos(pitch) * (dist + w * 0.5)); cam.lookAt(0, Number(q.get("ly") || 1.1), 0);
     });
     let last = performance.now();
-    const loop = () => { const now = performance.now(), dt = Math.min(0.05, (now - last) / 1000), t = now / 1000; last = now; rigs.forEach(({ rig, a }) => { const an = q.get("anim"); if (an && !(a[an] > 0) && t % 1.6 < 0.05) a[an] = 1; if (q.get("freeze")) a[an] = Number(q.get("freeze")); animateRig(rig, a, dt, t); }); renderer.render(scene, cam); raf = requestAnimationFrame(loop); };
+    const loop = () => { const now = performance.now(), dt = Math.min(0.05, (now - last) / 1000), t = now / 1000; last = now; rigs.forEach(({ rig, a }) => { const an = q.get("anim"); if (an && !(a[an] > 0) && t % 1.6 < 0.05) a[an] = 1; if (q.get("freeze")) a[an] = Number(q.get("freeze")); if (rig.body) animateRig(rig, a, dt, t); }); renderer.render(scene, cam); raf = requestAnimationFrame(loop); };
     loop();
     return () => { alive = false; cancelAnimationFrame(raf); renderer.dispose(); };
   }, []);

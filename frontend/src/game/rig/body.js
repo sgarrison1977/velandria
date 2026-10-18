@@ -182,6 +182,11 @@ function helmet(head, o, hc) {
     mesh(lathe("brim", [[0.001, 0.012], [0.16, 0.005], [0.28, -0.03], [0.3, -0.045], [0.29, -0.05], [0.001, -0.005]], 26), m, 0, hc + 0.1, 0, head);
     mesh(G("hatcone", () => sculpt(new THREE.LatheGeometry([[0.14, 0], [0.13, 0.08], [0.1, 0.18], [0.06, 0.32], [0.025, 0.44], [0.001, 0.5]].map(([r, y]) => new THREE.Vector2(r, y)), 22), (v) => { const t = v.y / 0.5; v.z -= t * t * 0.2; v.y -= t * t * t * 0.06; })), m, 0, hc + 0.1, -0.005, head);
     mesh(cyl(0.142, 0.142, 0.035, 22, true), mat("cloth", o.trim || "#c9a24e"), 0, hc + 0.125, -0.005, head);
+  } else if (h.style === "tricorn") {
+    const m = mat("leather", c);
+    mesh(helmShell(0.138, 0.32), m, 0, hc + 0.01, -0.006, head);
+    for (let i = 0; i < 3; i++) { const a = (i / 3) * Math.PI * 2; mesh(box(0.2, 0.09, 0.016), m, Math.sin(a) * 0.15, hc + 0.1, Math.cos(a) * 0.15, head, -0.5, a, 0); }
+    mesh(torus(0.15, 0.008), mat("metal", "#c9a24e"), 0, hc + 0.06, -0.006, head, Math.PI / 2, 0, 0);
   } else if (h.style === "hood") {
     const m = mat("cloth", c, { side: THREE.DoubleSide });
     mesh(G("hood", () => sculpt(new THREE.SphereGeometry(0.158, 26, 16, Math.PI / 2 + 0.85, Math.PI * 2 - 1.7, 0, Math.PI * 0.78), (v) => { v.y *= 1.12; if (v.z < 0) v.z *= 1.15; })), m, 0, hc + 0.01, -0.012, head);

@@ -149,7 +149,7 @@ input { font-family: inherit; }
 .inv-panel { right: 230px; top: 70px; width: 372px; }
 .char-panel { left: 18px; top: 100px; width: 320px; } .skills-panel { left: 350px; top: 100px; width: 430px; } .quest-panel { left: 18px; top: 100px; width: 380px; }
 .settings { left: 50%; top: 80px; transform: translateX(-50%); width: 480px; animation: none; }
-.worldmap { left: 50%; top: 70px; transform: translateX(-50%); width: min(1500px, 96vw); animation: none; } .worldmap canvas { width: 100%; height: auto; display: block; border: 1px solid #000; }
+.worldmap { left: 50%; top: 60px; transform: translateX(-50%); width: min(1500px, 96vw, calc((100vh - 190px) * 2)); animation: none; } .worldmap canvas { width: 100%; height: auto; display: block; border: 1px solid #000; }
 .map-legend { display: flex; gap: 16px; font-size: 12px; color: var(--muted); margin-top: 8px; flex-wrap: wrap; } .map-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; } .map-legend i.sq { border-radius: 0; border: 1.5px solid #e6c46a; background: none; }
 .merchant { left: 50%; top: 70px; transform: translateX(-50%); width: min(880px, 96vw); animation: none; }
 .dialog { left: 50%; top: 22%; transform: translateX(-50%); width: 400px; animation: none; } .inspect { right: 230px; top: 100px; width: 300px; }

@@ -32,6 +32,11 @@ const MONSTER_BUILD = {
   forest_bandit: () => humanoid({ skin: "#b88466", beard: "#3a2414", beardStyle: "stubble", helm: { style: "hood", color: "#2a2620" }, top: { style: "leather", color: "#3e3226" }, legs: { style: "leather", color: "#2a241c" }, boots: { style: "boot", color: "#2a1f16" }, cape: "#24201a", tatter: true, weapon: "sword", belt: "#5a3a1a", bracers: "#2a1a10" }),
   orc_warrior: () => humanoid({ scale: 1.22, bulk: 1.35, body: "bare", head: "brute", skin: "#5a6c34", hairStyle: "bald", tusks: true, mohawk: "#1a1410", legs: { style: "leather", color: "#2e2418" }, boots: { style: "fur", color: "#3a2a1a" }, pauldrons: "#6a6a6a", bracers: "#3a2416", weapon: "axe", eyes: "#ff3a2a", belt: "#3a2416" }),
   dark_cultist: () => humanoid(robe("#1c1226", { skin: "#8a7a72", faceVoid: true, helm: { style: "hood", color: "#1c1226" }, trim: "#6a2a8a", weapon: "staff", weaponColor: "#2a1a1a", glow: "#b05cff", eyes: "#d07aff" })),
+  reef_crawler: () => spider({ body: "#3a6a6a", abd: "#c86a4a", mark: "#ffd0a0", leg: "#2a4a4a", glow: true, scale: 1.8 }),
+  drowned_corsair: () => humanoid({ body: "bone", skin: "#a8b8a8", head: "skull", top: { style: "rags", color: "#2a3a3a" }, helm: { style: "tricorn", color: "#1a1a1a" }, weapon: "sword", weaponColor: "#6a8a8a", eyes: "#5affd0", cape: "#1a2a2a", tatter: true, belt: "#4a3a1a" }),
+  tidecursed_wraith: () => humanoid(robe("#0a2a30", { scale: 1.2, faceVoid: true, helm: { style: "hood", color: "#0a2a30" }, tatter: true, weapon: "staff", weaponColor: "#1a3a3a", glow: "#3affc8", eyes: "#7affe0", cape: "#06181c" })),
+  coral_colossus: () => humanoid({ scale: 2.2, bulk: 1.7, hunch: true, body: "stone", head: "brute", skin: "#c87a6a", hairStyle: "bald", boots: { style: "bare" }, rocky: true, eyes: "#5affe0", weapon: "club", weaponColor: "#8a4a4a" }),
+  captain_blackbrine: () => humanoid({ scale: 1.35, bulk: 1.2, skin: "#9aaa9a", head: "skull", top: { style: "leather", color: "#1a1a22" }, legs: { style: "leather", color: "#1a1a1a" }, boots: { style: "boot", color: "#120e0a" }, helm: { style: "tricorn", color: "#0e0e0e" }, cape: "#4a0a10", tatter: true, weapon: "sword", weaponColor: "#c9a24e", glow: "#3affc8", eyes: "#3affc8", belt: "#c9a24e", pauldrons: "#c9a24e" }),
   forest_troll: () => humanoid({ scale: 1.75, bulk: 1.5, hunch: true, body: "bare", head: "brute", skin: "#667a64", hair: "#3a4a2a", hairStyle: "long", legs: { style: "leather", color: "#3a2a1a" }, boots: { style: "bare" }, loin: "#3a2a1a", weapon: "club", weaponColor: "#5a4632", tusks: true, eyes: "#ffcf3a", claws: true }),
 };
 export const buildMonster = (type) => MONSTER_BUILD[type]();
@@ -46,6 +51,8 @@ const NPC_BUILD = {
   elder: () => humanoid(robe("#4a3a5a", { skin: "#d0a888", beard: "#ddd", beardStyle: "full", hair: "#ccc", hairStyle: "long", trim: "#c9a24e", weapon: "staff", weaponColor: "#5a4632", glow: "#ffcf7a" })),
   guard: () => humanoid({ skin: "#c8946e", beard: "#3a2414", beardStyle: "stubble", top: { style: "mail", color: "#8a8f96" }, trim: "#7a1f1f", legs: { style: "plate", color: "#8a8f96" }, boots: { style: "plate", color: "#6a6e74" }, gloves: { style: "gauntlet", color: "#8a8f96" }, helm: { style: "nasal", color: "#8a8f96" }, cape: "#7a1f1f", weapon: "spear", off: "shield", shieldKind: "iron", shieldColor: "#7a1f1f", pauldrons: "#8a8f96" }),
   villager: () => humanoid({ skin: pick(["#d0a080", "#c08a6a", "#e0b898", "#9a6a4a"]), top: { style: "tunic", color: pick(["#6a5a3a", "#5a6a4a", "#7a4a3a", "#4a5a6a"]) }, legs: { style: "cloth", color: "#4a3a2a" }, boots: { style: "shoe", color: "#3a2a1a" }, hair: pick(["#4a2a1a", "#8a6a3a", "#2a1a10", "#a8a090"]), hairStyle: pick(["short", "long", "tail"]), beard: Math.random() < 0.4 ? "#4a2a1a" : null, beardStyle: "stubble" }),
+  sailor: () => humanoid({ bulk: 1.1, skin: "#b88466", beard: "#8a8a8a", beardStyle: "full", hair: "#7a7a7a", top: { style: "tunic", color: "#2a4a6a" }, legs: { style: "cloth", color: "#3a3428" }, boots: { style: "boot", color: "#2a1f16" }, helm: { style: "cap", color: "#1e2a3a" }, belt: "#4a3020" }),
+  fishmonger: () => humanoid({ skin: "#d6a888", hair: "#8a4a2a", hairStyle: "tail", top: { style: "tunic", color: "#5a7a7a" }, legs: { style: "cloth", color: "#3a3428" }, boots: { style: "boot", color: "#2a1f16" }, belt: "#e4ddcc", weapon: "dagger" }),
   child: () => humanoid({ scale: 0.6, skin: "#e0b090", top: { style: "tunic", color: "#4a6a8a" }, hair: "#9a6a2a", headScale: 1.25 }),
 };
 function waystone() {
@@ -64,7 +71,17 @@ function trunk() {
   mesh(B(0.22, 0.26, 0.06), gold, 0, 0.72, 0.5, root);
   return { root, kind: "prop", height: 1.6 };
 }
-export const buildNpc = (kind) => kind === "trunk" ? trunk() : kind === "waystone" ? waystone() : (NPC_BUILD[kind] || NPC_BUILD.villager)();
+function chest() {
+  const root = new THREE.Group(), wood = mat("leather", "#4a3018"), iron = mat("metal", "#2e3a3a"), gold = M("#ffd36b", { emissive: "#ffb22e", emissiveIntensity: 1.6 });
+  mesh(B(1.5, 0.75, 0.95), wood, 0, 0.38, 0, root);
+  const lid = mesh(new THREE.CylinderGeometry(0.48, 0.48, 1.5, 12, 1, false, 0, Math.PI), wood, 0, 0.76, -0.05, root); lid.rotation.z = Math.PI / 2; lid.rotation.x = -0.35;
+  for (const x of [-0.55, 0.55]) mesh(B(0.1, 0.8, 1.0), iron, x, 0.4, 0, root);
+  for (let i = 0; i < 7; i++) mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.03, 8), gold, -0.5 + (i % 4) * 0.33, 0.8 + (i > 3 ? 0.05 : 0), 0.1 + (i % 2) * 0.12, root);
+  for (let i = 0; i < 5; i++) mesh(new THREE.DodecahedronGeometry(0.12 + (i % 2) * 0.06, 0), M("#6a8a7a"), Math.cos(i * 1.3) * 0.95, 0.08, Math.sin(i * 1.3) * 0.7, root);
+  const glow = new THREE.PointLight("#ffcf5a", 6, 5, 1.6); glow.position.set(0, 1.2, 0); root.add(glow);
+  return { root, kind: "prop", height: 1.4 };
+}
+export const buildNpc = (kind) => kind === "trunk" ? trunk() : kind === "chest" ? chest() : kind === "waystone" ? waystone() : (NPC_BUILD[kind] || NPC_BUILD.villager)();
 
 const CLASS_LOOK = {
   warrior: { skin: "#c8946e", hair: "#3a2414", hairStyle: "short", beard: "#3a2414", beardStyle: "stubble", top: { style: "tunic", color: "#6a5a48" }, legs: { style: "leather", color: "#3a3028" }, boots: { style: "boot", color: "#3a2a1c" }, bracers: "#4a3020", pauldrons: "#80868e", belt: "#3a2414" },
