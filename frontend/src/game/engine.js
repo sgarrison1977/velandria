@@ -18,11 +18,11 @@ const glowTex = (() => {
   return new THREE.CanvasTexture(c);
 })();
 const sprite = (color, size) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); s.scale.setScalar(size); return s; };
-const AB_SFX = { ignis: "fire", flamma_ventus: "fire", agredi: "arcane", multi_vis_nex: "arcane", radius: "zap", venenum: "poison", tabes_viscera: "poison",
+const AB_SFX = { lunae_lumen_nex: "zap", ignis: "fire", flamma_ventus: "fire", agredi: "arcane", multi_vis_nex: "arcane", radius: "zap", venenum: "poison", tabes_viscera: "poison",
   minor_mederi: "heal", minor_sanatio: "heal", teuri: "buff", velocitas: "buff", robur: "buff", contra_visus: "buff", creare_porta: "portal", pergere_trans: "portal",
   attack_run: "dash", multi_shot: "bow", arrow_barrage: "bow", double_stab: "swing", spin_attack: "swing", power_strike: "heavy", cleave: "swing" };
 const growlFor = (type) => /skeleton|wraith|ghoul|knight|colossus|shade|cultist|king/.test(type) ? "growl_undead" : /golem|fiend|champion|brood/.test(type) ? "roar" : /wolf|spider|crawler|imp/.test(type) ? "growl_beast" : null;
-const AB_COLOR = { arcane_bolt: "#7fb8ff", flame_burst: "#ff7a2a", aimed_shot: "#ffd36b", venom_arrow: "#7aff5a", power_strike: "#ffe0a0", cleave: "#ffc080", minor_heal: "#7aff9a", iron_guard: "#9ac8ff", quickstep: "#c8f0ff", whirlwind: "#ffc080", earthshatter: "#d8a060", frost_nova: "#a8e8ff", meteor_storm: "#ff5a1a", volley: "#ffd36b", multishot: "#ffe08a",
+const AB_COLOR = { lunae_lumen_nex: "#cfe6ff", arcane_bolt: "#7fb8ff", flame_burst: "#ff7a2a", aimed_shot: "#ffd36b", venom_arrow: "#7aff5a", power_strike: "#ffe0a0", cleave: "#ffc080", minor_heal: "#7aff9a", iron_guard: "#9ac8ff", quickstep: "#c8f0ff", whirlwind: "#ffc080", earthshatter: "#d8a060", frost_nova: "#a8e8ff", meteor_storm: "#ff5a1a", volley: "#ffd36b", multishot: "#ffe08a",
   agredi: "#7fb8ff", minor_mederi: "#7aff9a", minor_sanatio: "#c8ff7a", double_stab: "#ffe0a0", attack_run: "#ffb070", spin_attack: "#ffc080", multi_shot: "#ffe08a",
   arrow_barrage: "#ffd36b", ignis: "#ff6a1a", multi_vis_nex: "#a0d0ff", radius: "#e8f4ff", venenum: "#7aff5a", flamma_ventus: "#ff7a2a", tabes_viscera: "#a8ff5a",
   teuri: "#9ac8ff", velocitas: "#c8f0ff", robur: "#ffb060", contra_visus: "#c0a8ff", pergere_trans: "#c0a0ff", creare_porta: "#b080ff" };
@@ -183,6 +183,7 @@ export class Engine {
     return e;
   }
   castFx(src, tgt, ab) {
+    if (ab === "lunae_lumen_nex" && tgt) { src.anim.cast = 1; this.beam(src, tgt, AB_COLOR[ab]); if (Math.hypot(src.x - (this.me?.x || 0), src.z - (this.me?.z || 0)) < 30) sfx("zap"); return; }
     const c = AB_COLOR[ab] || "#fff";
     const melee = ["power_strike", "cleave", "whirlwind", "earthshatter", "double_stab", "attack_run", "spin_attack"].includes(ab);
     src.anim.cast = melee ? 0 : 1;
@@ -256,6 +257,16 @@ export class Engine {
       const to = new THREE.Vector3(tgt.x, this.groundY(tgt.x, tgt.z) + tgt.height * 0.55, tgt.z);
       o.position.lerpVectors(from, to, t); o.position.y += Math.sin(t * Math.PI) * (arrow ? 0.6 : 0.3); o.lookAt(to);
     }, done);
+  }
+  beam(src, tgt, color) {
+    const y0 = this.groundY(src.x, src.z) + (src.height || 2) * 1.12, y1 = this.groundY(tgt.x, tgt.z) + (tgt.height || 1.4) * 0.55;
+    const a = new THREE.Vector3(src.x, y0, src.z), b = new THREE.Vector3(tgt.x, y1, tgt.z), len = a.distanceTo(b);
+    const g = new THREE.Group(); g.position.copy(a).lerp(b, 0.5); g.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
+    const mk = (r, c, o) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 10, 1, true), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, blending: THREE.AdditiveBlending, depthWrite: false })); g.add(m); return m; };
+    const core = mk(0.05, "#ffffff", 1), glow = mk(0.2, color, 0.55), haze = mk(0.45, "#6a8aff", 0.18);
+    this.addFx(g, 0.45, (t) => { const k = 1 - t, w = 1 + Math.sin(t * 40) * 0.12; core.material.opacity = k; glow.material.opacity = 0.55 * k; haze.material.opacity = 0.18 * k; glow.scale.set(w, 1, w); haze.scale.set(w * (1 + t), 1, w * (1 + t)); },
+      () => g.traverse((o) => { o.geometry?.dispose(); o.material?.dispose(); }));
+    this.shock(tgt.x, tgt.z, color, 2.2); this.burst(tgt, "#e8f4ff", 18, 2.5);
   }
   shock(x, z, color, r) {
     const fl = sprite(color, r * 1.4); fl.position.set(x, this.groundY(x, z) + 0.8, z);

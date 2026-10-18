@@ -77,6 +77,8 @@ ABILITIES = {
                     desc="Poison your target for 5 + 45% Intelligence every second for 8 seconds."),
     "flamma_ventus": dict(name="Flamma Ventus", cls=["warlock"], level=5, cost=22, cd=0, range=10, kind="cone", angle=0.7, base=14, scale=1.3,
                           desc="Flame wind: scorch every enemy in a 10m cone for 14 + 130% Intelligence."),
+    "lunae_lumen_nex": dict(name="Lunae Lumen Nex", cls=["warlock"], level=12, cost=26, cd=0, range=16, kind="spell", base=38, scale=2.8,
+                            desc="Moonlight beam: a searing lance of lunar light strikes one enemy for 38 + 280% Intelligence damage."),
     "tabes_viscera": dict(name="Tabes Viscera", cls=["warlock"], level=6, cost=30, cd=0, kind="aoe_self", radius=9.0, base=10, scale=1.0, rot=0.3,
                           desc="A blood-red cloud bursts above every enemy within 9m, rotting their flesh for 10 + 100% Intelligence, then more over 5 seconds."),
     "teuri": dict(name="Teuri", cls=ALL_CLS, level=5, cost=15, cd=0, kind="buff", buff="armor", value=10, per_level=0.8, dur=CHARGE_SECS, charge=True,
