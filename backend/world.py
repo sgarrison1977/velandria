@@ -171,15 +171,16 @@ BARROW_ROOMS = [
     dict(name="Tomb of the Barrow King", x=300, z=542, r=25, lvl="10 Boss"),
 ]
 BARROW_LINKS = [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (3, 6), (6, 7)]
-BARROW_ENTRY = (92.0, 128.0)
+BARROW_ENTRY = (190.0, -22.0)  # north-east of Titus on the northern shore
+BARROW_G = (BARROW_ENTRY[0] + 160, BARROW_ENTRY[1] + 160)
 DUNGEONS = [dict(name="The Titus Barrows", label="The Titus Barrows — beneath Titus", entry="The Titus Barrows", x0=30, z0=440, w=310, h=140),
             dict(name="The Hollow Deep", label="The Hollow Deep — beneath the cave", entry="Hollow Deep", x0=370, z0=452, w=380, h=138),
             dict(name="The Proving Pits", label="The Proving Pits — grinding halls", entry="The Proving Pits", x0=880, z0=478, w=290, h=84)]
 PIT_ENTRY = (722.0, 212.0)
 PORTALS = [dict(id="hollow_in", x=518.0, z=57.0, face=(0.0, 1.0), to=(426.0, 550.0), name="Hollow Deep", msg="You descend into the Hollow Deep..."),
            dict(id="hollow_out", x=411.0, z=562.0, to=(518.0, 62.0), name="Exit to the surface", msg="You climb back into the daylight."),
-           dict(id="barrow_in", x=BARROW_ENTRY[0], z=BARROW_ENTRY[1], face=(-1.0, 0.0), to=(62.0, 468.0), name="The Titus Barrows", msg="You descend the worn stair into the Titus Barrows..."),
-           dict(id="barrow_out", x=50.0, z=468.0, to=(BARROW_ENTRY[0] - 4, BARROW_ENTRY[1] + 3), name="Exit to the surface", msg="You climb back up into the light north of Titus."),
+           dict(id="barrow_in", x=BARROW_ENTRY[0], z=BARROW_ENTRY[1], face=(0.0, 1.0), to=(62.0, 468.0), name="The Titus Barrows", msg="You descend the worn stair into the Titus Barrows..."),
+           dict(id="barrow_out", x=50.0, z=468.0, to=(BARROW_ENTRY[0], BARROW_ENTRY[1] + 5), name="Exit to the surface", msg="You climb back up into the salt air of the northern shore."),
            dict(id="pits_in", x=PIT_ENTRY[0], z=PIT_ENTRY[1], face=(0.0, 1.0), to=(904.0, 520.0), name="The Proving Pits", msg="You descend into the Proving Pits. The horde never stops coming..."),
            dict(id="pits_out", x=893.0, z=520.0, to=(PIT_ENTRY[0], PIT_ENTRY[1] + 5), name="Exit to the surface", msg="You climb out of the Proving Pits.")]
 PIT_TIERS = [(1, ["pit_giant_spider", "pit_skeleton", "pit_orc_warrior", "pit_dark_cultist"]),
@@ -309,6 +310,7 @@ class World:
         self._scatter_spawns()
         self._globalize(rnd)
         self._harbor()
+        self._cave_sites()
         self.npc_block()
 
     def _globalize(self, rnd):
@@ -394,6 +396,30 @@ class World:
                 lx = min(max(x - OX, 0), LW - 1)
                 opts = next(o for lim, o in SCATTER_BANDS if lx < lim)
                 self.spawns.append(dict(monster=rnd.choice(opts), x=x, z=z, r=12, n=3))
+
+    def _cave_sites(self):
+        """global: clear the ground around dungeon cave mouths, block the rock mass, lay the Barrows shore trail"""
+        road = catmull([(255, 232), (296, 196), (330, 166), (BARROW_G[0], BARROW_G[1] + 6)], 2.0)
+        self.paths.append(dict(w=2.0, hidden=False, pts=road))
+        self._stamp_dist(road, 2.0, 8)
+        rd = self.road_dist
+        sites = [(pt["x"], pt["z"]) for pt in PORTALS if pt.get("face")]
+        def keep(v):
+            if any(math.hypot(v[0] - x, v[1] - z) < 9 for x, z in sites):
+                return False
+            xi, zi = int(v[0]), int(v[1])
+            return not (0 <= xi < W and 0 <= zi < H and rd[zi, xi] < 3.5)
+        self.trees, self.rocks, self.bushes, self.grass = ([v for v in L if keep(v)] for L in (self.trees, self.rocks, self.bushes, self.grass))
+        x0, x1, z0, z1 = 240, 365, 120, 240
+        zz, xx = np.mgrid[z0:z1, x0:x1]
+        near = (rd[z0:z1, x0:x1] < 2.8) | (np.hypot(xx + 0.5 - BARROW_G[0], zz + 0.5 - BARROW_G[1]) < 8)
+        self.blocked[z0:z1, x0:x1][near & (sea(xx + 0.5, zz + 0.5) < -3)] = 0
+        for pt in PORTALS:
+            if pt.get("face"):
+                fx, fz = pt["face"]
+                self._disc(pt["x"] - fx * 6.5, pt["z"] - fz * 6.5, 4.6)
+                for sd in (-1, 1):
+                    self._disc(pt["x"] - fx * 2.5 + fz * sd * 3.6, pt["z"] - fz * 2.5 - fx * sd * 3.6, 1.6)
 
     def _harbor(self):
         """Saltmere Harbor (5th town) and the Offshore Isles, authored in global coords"""
@@ -560,11 +586,6 @@ class World:
         P = self.props
         for pt in PORTALS:
             P.append(dict(kind="portal", x=pt["x"], z=pt["z"], name=pt["name"], face=pt.get("face")))
-            if pt.get("face"):
-                fx, fz = pt["face"]
-                self._disc(pt["x"] - fx * 6.5, pt["z"] - fz * 6.5, 4.6)
-                for s in (-1, 1):
-                    self._disc(pt["x"] - fx * 2.5 + fz * s * 3.6, pt["z"] - fz * 2.5 - fx * s * 3.6, 1.6)
         for k, rm in enumerate(DUNGEON_ROOMS + PIT_ROOMS + BARROW_ROOMS):
             for i in range(4):
                 a = i * math.pi / 2 + 0.7

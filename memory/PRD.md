@@ -77,3 +77,4 @@ Later requests: hold-to-walk toward pointer; ranged/spell abilities fire at the 
 - Custom gifts to Gribb: Hawkeye Cap, Emberstrike bow (item emberstrike_bow), Heart of the Wilds amulet.
 - Keeper's Gift popup: category tabs (Weapons, Off-hand, Helms, Chest, Limbs, Rings & Amulets, Potions & Food, Materials) + search + icon grid. Preview: /gallery?set=give
 - New spells (lvl 8, learn with skill points): Wizard Glacies Nova (8m frost AoE, 30% slow 3s), Warlock Fulmen Catena (lightning bolt chaining to 4 more enemies, -20% per jump).
+- Titus Barrows entrance moved to the northern shore NE of Titus (local 190,-22 / global 350,138) with a dirt trail from Silkfield; cave-site clearing + rock collision now done post-globalize in World._cave_sites().
