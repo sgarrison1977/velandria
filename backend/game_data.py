@@ -138,6 +138,7 @@ ITEMS = {
     "cultist_staff": W("Staff of the Veiled", ["mage"], "rare", [11, 17], 1.6, 600, 10, magic=True, stats={"int": 5, "wis": 3, "mp_regen": 2}, desc="Whispers in the dark.", color="#6b3fa0"),
     "hunting_bow": W("Hunting Bow", ["ranger"], "common", [3, 6], 1.6, 12, desc="Yew and sinew."),
     "longbow": W("Elderglen Longbow", ["ranger"], "uncommon", [7, 12], 1.6, 250, 5, stats={"dex": 2}, desc="Strung with spider silk."),
+    "emberstrike_bow": W("Emberstrike Longbow", ["ranger"], "legendary", [14, 22], 1.4, 0, 12, desc="Every arrow loosed from it bursts into flame.", color="#ff7a2a"),
     "bandit_bow": W("Bandit's Recurve", ["ranger"], "rare", [11, 18], 1.45, 560, 9, stats={"dex": 4}, desc="Stolen, many times over."),
     # offhand
     "wooden_shield": A("Wooden Shield", "off", "common", 3, 10, cls=["warrior"], desc="Planks bound with iron."),

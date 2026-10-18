@@ -159,7 +159,7 @@ export class Engine {
         if (near(src)) { sfx(f.style === "melee" ? "swing" : f.style === "arrow" ? "bow" : "zap"); if (src.kind === "monster" && Math.random() < 0.22) { const gr = growlFor(src.type || ""); if (gr) sfx(gr); } }
         if (f.miss && tgt) this.number(tgt, "miss", "#bbb");
         break;
-      case "dmg": if (tgt) { tgt.anim.hurt = 1; tgt.lastHit = performance.now(); this.number(tgt, f.v, f.crit ? "#ffcf3a" : f.dt === "poison" ? "#8aff5a" : f.dt === "magic" ? "#9ac8ff" : "#fff", f.crit); if (near(tgt)) sfx(f.crit ? "crit" : "hit"); } break;
+      case "dmg": if (tgt) { tgt.anim.hurt = 1; tgt.lastHit = performance.now(); this.number(tgt, f.v, f.crit ? "#ffcf3a" : f.dt === "poison" ? "#8aff5a" : f.dt === "magic" ? "#9ac8ff" : f.dt === "fire" ? "#ff8a3a" : "#fff", f.crit); if (near(tgt) && f.dt !== "fire") sfx(f.crit ? "crit" : "hit"); } break;
       case "pdmg": if (tgt) { tgt.anim.hurt = 1; this.number(tgt, f.v, "#ff5040"); if (f.tgt === this.meId) { sfx("hurt"); this.shake = 0.25; } } break;
       case "death": if (tgt) { tgt.anim.dead = true; if (near(tgt)) sfx("mdeath"); } break;
       case "pdeath": if (tgt) tgt.anim.dead = true; if (f.tgt === this.meId) sfx("death"); break;

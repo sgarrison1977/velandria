@@ -514,6 +514,9 @@ class Game:
             dmg *= COMBAT["crit_mult"]
         self.fx(m.x, m.z, {"t": "fx", "k": "attack", "src": p.id, "tgt": m.id, "style": kind})
         self.damage_monster(m, dmg, p, "magic" if magic else "phys", crit)
+        fire = p.tot.get("fire_dmg", 0)
+        if fire and not m.dead_until:
+            self.damage_monster(m, fire * (COMBAT["crit_mult"] if crit else 1) * rnd.uniform(0.9, 1.1), p, "fire", crit)
 
     def damage_monster(self, m, raw, p, dtype, crit=False):
         if m.dead_until:
@@ -521,7 +524,7 @@ class Game:
         if p is not None and p.buffs.pop("invis", None):
             p.dirty = True
             p.send({"t": "sys", "msg": "You attacked — Contra Visus fades and you are visible again."})
-        res = m.d["resist"].get("magic" if dtype in ("magic", "poison") else "phys", 1.0)
+        res = m.d["resist"].get("magic" if dtype in ("magic", "poison", "fire") else "phys", 1.0)
         armor = 0 if dtype != "phys" else m.d["armor"]
         dmg = max(1, round(raw * (1 - armor / (armor + COMBAT["armor_k"])) * res))
         m.hp -= dmg
