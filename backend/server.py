@@ -2,7 +2,7 @@ from dotenv import load_dotenv
 from pathlib import Path
 load_dotenv(Path(__file__).parent / '.env')
 
-import os, re, json, logging, asyncio, uuid
+import os, re, json, logging, asyncio, uuid, hmac
 from datetime import datetime, timezone, timedelta
 import bcrypt, jwt
 from fastapi import FastAPI, APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect, Depends
@@ -208,11 +208,13 @@ async def current_admin(request: Request):
 
 @api.post("/admin/login")
 async def admin_login(body: AdminLoginIn, request: Request):
-    ident = f"admin:{request.client.host if request.client else 'x'}"
+    ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip() or (request.client.host if request.client else "x")
+    ident = f"admin:{ip}"
     att = await db.login_attempts.find_one({"identifier": ident})
     if att and att.get("count", 0) >= 5 and datetime.fromisoformat(att["until"]) > datetime.now(timezone.utc):
         raise HTTPException(429, "Too many failed attempts. Try again in 15 minutes.")
-    if body.username != os.environ["ADMIN_USERNAME"] or body.password != os.environ["ADMIN_PASSWORD"]:
+    ok_u = hmac.compare_digest(body.username.encode(), os.environ["ADMIN_USERNAME"].encode())
+    if not (hmac.compare_digest(body.password.encode(), os.environ["ADMIN_PASSWORD"].encode()) and ok_u):
         cnt = (att or {}).get("count", 0) + 1
         await db.login_attempts.update_one({"identifier": ident}, {"$set": {"count": cnt, "until": (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat()}}, upsert=True)
         raise HTTPException(401, "Invalid admin username or password")

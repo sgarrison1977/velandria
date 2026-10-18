@@ -24,10 +24,10 @@ export const CharRow = ({ c, onChange, onMsg }) => {
       <td><input type="number" min={0} value={gold} disabled={c.online} onChange={(e) => setGold(e.target.value)} data-testid={`admin-char-gold-input-${tid}`} /></td>
       <td data-testid={`admin-char-score-${tid}`}>{c.score}</td>
       <td className={c.online ? "admin-online" : "admin-sub"}>{c.online ? "In world" : "Offline"}</td>
-      <td className="admin-row-btns">
+      <td><div className="admin-row-btns">
         <button className="btn" disabled={!dirty || c.online} onClick={save} data-testid={`admin-char-save-btn-${tid}`}>Save</button>
         <button className="btn danger" disabled={c.online} onClick={del} data-testid={`admin-char-delete-btn-${tid}`}>Delete</button>
-      </td>
+      </div></td>
     </tr>
   );
 };

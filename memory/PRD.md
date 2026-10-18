@@ -85,3 +85,7 @@ Later requests: hold-to-walk toward pointer; ranged/spell abilities fire at the 
 - Game renamed to Velandria (Jun 2026).
 - Perf (Jun 2026): static structure meshes merged per material+64m chunk (structures.js mergeStatic) — graveyard view 1796→129 draw calls; static PointLights harvested into an 8-light pool reassigned to nearest anchors (lightpool.js) — scene light count was 47. Server tick ~2.7ms with 1500 monsters (not the bottleneck).
 - Graveyard shrunk to 52x36 with 50 skeletons; crypt doors at (270/300, 586.4). Town outskirts: 7 low-level (lv1-4) packs of 3-4 at 82-118m around each of the 5 towns. TARGET_MONSTERS raised to 1800 (≈310 lone wanderers + 52 camps).
+
+## 2026-06 Updates
+- Ocean/river/lake water moved to a lightweight custom ShaderMaterial (no PBR/shadow/point-light cost); foam/swash/fog/cave dimming kept (`world3d.js` waterMaterial, `waterLight` uniform set in engine.js).
+- Admin panel: "Admin Login" button at bottom of title screen -> /admin. Separate admin creds (ADMIN_USERNAME/ADMIN_PASSWORD env, griblin). Lists accounts (email, created, char count), characters (name, class, level, gold, gear score, online), search, reset password (bcrypt, plaintext never stored), edit level/gold, delete character/account (blocked while character is in world). Lockout 5 fails/15min by X-Forwarded-For IP. Tested iteration_2 (100%).

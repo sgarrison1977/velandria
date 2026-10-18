@@ -1,0 +1,36 @@
+{
+  "summary": "Admin panel feature tested end-to-end (backend pytest 18/18 + Playwright UI flow). Admin Login link on title screen -> /admin, wrong creds error, correct creds griblin/Casey123! show panel with stats (90 accounts / 70 chars), search by email & char name & no-match empty state, account expand with char table (level/gold inputs, gear score, status), reset password (player login with new pw 200, old pw 401), edit level/gold persisted after reload, level>100 shows validation message, delete character, delete account (removes chars; login fails afterwards), logout returns to login form. Auth guards: no token / player JWT -> 401 on all admin endpoints. Brute-force lockout confirmed 429 (also blocks valid creds). Only throwaway admintest_*@test.io accounts were touched and all were cleaned up; lockout records cleared from DB so admin login works again. No /play or WebSocket used.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/admin/login (and /api/auth/login)", "issue": "Lockout identifier uses request.client.host, which is the Kubernetes ingress pod IP (observed 10.231.129.156 / .157), not the real client IP. Effect: lockout is effectively GLOBAL - any anonymous visitor submitting 5 bad admin passwords locks the real admin out for 15 min (and can keep doing so: DoS). Fix: derive IP from first entry of X-Forwarded-For header (fallback to client.host)."},
+      {"endpoint": "POST /api/admin/login", "issue": "Credentials compared with != (not constant-time). Use hmac.compare_digest for username and password."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Title screen", "issues": ["'Admin Login' link at bottom is very low contrast (dim text/border on dark forest background) - fine if intentionally discreet"]},
+      {"screen": "Admin panel account row", "issues": ["Chevron/date/char-count cluster floats at ~85% width leaving an odd empty gap at the right edge of each account header", "In expanded char table the row bottom borders stop before the Save/Delete action cell (borders misaligned)"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_admin_panel.py", "/app/test_reports/pytest/pytest_admin.xml"],
+  "action_items": [
+    "Use X-Forwarded-For (first IP) for the login lockout identifier in admin_login and login so lockout is per real client, not global",
+    "Use hmac.compare_digest for admin credential comparison",
+    "Optional: minor alignment polish on admin account header and table row borders"
+  ],
+  "critical_code_review_comments": [
+    "CharRow local state (useState(c.level/c.gold)) is not re-synced when props change on Refresh; if a value changes server-side (e.g. player levels up in game) the input shows stale value and 'dirty' compares against new props - add useEffect to reset on c.level/c.gold change",
+    "Admin JWT shares JWT_SECRET with player tokens; separated only by type claim - acceptable but a separate secret would be safer",
+    "Admin token stored in sessionStorage (XSS-readable) - acceptable for MVP"
+  ],
+  "updated_files": ["/app/backend/tests/test_admin_panel.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "Admin panel griblin / Casey123! (from /app/memory/test_credentials.md) - works",
+  "seed_data_creation": "Created throwaway admintest_*@test.io accounts + Tst* characters; all deleted. Cleared admin:* lockout records from login_attempts after the lockout test.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run: REACT_APP_BACKEND_URL=... pytest /app/backend/tests/test_admin_panel.py. Lockout test was done manually (not in pytest file) because it locks admin for 15 min; clear db.login_attempts identifiers starting with 'admin:' afterwards. Never touch real accounts (~89 in preview DB)."
+}

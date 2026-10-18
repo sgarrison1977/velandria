@@ -19,7 +19,7 @@ export const AccountRow = ({ acc, onChange, onMsg }) => {
   return (
     <div className="admin-acc" data-testid={`admin-account-${tid}`}>
       <button className="admin-acc-head" onClick={() => setOpen(!open)} data-testid={`admin-account-toggle-${tid}`}>
-        <b>{acc.email}</b>{acc.admin && <span className="admin-tag">admin</span>}
+        <b>{acc.email} {acc.admin && <span className="admin-tag">admin</span>}</b>
         <span className="admin-sub">{acc.created_at ? new Date(acc.created_at).toLocaleDateString() : "—"}</span>
         <span className="admin-sub" data-testid={`admin-account-char-count-${tid}`}>{acc.characters.length} character{acc.characters.length === 1 ? "" : "s"}</span>
         <span className="admin-chev">{open ? "▾" : "▸"}</span>
