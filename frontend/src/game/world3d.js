@@ -211,8 +211,8 @@ function windify(mat, amt = 0.12, cut = false) {
       .replace("#include <begin_vertex>", `#include <begin_vertex>
       #ifdef USE_INSTANCING
       float ph = instanceMatrix[3].x*0.21 + instanceMatrix[3].z*0.17;
-      transformed.x += sin(uWind*1.3+ph) * ${amt.toFixed(3)} * max(0.0, position.y);
-      transformed.z += cos(uWind*1.1+ph) * ${(amt * 0.6).toFixed(3)} * max(0.0, position.y);
+      ${amt ? `transformed.x += sin(uWind*1.3+ph) * ${amt.toFixed(3)} * max(0.0, position.y);
+      transformed.z += cos(uWind*1.1+ph) * ${(amt * 0.6).toFixed(3)} * max(0.0, position.y);` : "ph += 0.0;"}
       vCut = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;
       #endif`);
   };
@@ -311,8 +311,8 @@ function treeSpecies() {
   const bt = barkTex("#4a3524", "rgba(140,110,80,0.25)"), btg = barkTex("#5a5048", "rgba(160,150,140,0.25)"), btp = barkTex("#7a6c5c", "rgba(220,210,190,0.3)");
   const BM = (map) => new THREE.MeshStandardMaterial({ map, roughness: 0.95 });
   const bark = BM(bt), barkGrey = BM(btg), barkPale = BM(btp);
-  const LM = (tex, o = {}) => windify(new THREE.MeshStandardMaterial({ map: tex, alphaTest: 0.42, side: THREE.DoubleSide, vertexColors: true, roughness: 0.9, ...o }), 0.12, true);
-  const CM = (o = {}) => windify(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: true, ...o }), 0.12, true);
+  const LM = (tex, o = {}) => windify(new THREE.MeshStandardMaterial({ map: tex, alphaTest: 0.42, side: THREE.DoubleSide, vertexColors: true, roughness: 0.9, ...o }), 0, true);
+  const CM = (o = {}) => windify(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: true, ...o }), 0, true);
   const pineL = LM(leafTex(130, 35, true)), oakL = LM(leafTex(95, 45, false)), elderL = LM(leafTex(170, 40, false), { emissive: "#0b2a2a", emissiveIntensity: 0.35 });
   const pineC = CM(), oakC = CM(), elderC = CM({ emissive: "#0b2a2a", emissiveIntensity: 0.3 });
   const roots = (r) => [0, 1, 2, 3, 4].map((i) => clean(tr(new THREE.CylinderGeometry(0.04, r * 0.45, 1.0, 5), Math.cos(i * 1.3) * r, 0.12, Math.sin(i * 1.3) * r, 1, 0, Math.sin(i * 1.3) * 1.1, -Math.cos(i * 1.3) * 1.1)));
