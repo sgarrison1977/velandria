@@ -16,6 +16,8 @@ ISLES = [dict(name="Isle of Thorns", x=1000.0, z=800.0, r=34.0), dict(name="Wrec
          dict(name="Drowned Spire", x=770.0, z=865.0, r=25.0)]
 ISLE_BARS = [(0, 1), (0, 2)]
 HARBOR = (1080.0, 582.0)
+GRAVEYARD = (285.0, 582.0)
+GRAVE_HALF = (36, 25)
 HARBOR_R = (44, 28)
 HARBOR_ROAD = [(1080, 548), (1090, 520), (1098, 470), (1094, 420), (1098, 372)]
 ISLE_LANDING = (1000.0, 776.0)
@@ -315,6 +317,7 @@ class World:
         self._globalize(rnd)
         self._harbor()
         self._cave_sites()
+        self._graveyard()
         self._monster_camps()
         self.npc_block()
 
@@ -364,6 +367,7 @@ class World:
                 if not n.get("glob"):
                     n["pos"] = list(T(*n["pos"]))
             SAFE_ZONES.append(dict(town="harbor", x=HARBOR[0], z=HARBOR[1], half=SAFE_HALF))
+            REGIONS.append(dict(name="Titus Gravefields", x=GRAVEYARD[0], z=GRAVEYARD[1], r=40, lvl="1-15"))
             SAFE_ZONES.append(dict(town="isles", x=ISLE_LANDING[0], z=ISLE_LANDING[1] + 4, half=7.0, waystone=False))
             REGIONS.extend([dict(name="Saltmere Harbor", x=HARBOR[0], z=HARBOR[1], r=48, lvl="Safe town"),
                             ] +
@@ -397,7 +401,7 @@ class World:
         from game_data import MONSTERS
         rr = random.Random(5150)
         REGIONS[:] = [r for r in REGIONS if not r.get("camp")]
-        towns = [to_global(*c) for c in (SEMEL, ELDER, IRON, SUNH)] + [HARBOR]
+        towns = [to_global(*c) for c in (SEMEL, ELDER, IRON, SUNH)] + [HARBOR, GRAVEYARD]
         caves = [(pt["x"], pt["z"]) for pt in PORTALS if pt.get("face")]
         band = lambda x: next(o for lim, o in SCATTER_BANDS if min(max(x - OX, 0), LW - 1) < lim)
         def land(x, z, m=10):
@@ -501,6 +505,63 @@ class World:
             for x, z, a in ring(3, 2.5, 1.5): put("bones", x, z, 0)
         elif fam == "golem":
             for x, z, a in ring(6, 8, rr.uniform(0, 6)): put("pillar", x, z, 0.7, h=round(rr.uniform(2.0, 4.5), 1))
+
+    def _graveyard(self):
+        """global: Titus Gravefields — iron-fenced graveyard far south of Titus, lv 1-15 skeleton hunting ground"""
+        gx, gz = GRAVEYARD
+        hx, hz = GRAVE_HALF
+        rr = random.Random(1313)
+        road = catmull([(250, 418), (258, 468), (276, 520), (gx, gz - hz - 1)], 2.0)
+        self.paths.append(dict(w=2.0, hidden=False, pts=road))
+        self._stamp_dist(road, 2.0, 8)
+        rd = self.road_dist
+        inside = lambda x, z, m=0: abs(x - gx) <= hx + m and abs(z - gz) <= hz + m
+        def keep(v):
+            xi, zi = int(v[0]), int(v[1])
+            return not inside(v[0], v[1], 4) and not (0 <= xi < W and 0 <= zi < H and rd[zi, xi] < 3.5)
+        self.trees, self.rocks, self.bushes = ([v for v in L if keep(v)] for L in (self.trees, self.rocks, self.bushes))
+        self.grass = [v for v in self.grass if keep(v) or (inside(v[0], v[1]) and rr.random() < 0.3)]
+        x0, x1, z0, z1 = int(gx - hx - 40), int(gx + hx + 6), 410, int(gz + hz + 6)
+        zz, xx = np.mgrid[z0:z1, x0:x1]
+        area = ((np.abs(xx + 0.5 - gx) <= hx + 3) & (np.abs(zz + 0.5 - gz) <= hz + 3)) | (rd[z0:z1, x0:x1] < 2.8)
+        self.blocked[z0:z1, x0:x1][area & (sea(xx + 0.5, zz + 0.5) < -3)] = 0
+        corners = [(gx - hx, gz - hz), (gx + hx, gz - hz), (gx + hx, gz + hz), (gx - hx, gz + hz)]
+        for i in range(4):
+            (ax, az), (bx, bz) = corners[i], corners[(i + 1) % 4]
+            n = int(math.hypot(bx - ax, bz - az) / 3)
+            for k in range(n):
+                x, z = ax + (bx - ax) * k / n, az + (bz - az) * k / n
+                x2, z2 = ax + (bx - ax) * (k + 1) / n, az + (bz - az) * (k + 1) / n
+                if i == 0 and abs((x + x2) / 2 - gx) < 4:
+                    continue
+                self.walls.append(dict(x=x, z=z, x2=x2, z2=z2, style="iron"))
+                for t in (0, 0.5, 1):
+                    self._disc(x + (x2 - x) * t, z + (z2 - z) * t, 0.7)
+        P = self.props
+        P.append(dict(kind="gate_iron", x=gx, z=gz - hz, rot=-math.pi / 2))
+        P.append(dict(kind="sign", x=gx - 6, z=gz - hz - 3))
+        for (mx, mz) in [(gx - 22, gz + 14), (gx + 22, gz + 14)]:
+            P.append(dict(kind="mausoleum", x=mx, z=mz)); self._block_rect(mx, mz, 9, 7)
+        for (x, z) in [(gx - 30, gz - 18), (gx + 29, gz - 17), (gx - 12, gz + 3), (gx + 13, gz - 6), (gx - 31, gz + 6), (gx + 31, gz + 2), (gx + 4, gz + 21), (gx - 5, gz - 12)]:
+            P.append(dict(kind="dead_tree", x=x, z=z, rot=rr.uniform(0, 6.28), s=round(rr.uniform(0.9, 1.4), 2))); self._disc(x, z, 0.6)
+        for (x, z) in [(gx - 4, gz - hz + 3), (gx + 4, gz - hz + 3), (gx - 4, gz + 6), (gx + 4, gz + 6)]:
+            P.append(dict(kind="brazier", x=x, z=z)); self._disc(x, z, 0.6)
+        for z in np.arange(gz - hz + 6, gz + hz - 3, 5.0):
+            for x in np.arange(gx - hx + 4, gx + hx - 3, 4.0):
+                if abs(x - gx) < 6 or any(abs(x - mx) < 7 and abs(z - mz) < 6 for mx, mz in [(gx - 22, gz + 14), (gx + 22, gz + 14)]) or rr.random() < 0.18:
+                    continue
+                x2, z2 = x + rr.uniform(-0.6, 0.6), z + rr.uniform(-0.5, 0.5)
+                if self.walkable(x2, z2):
+                    P.append(dict(kind="grave", x=round(float(x2), 1), z=round(float(z2), 1), rot=round(math.pi / 2 + rr.uniform(-0.15, 0.15), 2))); self._disc(x2, z2, 0.45)
+                    if rr.random() < 0.12:
+                        P.append(dict(kind="bones", x=round(float(x2) + 1.2, 1), z=round(float(z2) + 0.8, 1), s=0.9))
+        for (m, ox, oz, r, n) in [("restless_bones", -16, -15, 12, 15), ("restless_bones", 16, -15, 12, 15), ("skeleton", -18, -2, 12, 15),
+                                  ("skeleton", 18, -2, 12, 15), ("grave_warden", -14, 10, 10, 12), ("grave_warden", 14, 10, 10, 12),
+                                  ("crypt_knight", -22, 20, 6, 7), ("crypt_knight", 22, 20, 6, 8), ("sexton_of_bones", 0, 19, 3, 1)]:
+            x, z = gx + ox, gz + oz
+            if not self.walkable(x, z):
+                x, z = self.nearest_walkable(x, z) if hasattr(self, "nearest_walkable") else (gx, gz)
+            self.spawns.append(dict(monster=m, x=float(x), z=float(z), r=r, n=n))
 
     def _cave_sites(self):
         """global: clear the ground around dungeon cave mouths, block the rock mass, lay the Barrows shore trail"""
@@ -916,4 +977,4 @@ class World:
                     walls=self.walls, buildings=self.buildings, props=self.props, trees=self.trees, rocks=self.rocks, bushes=self.bushes,
                     grass=self.grass, regions=REGIONS + DUNGEON_ROOMS + PIT_ROOMS + BARROW_ROOMS, dungeons=DUNGEONS, safe_zones=SAFE_ZONES, oh=OH, cave_rocks=self.cave_rocks,
                     portals=[dict(x=p['x'], z=p['z'], name=p['name']) for p in PORTALS], isles=ISLES, isle_bars=ISLE_BARS, docks=DOCKS,
-                    towns={**{k: to_global(*v) for k, v in dict(semel=SEMEL, elderglen=ELDER, ironhold=IRON, sunhollow=SUNH).items()}, "harbor": HARBOR})
+                    towns={**{k: to_global(*v) for k, v in dict(semel=SEMEL, elderglen=ELDER, ironhold=IRON, sunhollow=SUNH).items()}, "harbor": HARBOR, "graveyard": GRAVEYARD})

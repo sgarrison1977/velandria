@@ -281,6 +281,29 @@ function prop(p, terrain, lights) {
       const egg = M("#d8d4c0", { roughness: 0.6 });
       for (let i = 0; i < 4; i++) { const e = new THREE.Mesh(new THREE.SphereGeometry(0.28 + (i % 2) * 0.1, 8, 6), egg); e.scale.y = 1.3; e.position.set(Math.cos(i * 1.7) * 0.9, 0.3, Math.sin(i * 1.7) * 0.9); g.add(e); }
       g.rotation.y = p.rot || 0; break; }
+    case "gate_iron": {
+      const stn = M("#6f6a60"), iron = M("#1e1f22", { metalness: 0.7, roughness: 0.45 });
+      for (const sx of [-1, 1]) { box(1.1, 3.6, 1.1, stn, sx * 4.2, 1.8, 0, g); const orb = new THREE.Mesh(new THREE.SphereGeometry(0.42, 10, 8), stn); orb.position.set(sx * 4.2, 3.95, 0); g.add(orb); }
+      const arch = new THREE.Mesh(new THREE.TorusGeometry(3.7, 0.08, 6, 24, Math.PI), iron); arch.position.y = 3.0; g.add(arch);
+      box(7.4, 0.08, 0.08, iron, 0, 3.0, 0, g);
+      for (let i = 0; i < 5; i++) { const sk = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), M("#d8d0b8")); sk.position.set(-1.6 + i * 0.8, 3.0 + Math.sin((i + 0.5) / 5 * Math.PI) * 1.2, 0); g.add(sk); }
+      for (const sx of [-1, 1]) { const door = new THREE.Group(); for (let i = 0; i < 6; i++) cyl(0.03, 0.03, 2.6, 4, iron, -sx * (0.3 + i * 0.5), 1.3, 0, door); box(3.2, 0.06, 0.06, iron, -sx * 1.55, 2.4, 0, door); door.position.x = sx * 3.6; door.rotation.y = sx * 1.2; g.add(door); }
+      g.rotation.y = -(p.rot || 0) - Math.PI / 2; break; }
+    case "mausoleum": {
+      const stn = M("#7a766c"), dark = M("#4a4740"), roof = M("#5a564e");
+      box(9, 0.6, 7, dark, 0, 0.3, 0, g); box(8, 4.2, 6, stn, 0, 2.7, -0.2, g);
+      const r = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 5.0, 2.2, 4, 1), roof); r.rotation.y = Math.PI / 4; r.scale.set(1.12, 1, 0.85); r.position.y = 5.9; g.add(r);
+      for (const sx of [-2.6, -1, 1, 2.6]) cyl(0.32, 0.36, 4.2, 10, stn, sx, 2.7, 3.1, g);
+      box(8.6, 0.5, 1.2, stn, 0, 5.0, 3.0, g);
+      box(2, 3, 0.1, M("#141210"), 0, 2.1, 2.85, g);
+      const stat = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.6, 6), stn); stat.position.set(0, 7.4, 0); g.add(stat);
+      const gl = new THREE.PointLight("#7affc8", 6, 9, 1.6); gl.position.set(0, 2, 4); g.add(gl);
+      break; }
+    case "dead_tree": {
+      const bark = M("#3a3028");
+      const trunk = cyl(0.22, 0.4, 4.2, 6, bark, 0, 2.1, 0, g); trunk.rotation.z = 0.08;
+      for (let i = 0; i < 5; i++) { const a = i * 1.3, b = cyl(0.05, 0.12, 2.2 - i * 0.2, 4, bark, Math.cos(a) * 0.6, 3 + i * 0.35, Math.sin(a) * 0.6, g); b.rotation.set(Math.sin(a) * 0.9, 0, -Math.cos(a) * 0.9); }
+      g.scale.setScalar(p.s || 1); g.rotation.y = p.rot || 0; break; }
     case "fish_rack": {
       for (const sx of [-1.2, 1.2]) cyl(0.07, 0.08, 2.2, 5, wood, sx, 1.1, 0, g);
       box(2.6, 0.08, 0.08, wood, 0, 2.1, 0, g);
@@ -309,7 +332,13 @@ export function buildStructures(world, terrain, scene) {
   for (const w of world.walls) {
     const len = Math.hypot(w.x2 - w.x, w.z2 - w.z) + 0.3, ang = Math.atan2(w.z2 - w.z, w.x2 - w.x);
     const g = new THREE.Group();
-    if (w.style === "stone") { box(len, 2.6, 1.3, wallStone, 0, 1.3, 0, g); box(len * 0.45, 0.6, 1.4, cap, -len * 0.25, 2.9, 0, g); }
+    if (w.style === "iron") {
+      const iron = M("#1e1f22", { metalness: 0.7, roughness: 0.45 });
+      box(len, 0.45, 0.5, wallStone, 0, 0.22, 0, g);
+      for (let i = 0; i < Math.round(len / 0.32); i++) { const x = -len / 2 + 0.16 + i * 0.32; cyl(0.025, 0.025, 1.9, 4, iron, x, 1.4, 0, g); cone(0.05, 0.16, 4, iron, x, 2.42, 0, g); }
+      for (const y of [0.75, 2.05]) box(len, 0.06, 0.06, iron, 0, y, 0, g);
+      box(0.32, 2.3, 0.32, wallStone, -len / 2, 1.15, 0, g); box(0.42, 0.14, 0.42, cap, -len / 2, 2.35, 0, g);
+    } else if (w.style === "stone") { box(len, 2.6, 1.3, wallStone, 0, 1.3, 0, g); box(len * 0.45, 0.6, 1.4, cap, -len * 0.25, 2.9, 0, g); }
     else for (let i = 0; i < 3; i++) { cyl(0.35, 0.4, 4.4 + (i % 2) * 0.6, 6, log, -len / 2 + (i + 0.5) * len / 3, 2.2, 0, g); cone(0.36, 0.8, 6, log, -len / 2 + (i + 0.5) * len / 3, 4.8 + (i % 2) * 0.6, 0, g); }
     g.position.set((w.x + w.x2) / 2, terrain.height(w.x, w.z), (w.z + w.z2) / 2);
     g.rotation.y = -ang;

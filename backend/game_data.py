@@ -343,6 +343,15 @@ for _t, (_b, _l, _n) in PIT_CHAMPIONS.items():
               radius=round(_c["radius"] * 1.4, 2), model_scale=1.45, champion=True, respawn=8, leash=26)
     MONSTERS[f"pit_champion_{_t}"] = _c
 
+# Titus Gravefields (lv 1-15 skeleton hunting ground)
+for _k, _l, _n, _x in [("restless_bones", 2, "Restless Bones", {}), ("grave_warden", 9, "Gravewarden Skeleton", {"model_scale": 1.1}),
+                       ("crypt_knight", 13, "Cryptbound Knight", {"model_scale": 1.2}), ("sexton_of_bones", 15, "Sexton of Bones", {"model_scale": 1.45})]:
+    _c = _pit("skeleton", _l)
+    _c.update({"name": _n, "respawn": 35, "leash": 16, **_x})
+    if _k == "sexton_of_bones":
+        _c.update(hp=_c["hp"] * 4, xp=_c["xp"] * 4, respawn=240, gold_mult=4, loot=_c["loot"] + [("bone_dust", 1.0), ("iron_helm", 0.25), ("steel_longsword", 0.2), ("ring_vigor", 0.15)])
+    MONSTERS[_k] = _c
+
 # Offshore Isles: rare level 25-35 sea monsters with richer loot
 _ISLE_LOOT = [("sea_pearl", 0.35), ("hp_potion", 0.3), ("black_pearl", 0.03), ("ring_vampire", 0.03), ("broodsilk_cloak", 0.04), ("wraith_staff", 0.03),
               ("bloodthorn_bow", 0.03), ("golemstone_plate", 0.03), ("soulreaver_blade", 0.015)]
