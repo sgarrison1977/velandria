@@ -10,12 +10,12 @@ export const AccountRow = ({ acc, onChange, onMsg }) => {
   const tid = acc.email.replace(/[^a-z0-9]/g, "-");
   const resetPw = async () => {
     try { await adminHttp.put(`/admin/accounts/${acc.id}/password`, { password: pw }); setPw(""); onMsg(`Password reset for ${acc.email}`); }
-    catch (e) { onMsg(errMsg(e)); }
+    catch (e) { onMsg(errMsg(e), false); }
   };
   const del = async () => {
     if (!window.confirm(`Delete account ${acc.email} and all ${acc.characters.length} characters? This cannot be undone.`)) return;
     try { await adminHttp.delete(`/admin/accounts/${acc.id}`); onMsg(`Deleted ${acc.email}`); onChange(); }
-    catch (e) { onMsg(errMsg(e)); }
+    catch (e) { onMsg(errMsg(e), false); }
   };
   return (
     <div className={`admin-acc${acc.ban ? " banned" : ""}`} data-testid={`admin-account-${tid}`}>

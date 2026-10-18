@@ -8,4 +8,4 @@ adminHttp.interceptors.request.use((c) => {
   return c;
 });
 
-export const fmtDur = (s) => { s = s || 0; const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60); return h ? `${h}h ${m}m` : `${m}m`; };
+export const fmtDur = (s) => { s = s || 0; const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60); return h ? `${h}h ${m}m` : m ? `${m}m` : s ? "<1m" : "0m"; };

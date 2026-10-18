@@ -423,28 +423,19 @@ varying vec2 vSea; varying vec3 vView;
 #include <common>
 #include <fog_pars_fragment>
 void main() {
-  vec3 base = uColor; float a = uOpacity, foam = 0.0;
+  vec3 base = uColor;
 #ifdef SEA
   vec2 suv = vSea / uSize;
   float cd = (suv.x < 0.0 || suv.y < 0.0 || suv.x > 1.0 || suv.y > 1.0) ? 60.0 : texture2D(uShore, suv).r * 63.75 - 8.0;
   float near = 1.0 - smoothstep(0.0, 16.0, cd);
-  if (near > 0.0 || cd < 0.0) {
-    float wob = sin(vSea.x * 0.11 + vSea.y * 0.07) * 1.2 + sin(vSea.x * 0.031 - vSea.y * 0.047 + uTime * 0.3) * 1.8;
-    float brk = 0.6 + 0.4 * sin(vSea.x * 0.37 + vSea.y * 0.29 + uTime * 0.5);
-    float crest = smoothstep(0.955, 0.995, sin(cd * 0.55 + uTime * 1.25 + wob)) * near * brk;
-    float run = sin(uTime * 1.25 + wob);
-    float swash = smoothstep(-3.2, -2.2, cd) * (1.0 - smoothstep(-1.6 + run * 1.2, -0.6 + run * 1.2, cd)) * (0.35 + 0.3 * run);
-    foam = clamp(crest * 0.55 + swash, 0.0, 0.8);
-    base = mix(base, vec3(0.0152, 0.107, 0.133), near * 0.45);
-  }
+  base = mix(base, vec3(0.0152, 0.107, 0.133), near * 0.45);
 #endif
   vec3 n = normalize(vec3(sin(vSea.x * 0.21 + uTime * 0.9) * 0.06 + sin(vSea.y * 0.47 - uTime * 1.3) * 0.03, 1.0, sin(vSea.y * 0.19 + uTime * 0.7) * 0.06 + sin(vSea.x * 0.43 + uTime * 1.1) * 0.03));
   vec3 v = normalize(vView), l = normalize(vec3(-0.43, 0.86, 0.29));
   float spec = pow(max(dot(n, normalize(l + v)), 0.0), 90.0);
   float fres = pow(1.0 - max(v.y, 0.0), 3.0);
   vec3 col = base * vec3(0.68, 0.59, 0.49) * uLight + uEmissive + uSun * spec * 0.9 * uLight + vec3(0.04, 0.06, 0.08) * fres * uLight;
-  col = mix(col, vec3(0.79, 0.89, 0.91) * (0.25 + 0.75 * uLight), foam) + vec3(0.013, 0.017, 0.02) * foam;
-  gl_FragColor = vec4(col, mix(a, 0.97, foam));
+  gl_FragColor = vec4(col, uOpacity);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
   #include <fog_fragment>

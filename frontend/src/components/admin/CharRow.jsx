@@ -10,18 +10,18 @@ export const CharRow = ({ c, onChange, onMsg }) => {
   const tid = c.name.toLowerCase();
   const save = async () => {
     try { await adminHttp.put(`/admin/characters/${c.id}`, { level: Number(level), gold: Number(gold) }); onMsg(`Saved ${c.name}`); onChange(); }
-    catch (e) { onMsg(errMsg(e)); }
+    catch (e) { onMsg(errMsg(e), false); }
   };
   const kick = async () => {
     const reason = window.prompt(`Kick ${c.name} from the world? Optional reason:`, "");
     if (reason === null) return;
     try { await adminHttp.post(`/admin/characters/${c.id}/kick`, reason.trim() ? { text: reason.trim() } : undefined); onMsg(`Kicked ${c.name}`); onChange(); }
-    catch (e) { onMsg(errMsg(e)); }
+    catch (e) { onMsg(errMsg(e), false); }
   };
   const del = async () => {
     if (!window.confirm(`Delete character ${c.name}? This cannot be undone.`)) return;
     try { await adminHttp.delete(`/admin/characters/${c.id}`); onMsg(`Deleted ${c.name}`); onChange(); }
-    catch (e) { onMsg(errMsg(e)); }
+    catch (e) { onMsg(errMsg(e), false); }
   };
   return (
     <tr data-testid={`admin-char-row-${tid}`}>

@@ -38,6 +38,12 @@ const MONSTER_BUILD = {
   coral_colossus: () => humanoid({ scale: 2.2, bulk: 1.7, hunch: true, body: "stone", head: "brute", skin: "#c87a6a", hairStyle: "bald", boots: { style: "bare" }, rocky: true, eyes: "#5affe0", weapon: "club", weaponColor: "#8a4a4a" }),
   captain_blackbrine: () => humanoid({ scale: 1.35, bulk: 1.2, skin: "#9aaa9a", head: "skull", top: { style: "leather", color: "#1a1a22" }, legs: { style: "leather", color: "#1a1a1a" }, boots: { style: "boot", color: "#120e0a" }, helm: { style: "tricorn", color: "#0e0e0e" }, cape: "#4a0a10", tatter: true, weapon: "sword", weaponColor: "#c9a24e", glow: "#3affc8", eyes: "#3affc8", belt: "#c9a24e", pauldrons: "#c9a24e" }),
   forest_troll: () => humanoid({ scale: 1.75, bulk: 1.5, hunch: true, body: "bare", head: "brute", skin: "#667a64", hair: "#3a4a2a", hairStyle: "long", legs: { style: "leather", color: "#3a2a1a" }, boots: { style: "bare" }, loin: "#3a2a1a", weapon: "club", weaponColor: "#5a4632", tusks: true, eyes: "#ffcf3a", claws: true }),
+  grubnak: () => humanoid({ scale: 1.65, bulk: 1.55, head: "goblin", skin: "#5a7a2a", ears: true, tusks: true, headScale: 1.15, helm: { style: "crown", color: "#b08a3a" }, top: { style: "leather", color: "#4a3420" }, legs: { style: "leather", color: "#2e2418" }, boots: { style: "fur", color: "#3a2a1a" }, pauldrons: "#b08a3a", bracers: "#3a2416", belt: "#b08a3a", cape: "#6a1a10", tatter: true, weapon: "axe", weaponColor: "#8a6a3a", eyes: "#ff3a1a" }),
+  greymaw: () => wolf({ color: "#9a9aa4", dark: "#3a3a46", scale: 2.7 }),
+  ixra: () => spider({ body: "#0e1a10", abd: "#1c3a14", mark: "#b8ff3a", leg: "#0a140a", glow: true, scale: 3.1 }),
+  malzeth: () => humanoid(robe("#0e1e3a", { scale: 1.5, skin: "#9ab0c8", helm: { style: "hood", color: "#0e1e3a" }, trim: "#9ad8ff", tatter: true, weapon: "staff", weaponColor: "#cfe8ff", glow: "#7ad0ff", eyes: "#bfe8ff", cape: "#0a1428", beard: "#dfe8f0", beardStyle: "full" })),
+  revenant: () => humanoid({ scale: 1.95, bulk: 1.4, skin: "#c8b8a0", head: "skull", top: { style: "plate", color: "#5a4234" }, legs: { style: "plate", color: "#4a3a30" }, boots: { style: "plate", color: "#3a2e26" }, gloves: { style: "gauntlet", color: "#5a4234" }, helm: { style: "great", color: "#4a382c" }, helmHorns: true, pauldrons: "#6a4a38", cape: "#2a0a0a", tatter: true, weapon: "sword", weaponColor: "#6a5a50", glow: "#ff2a2a", eyes: "#ff2a2a" }),
+  pyrrhax: () => humanoid({ scale: 3.0, bulk: 1.5, body: "bare", head: "brute", skin: "#2a1a14", hairStyle: "bald", boots: { style: "bare" }, loin: "#140a06", horns: "#ffb03a", wings: "#3a1408", tail: "#2a120a", eyes: "#ffd23a", claws: true, weapon: "axe", weaponColor: "#ff7a1a", glow: "#ff7a1a" }),
 };
 export const buildMonster = (type) => MONSTER_BUILD[type]();
 
@@ -64,6 +70,19 @@ function waystone() {
   for (let i = 0; i < 3; i++) mesh(B(0.08, 0.5, 0.05), rune, Math.sin(i * 2.1) * 0.46, 1.3 + i * 0.7, Math.cos(i * 2.1) * 0.46, root).rotation.y = i * 2.1;
   return { root, kind: "prop", height: 3.6 };
 }
+function board() {
+  const root = new THREE.Group(), wood = mat("leather", "#5a3e24"), dark = mat("leather", "#3a2816"), paper = M("#e8dcb8"), seal = M("#b02a1a", { emissive: "#6a0a0a", emissiveIntensity: 0.6 }), gold = M("#ffd36b", { emissive: "#ffb22e", emissiveIntensity: 1.2 });
+  for (const x of [-1.25, 1.25]) mesh(B(0.2, 2.8, 0.2), dark, x, 1.4, 0, root);
+  mesh(B(2.6, 1.6, 0.12), wood, 0, 1.75, 0, root);
+  for (const y of [0.95, 2.55]) mesh(B(2.8, 0.14, 0.18), dark, 0, y, 0, root);
+  const roof = mesh(B(3.1, 0.1, 0.8), dark, 0, 2.9, 0.1, root); roof.rotation.x = 0.25;
+  [[-0.8, 2.0, 0.08], [0.0, 1.85, -0.06], [0.75, 2.05, 0.1], [-0.35, 1.35, 0.04], [0.55, 1.4, -0.08]].forEach(([x, y, r]) => {
+    const sh = mesh(B(0.62, 0.78, 0.02), paper, x, y, 0.08, root); sh.rotation.z = r;
+    mesh(B(0.12, 0.12, 0.03), seal, x, y + 0.3, 0.1, root);
+  });
+  mesh(new THREE.OctahedronGeometry(0.12, 0), gold, 0, 3.1, 0.15, root);
+  return { root, kind: "prop", height: 3.0 };
+}
 function trunk() {
   const root = new THREE.Group(), wood = mat("leather", "#5a3a20"), iron = mat("metal", "#3a3a40"), gold = mat("metal", "#c9a24e");
   mesh(B(1.6, 0.8, 0.95), wood, 0, 0.4, 0, root);
@@ -88,7 +107,7 @@ function cryptDoor() {
   mesh(new THREE.SphereGeometry(0.05, 6, 6), glow, -0.07, 1.52, 0.2, root); mesh(new THREE.SphereGeometry(0.05, 6, 6), glow, 0.07, 1.52, 0.2, root);
   return { root, kind: "prop", height: 1.9 };
 }
-export const buildNpc = (kind) => kind === "trunk" ? trunk() : kind === "chest" ? chest() : kind === "crypt_door" ? cryptDoor() : kind === "waystone" ? waystone() : (NPC_BUILD[kind] || NPC_BUILD.villager)();
+export const buildNpc = (kind) => kind === "board" ? board() : kind === "trunk" ? trunk() : kind === "chest" ? chest() : kind === "crypt_door" ? cryptDoor() : kind === "waystone" ? waystone() : (NPC_BUILD[kind] || NPC_BUILD.villager)();
 
 const CLASS_LOOK = {
   warrior: { skin: "#c8946e", hair: "#3a2414", hairStyle: "short", beard: "#3a2414", beardStyle: "stubble", top: { style: "tunic", color: "#6a5a48" }, legs: { style: "leather", color: "#3a3028" }, boots: { style: "boot", color: "#3a2a1c" }, bracers: "#4a3020", pauldrons: "#80868e", belt: "#3a2414" },

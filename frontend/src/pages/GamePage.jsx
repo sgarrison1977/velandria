@@ -15,6 +15,7 @@ import { Minimap, WorldMap, Chat } from "@/components/game/Maps";
 import { LeaderboardPanel } from "@/components/game/Leaderboard";
 import { AdminGivePanel } from "@/components/game/AdminGive";
 import { getLootFilter } from "@/components/game/LootFilter";
+import { BountyBoard } from "@/components/game/BountyBoard";
 
 export default function GamePage() {
   const { charId } = useParams();
@@ -59,6 +60,7 @@ export default function GamePage() {
           case "equip": sfx("open"); break;
           case "levelup": setState({ levelup: m.lv }); setTimeout(() => setState({ levelup: null }), 3500); break;
           case "announce": { const id = Date.now(); setState({ announce: { id, text: m.text } }); sfx("levelup"); setTimeout(() => getState().announce?.id === id && setState({ announce: null }), 8000); break; }
+          case "bounty": setState({ bounty: m, dialog: null }); break;
           case "inspect": setState({ inspect: m.d }); break;
           case "party": e.party = m.id ? m : null; setState({ party: m.id ? m : null }); break;
           case "party_invite": setState({ partyInvite: m }); sfx("open"); break;
@@ -100,9 +102,9 @@ export default function GamePage() {
       else if (action.startsWith("item:")) { const it = action.slice(5), s = st.me.inventory.find((x) => x.item === it); if (s) n.send({ t: "use", uid: s.uid }); else toast(`You have no ${data.items[it].name} left.`, "error"); }
       else if (action === "chat") setState((s) => ({ chatFocus: (s.chatFocus || 0) + 1 }));
       else if (action === "menu") {
-        const anyOpen = Object.values(st.panels).some(Boolean) || st.dialog || st.merchant || st.inspect || st.ctx || st.exitMenu || st.markPick || st.placing || st.storage;
+        const anyOpen = Object.values(st.panels).some(Boolean) || st.dialog || st.merchant || st.inspect || st.ctx || st.exitMenu || st.markPick || st.placing || st.storage || st.bounty;
         if (eng.current) eng.current.placing = null;
-        if (anyOpen) setState({ panels: {}, dialog: null, merchant: null, inspect: null, ctx: null, exitMenu: false, markPick: false, placing: null, storage: null }); else togglePanel("settings", true);
+        if (anyOpen) setState({ panels: {}, dialog: null, merchant: null, inspect: null, ctx: null, exitMenu: false, markPick: false, placing: null, storage: null, bounty: null }); else togglePanel("settings", true);
       } else { sfx("open"); togglePanel(action); }
     };
     window.addEventListener("keydown", down);
@@ -112,7 +114,8 @@ export default function GamePage() {
   const logout = (toMain) => { net.current?.send({ t: "logout" }); setTimeout(() => { if (toMain === true) localStorage.removeItem("sx_token"); nav(toMain === true ? "/" : "/characters"); }, 250); };
   const e = eng.current, n = net.current;
   return (
-    <div className="game" data-testid="game-root">
+    <div className="game" data-testid="game-root" onDragOver={(ev) => { if (ev.dataTransfer.types.includes("text/sx-uid") && (ev.target === canvas.current || overlay.current?.contains(ev.target))) ev.preventDefault(); }}
+      onDrop={(ev) => { const u = ev.dataTransfer.getData("text/sx-uid"); if (u && (ev.target === canvas.current || overlay.current?.contains(ev.target))) { ev.preventDefault(); sfx("loot"); net.current?.send({ t: "drop", uid: u }); } }}>
       <canvas ref={canvas} className="game-canvas" data-testid="game-canvas" />
       <div ref={overlay} className="overlay" />
       {!ready && <div className="loading" data-testid="loading-screen"><h1 className="logo">Velandria</h1><div className="spinner" /><p>{step}</p></div>}
@@ -134,6 +137,7 @@ export default function GamePage() {
         <InspectWindow data={data} />
         <MerchantWindow net={n} data={data} />
         <StorageWindow net={n} data={data} />
+        <BountyBoard net={n} data={data} engine={e} />
         {panels.inventory && <InventoryPanel data={data} net={n} />}
         {panels.character && <CharacterPanel data={data} net={n} />}
         {panels.skills && <SkillsPanel data={data} net={n} />}

@@ -1,0 +1,39 @@
+{
+  "summary": "Tested admin live features: live edit, kick, ban/unban, broadcast, activity stats. Backend: 13/13 pytest pass over a real WSS client on throwaway accounts (test_admin_live.py). Covered: 401 guards (no token and player token), last_login/play_seconds/ban fields, 403 ban message on login, banned JWT gets 401 on /api/characters and WS closes 4401, unban works, expired ban stops blocking, permanent ban text, days validation (422) and 404, live edit sends 'me' with level/gold, hp==max_hp, mp==max_mp, +3 attr/+3 skill per level, plus the sys msg, kick closes 4002 with/without a reason, ban kicks online chars (4002 + ban text), offline kick returns 400, periodic play time save (~20s) on char and account, broadcast sends announce + [Announcement] chat (only our char was online). Admin UI (Playwright, while a throwaway char was held online over WS): last login and play time in header, Played column, Kick visible and Delete disabled for online char, live Save (WS got level 4/gold 999 and +9/+9 points), broadcast success message, kick via prompt, ban via confirm then banned tag, status and Unban, unban. One bug found: kick/ban with a long non-ASCII reason never closes the socket. All throwaway data cleaned up (89 accounts, same as before).",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/admin/characters/{cid}/kick and PUT /api/admin/accounts/{uid}/ban (game.kick)", "issue": "Game.kick cuts the close reason by characters (reason[:110]), but a WebSocket close reason must be <=123 bytes UTF-8. A non-ASCII reason (repro: kick with text 'é'*100) makes ws.close() raise. The exception is swallowed, so the client socket is NEVER closed: the player is removed from the world (online=false) and the API returns 200, but the client gets no 4002 and sits on a dead connection. Ban reasons with accents or Cyrillic hit the same path.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "PUT /api/admin/characters/{cid} (online)", "issue": "Empty body {} on an online char returns 200 and still sends 'An admin has adjusted your character.'. The offline path returns 400 'Nothing to update'. These two paths are inconsistent."},
+      {"endpoint": "PUT /api/admin/characters/{cid}", "issue": "Lowering the level does not remove attr/skill points, so raising, lowering and raising again grants extra points with each cycle (online and offline)."},
+      {"endpoint": "Game.save / attach", "issue": "Play time keeps growing during the link-dead window after a disconnect, because play_mark keeps running until remove_player."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Admin panel", "issues": ["admin-message uses the red .form-err style for success messages too (Saved, Broadcast sent, Kicked, Unbanned); give success messages a neutral or green style", "Ban reason input is too narrow: placeholder cut off at 'Reason (optional, shown to pl'", "Play time shows '0m' for sessions under 1 minute; consider showing seconds or '<1m'"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_admin_live.py", "/app/backend/tests/test_admin_kick_edge.py", "/app/backend/tests/hold_online.py", "/app/test_reports/pytest/pytest_admin_live.xml"],
+  "action_items": [
+    "HIGH: In Game.kick, truncate the close reason by UTF-8 bytes, e.g. reason.encode()[:123].decode('utf-8','ignore'), and make sure the ws is still closed if close with a reason fails (fallback: ws.close(code=4002) with no reason). Retest with test_admin_kick_edge.py",
+    "Make the online live-edit path return 400 when level and gold are both None",
+    "Optional: take back attr/skill points on level decrease, or clamp them",
+    "UI: success style for admin-message, wider ban reason input"
+  ],
+  "critical_code_review_comments": [
+    "game.kick swallows every close exception silently, which hides the byte-length bug above",
+    "No cooldown after a kick: a kicked (not banned) player can reconnect right away. This is acceptable, but worth knowing",
+    "The ban check in login runs after the password check (good: no account enumeration). user_from_token checks the ban on every request (good)"
+  ],
+  "updated_files": ["/app/backend/tests/test_admin_live.py", "/app/backend/tests/test_admin_kick_edge.py", "/app/backend/tests/hold_online.py"],
+  "success_rate": {"backend": "93% (13/14 incl. edge test)", "frontend": "100%"},
+  "seed_data_creation": "Only throwaway admintest_*@test.io accounts with Tst* characters; all unbanned and deleted at the end (account count back to 89).",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "test_admin_live.py runs with xdist (pytest.ini addopts); the module fixture cleans up its own accounts. test_admin_kick_edge.py reproduces the unicode kick bug: run with -p no:xdist -o addopts=''. hold_online.py <secs> keeps a throwaway char online over WS and writes ids to /tmp/hold.json and messages to /tmp/hold_msgs.log, for UI tests of online-only controls. Delete that account afterwards. The broadcast test skips unless online==1.",
+  "rca of the issue": "Repro: connect a WS for a throwaway char, then POST /admin/characters/{cid}/kick {text:'é'*100}. The server builds 'You were kicked by an admin. Reason: ééé…', cuts it to 110 chars (~191 bytes), and ws.close(code=4002, reason=…) throws because the reason is over 123 bytes. The except: pass swallows it, then remove_player runs. Result: the client gets no close frame, the char is removed from game.players, and the socket stays open. Fix: cut the reason by bytes, and fall back to closing with no reason."
+}

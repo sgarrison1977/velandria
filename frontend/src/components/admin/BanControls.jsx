@@ -8,11 +8,11 @@ export const BanControls = ({ acc, tid, onChange, onMsg }) => {
   const ban = async () => {
     if (!window.confirm(`Ban ${acc.email}? Any online characters will be kicked.`)) return;
     try { const r = await adminHttp.put(`/admin/accounts/${acc.id}/ban`, { days: days === "perm" ? null : Number(days), reason }); onMsg(r.data.message); setReason(""); onChange(); }
-    catch (e) { onMsg(errMsg(e)); }
+    catch (e) { onMsg(errMsg(e), false); }
   };
   const unban = async () => {
     try { await adminHttp.delete(`/admin/accounts/${acc.id}/ban`); onMsg(`Unbanned ${acc.email}`); onChange(); }
-    catch (e) { onMsg(errMsg(e)); }
+    catch (e) { onMsg(errMsg(e), false); }
   };
   if (acc.ban) return (
     <div className="admin-ban" data-testid={`admin-ban-status-${tid}`}>

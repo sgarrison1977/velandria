@@ -547,12 +547,91 @@ def clean_look(look):
     out = {k: v for k, v in look.items() if k in LOOK_OPTS and v in LOOK_OPTS[k]}
     return out if len(out) == len(LOOK_OPTS) else None
 
+# ---------- World bosses (bounty targets)
+BOSS_TROPHIES = {
+    "warlord_tusk": M("Warlord's Tusk", "rare", 400, "Grubnak's broken tusk, still capped in brass."),
+    "greymaw_pelt": M("Greymaw's Pelt", "rare", 650, "Thick silver fur, scarred by a hundred hunts."),
+    "silkqueen_eye": M("Silkqueen's Eye", "epic", 900, "It glistens like a cold green star."),
+    "hierophant_sigil": M("Hierophant's Sigil", "epic", 1400, "Rimed with frost that never melts."),
+    "revenant_heart": M("Revenant Heart", "epic", 2200, "An iron heart that still beats, slowly."),
+    "ashen_core": M("Ashen Core", "legendary", 3500, "A coal from the Tyrant's chest. Warm forever."),
+}
+ITEMS.update(BOSS_TROPHIES)
+
+
+def _boss(key, base, lvl, name, hp_x, trophy, slam, scale=1.5, **x):
+    c = _pit(base, lvl)
+    c.pop("base")
+    c.update(name=name, hp=round(c["hp"] * hp_x), xp=c["xp"] * 8, dmg=[round(d * 1.45) for d in c["dmg"]], armor=round(c["armor"] * 1.25),
+             radius=round(c["radius"] * 1.45, 2), boss=True, bounty=True, respawn=600, leash=28, gold_mult=8, regen=round(lvl * 0.3),
+             model_scale=scale, slam=slam, loot=c["loot"] + [(trophy, 1.0), ("hp_potion", 1.0), ("mp_potion", 0.6)])
+    c.update(x)
+    MONSTERS[key] = c
+
+
+_boss("grubnak", "orc_warrior", 15, "Grubnak the Goblin Warlord", 9, "warlord_tusk",
+      dict(every=8, radius=7, mult=1.6, name="Warstomp", c1="#ffb03a", c2="#ff5a1a"), scale=1.0, enrage=dict(at=0.3, mult=1.5))
+_boss("greymaw", "dire_wolf", 22, "Old Greymaw, the Pack-Father", 8, "greymaw_pelt",
+      dict(every=9, radius=8, mult=1.3, name="Savage Howl", c1="#e0e0f0", c2="#7a8aa8"), scale=1.0, enrage=dict(at=0.4, mult=1.6))
+_boss("ixra", "broodmother", 28, "Ixra, the Silkweaver Queen", 8, "silkqueen_eye",
+      dict(every=10, radius=9, mult=0.8, name="Venom Burst", c1="#8aff3a", c2="#2a8a1a", poison=[45, 6]), scale=1.0, poison=[30, 5])
+_boss("malzeth", "dark_cultist", 40, "Hierophant Malzeth", 14, "hierophant_sigil",
+      dict(every=8, radius=10, mult=1.2, name="Frost Nova", dtype="frost", c1="#9ad8ff", c2="#3a8aff"), scale=1.0, ranged=True, range=12.0)
+_boss("revenant", "death_knight", 55, "The Iron Revenant", 5, "revenant_heart",
+      dict(every=7, radius=8, mult=1.4, name="Soul Rend", c1="#ff3a3a", c2="#5a0a1a", drain=0.5), scale=1.0)
+_boss("pyrrhax", "abyssal_fiend", 70, "Pyrrhax the Ashen Tyrant", 3.5, "ashen_core",
+      dict(every=6, radius=11, mult=1.5, name="Hellfire Nova", dtype="fire", c1="#ff7a1a", c2="#ffd23a"), scale=1.0, enrage=dict(at=0.25, mult=1.4))
+
+# global lair coordinates for overworld bosses
+BOSS_LAIRS = {"grubnak": (900, 445), "greymaw": (395, 190), "ixra": (548, 540), "malzeth": (1560, 250), "revenant": (988, 190), "pyrrhax": (1205, 178)}
+
+
+def _bounty(key, where, track):
+    m = MONSTERS[key]
+    return dict(name=m["name"], level=m["level"], where=where, track=track, gold=round(m["level"] ** 2 * 4 + 200), xp=m["xp"], tokens=1 + m["level"] // 15)
+
+
+BOUNTIES = {
+    "barrow_king": _bounty("barrow_king", "Titus Barrows, beneath the Gravefields", (285, 582)),
+    "grubnak": _bounty("grubnak", "Veiled Circle, south of Grimtusk", BOSS_LAIRS["grubnak"]),
+    "greymaw": _bounty("greymaw", "Direfang Hollow", BOSS_LAIRS["greymaw"]),
+    "ixra": _bounty("ixra", "Broodmother's Lair", BOSS_LAIRS["ixra"]),
+    "captain_blackbrine": _bounty("captain_blackbrine", "Wrecker's Atoll, Offshore Isles", (1250, 848)),
+    "malzeth": _bounty("malzeth", "Emberfall Crags", BOSS_LAIRS["malzeth"]),
+    "revenant": _bounty("revenant", "Dreadkeep Ruins", BOSS_LAIRS["revenant"]),
+    "pyrrhax": _bounty("pyrrhax", "The Abyssal Rift", BOSS_LAIRS["pyrrhax"]),
+    "hollow_king": _bounty("hollow_king", "The Hollow Deep (dungeon)", (680, 222)),
+}
+
+# ---------- Bounty Token shop (exclusive gear)
+_ST = ["wizard", "warlock"]
+BOUNTY_ITEMS = {
+    "bounty_token": M("Bounty Token", "epic", 0, "Proof of a slain tyrant. Spend it at any town Bounty Board.", stack=999),
+    "hunters_signet": A("Hunter's Signet", "ring", "rare", 2, 600, 15, stats={"str": 4, "dex": 4, "int": 4, "crit": 2}, desc="Bounty Board exclusive.", color="#c9a24e"),
+    "wardens_girdle": A("Warden's Girdle", "belt", "epic", 8, 1400, 25, stats={"sta": 8, "max_hp": 80, "hp_regen": 3}, desc="Bounty Board exclusive."),
+    "trackers_boots": A("Tracker's Boots", "feet", "epic", 12, 1800, 30, stats={"dex": 6, "sta": 5, "move_speed": 6}, desc="Bounty Board exclusive. Never lose the trail.", color="#4a3a26"),
+    "huntsman_cleaver": W("Huntsman's Cleaver", ["warrior"], "epic", [46, 66], 1.5, 3000, 35, stats={"str": 12, "sta": 8, "life_steal": 3}, desc="Bounty Board exclusive.", color="#c9c3b4"),
+    "huntsman_longbow": W("Huntsman's Longbow", ["ranger"], "epic", [40, 58], 1.3, 3000, 35, stats={"dex": 12, "crit": 3, "life_steal": 2}, desc="Bounty Board exclusive.", color="#8a6a3a"),
+    "huntsman_rod": W("Huntsman's Rod", _ST, "epic", [24, 36], 1.5, 3000, 35, magic=True, stats={"int": 12, "wis": 8, "mana_steal": 3}, desc="Bounty Board exclusive.", color="#7ad8ff"),
+    "slayers_visage": A("Slayer's Visage", "head", "legendary", 26, 6000, 55, stats={"sta": 12, "str": 6, "dex": 6, "int": 6, "crit": 3, "hp_regen": 5}, desc="Bounty Board exclusive. Worn by those who end legends.", color="#3a2a1a"),
+    "tyrantbane_amulet": A("Tyrantbane Amulet", "amulet", "legendary", 8, 7000, 60, stats={"str": 8, "dex": 8, "int": 8, "sta": 10, "wis": 8, "life_steal": 3}, desc="Bounty Board exclusive."),
+    "tyrantbane_blade": W("Tyrantbane", ["warrior"], "legendary", [88, 120], 1.45, 12000, 70, stats={"str": 28, "sta": 16, "life_steal": 8, "crit": 4}, desc="Bounty Board exclusive. Every tyrant's last sight.", color="#ffd36b"),
+    "tyrantbane_bow": W("Tyrantbane Recurve", ["ranger"], "legendary", [78, 106], 1.3, 12000, 70, stats={"dex": 30, "str": 8, "crit": 5, "life_steal": 6}, desc="Bounty Board exclusive.", color="#ffd36b"),
+    "tyrantbane_staff": W("Tyrantbane Scepter", _ST, "legendary", [50, 72], 1.5, 12000, 70, magic=True, stats={"int": 32, "wis": 14, "mana_steal": 8, "mp_regen": 8}, desc="Bounty Board exclusive.", color="#ffd36b"),
+}
+ITEMS.update(BOUNTY_ITEMS)
+BOUNTY_SHOP = [("hunters_signet", 3), ("wardens_girdle", 6), ("trackers_boots", 8), ("huntsman_cleaver", 10), ("huntsman_longbow", 10), ("huntsman_rod", 10),
+               ("slayers_visage", 18), ("tyrantbane_amulet", 22), ("tyrantbane_blade", 30), ("tyrantbane_bow", 30), ("tyrantbane_staff", 30)]
+for _t, (_x, _z) in {"semel": (81, 200), "elderglen": (991, 210), "ironhold": (1251, 200), "sunhollow": (1461, 300)}.items():
+    NPCS[f"board_{_t}"] = dict(name="Bounty Board", role="Boss Bounties · Token Shop", town=_t, pos=[_x, _z], kind="board", board=True)
+NPCS["board_harbor"] = dict(name="Bounty Board", role="Boss Bounties · Token Shop", town="harbor", pos=[1071, 582], kind="board", board=True, glob=True)
+
 
 def public_data():
     return dict(items=ITEMS, monsters={k: {kk: vv for kk, vv in v.items() if kk != "loot"} | {"drops": [i for i, _ in v["loot"]]} for k, v in MONSTERS.items()},
                 look_opts=LOOK_OPTS, abilities=ABILITIES, classes=CLASSES, xp_table=XP_TABLE, npcs=NPCS, quests=QUESTS, attr_info=ATTR_INFO,
                 actions=ACTIONS, max_level=MAX_LEVEL, inv_slots=INV_SLOTS, sell_ratio=SELL_RATIO,
-                merchants={k: dict(name=v["name"]) for k, v in MERCHANTS.items()})
+                merchants={k: dict(name=v["name"]) for k, v in MERCHANTS.items()}, bounties=BOUNTIES, bounty_shop=BOUNTY_SHOP)
 
 
 def sell_price(item_id, props=None):
@@ -585,7 +664,14 @@ def roll_props(item_id, mlvl, rnd, force=False):
     return props, name
 
 
-QUEST_ONLY = {i for q in QUESTS.values() for i, _ in q["reward"].get("items", [])}
+QUEST_ONLY = {i for q in QUESTS.values() for i, _ in q["reward"].get("items", [])} | set(BOUNTY_ITEMS)
+
+
+def rare_gear(mlvl, rnd):
+    rar = ("rare", "epic", "legendary") if mlvl >= 55 else ("rare", "epic")
+    pool = [k for k, it in ITEMS.items() if it["type"] in ("weapon", "armor") and it["price"] > 0 and it["rarity"] in rar and k not in QUEST_ONLY
+            and mlvl - 20 <= it.get("lvl", 1) <= mlvl + 3]
+    return rnd.choice(pool) if pool else None
 
 
 def random_gear(mlvl, rnd):

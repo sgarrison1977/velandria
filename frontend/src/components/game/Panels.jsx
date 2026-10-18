@@ -85,7 +85,7 @@ export function InventoryGrid({ data, me, onSlot, onRight, sellMode, net }) {
     <div className="inv-grid" data-testid="inventory-grid" onDragOver={over} onDragLeave={(ev) => ev.currentTarget.classList.remove("drop-hot")} onDrop={drop}>
       {cells.map((s, i) => s ? (
         <Hover key={s.uid} tip={<ItemTip id={s.item} item={inst(data.items[s.item], s)} me={me} extra={sellMode ? <div className="tip-meta gold-t">Sells for {Math.max(1, Math.floor(data.items[s.item].price * data.sell_ratio))}g each</div> : <div className="tip-meta">Right-click to {data.items[s.item].type === "consumable" ? "use" : "equip"}{data.items[s.item].slot === "ring" ? " · drag onto a ring slot to choose it" : ""}</div>} />}>
-          <ItemIcon id={s.item} item={data.items[s.item]} qty={s.qty} testid={`inv-slot-${i}`} locked={cantUse(inst(data.items[s.item], s), me)} dragUid={data.items[s.item].slot ? s.uid : undefined} onClick={() => onSlot(s)} onContextMenu={(e) => { e.preventDefault(); onRight && onRight(s); }} />
+          <ItemIcon id={s.item} item={data.items[s.item]} qty={s.qty} testid={`inv-slot-${i}`} locked={cantUse(inst(data.items[s.item], s), me)} dragUid={s.uid} onClick={() => onSlot(s)} onContextMenu={(e) => { e.preventDefault(); onRight && onRight(s); }} />
         </Hover>
       ) : <div key={`e${i}`} className="item-icon empty" data-testid={`inv-slot-${i}`} />)}
     </div>

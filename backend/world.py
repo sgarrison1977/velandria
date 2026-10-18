@@ -321,6 +321,10 @@ class World:
         self._cave_sites()
         self._graveyard()
         self._monster_camps()
+        from game_data import BOSS_LAIRS
+        for k, (x, z) in BOSS_LAIRS.items():
+            x, z = self.nearest_walkable(x, z, 12) or (x, z)
+            self.spawns.append(dict(monster=k, x=float(x), z=float(z), r=2, n=1))
         self.npc_block()
 
     def _globalize(self, rnd):

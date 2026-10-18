@@ -321,9 +321,8 @@ async def admin_broadcast(body: AdminTextIn, _=Depends(current_admin)):
 
 def live_edit(p, level, gold):
     if level is not None and level != p.level:
-        if level > p.level:
-            p.attr_points += ATTR_POINTS_PER_LEVEL * (level - p.level)
-            p.skill_points += SKILL_POINTS_PER_LEVEL * (level - p.level)
+        p.attr_points = max(0, p.attr_points + ATTR_POINTS_PER_LEVEL * (level - p.level))
+        p.skill_points = max(0, p.skill_points + SKILL_POINTS_PER_LEVEL * (level - p.level))
         p.level, p.xp = level, XP_TABLE[level]
         p.recalc()
         p.hp, p.mp = p.max_hp, p.max_mp
@@ -336,18 +335,20 @@ def live_edit(p, level, gold):
 @api.put("/admin/characters/{cid}")
 async def admin_edit_char(cid: str, body: AdminCharIn, _=Depends(current_admin)):
     live = game.players.get(cid)
+    if body.level is None and body.gold is None:
+        raise HTTPException(400, "Nothing to update")
     if live:
         live_edit(live, body.level, body.gold)
         await game.save(live)
         return admin_char(await db.characters.find_one({"id": cid}, {"_id": 0}))
-    old = await db.characters.find_one({"id": cid}, {"_id": 0, "level": 1})
+    old = await db.characters.find_one({"id": cid}, {"_id": 0, "level": 1, "attr_points": 1, "skill_points": 1})
     if not old:
         raise HTTPException(404, "Character not found")
     upd, inc = {}, {}
     if body.level is not None and body.level != old["level"]:
         upd |= {"level": body.level, "xp": XP_TABLE[body.level]}
-        if body.level > old["level"]:
-            inc = {"attr_points": ATTR_POINTS_PER_LEVEL * (body.level - old["level"]), "skill_points": SKILL_POINTS_PER_LEVEL * (body.level - old["level"])}
+        d = body.level - old["level"]
+        upd |= {"attr_points": max(0, old.get("attr_points", 0) + ATTR_POINTS_PER_LEVEL * d), "skill_points": max(0, old.get("skill_points", 0) + SKILL_POINTS_PER_LEVEL * d)}
     if body.level is not None:
         upd |= {"level": body.level, "xp": XP_TABLE[body.level]}
     if body.gold is not None:

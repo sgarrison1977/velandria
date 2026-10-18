@@ -12,6 +12,7 @@ const SETS = {
   monsters: ["skeleton", "goblin_scout", "forest_bandit", "orc_warrior", "dark_cultist", "forest_troll", "crypt_ghoul", "death_knight"],
   monsters2: ["imp", "hollow_shade", "shadow_wraith", "stone_golem", "abyssal_fiend", "forest_wolf", "giant_spider", "bone_colossus"],
   npcs: ["guard", "smith", "merchant", "healer", "druid", "elder", "gilded", "villager", "child", "gravekeeper", "crypt_door"],
+  bosses: ["grubnak", "greymaw", "ixra", "malzeth", "revenant", "pyrrhax", "board"],
   isles: ["reef_crawler", "drowned_corsair", "tidecursed_wraith", "coral_colossus", "captain_blackbrine", "sailor", "fishmonger", "chest"],
 };
 
@@ -38,9 +39,9 @@ function ModelSet() {
     const rigs = []; let raf, alive = true;
     fetch(`${API}/api/game/data`).then((r) => r.json()).then((data) => {
       if (!alive) return;
-      const all = SETS[set] || SETS.players, list = q.get("only") ? q.get("only").split(",").map((k) => all[Number(k)]) : all, n = list.length, gap = set.startsWith("monsters") ? 3.2 : 1.6;
+      const all = SETS[set] || SETS.players, list = q.get("only") ? q.get("only").split(",").map((k) => all[Number(k)]) : all, n = list.length, gap = set === "bosses" ? 5.5 : set.startsWith("monsters") ? 3.2 : 1.6;
       list.forEach((it, i) => {
-        const rig = set === "players" ? buildPlayer(it[0], it[1], data.items) : set === "npcs" || (set === "isles" && ["sailor", "fishmonger", "chest"].includes(it)) ? buildNpc(it) : buildMonster(it);
+        const rig = set === "players" ? buildPlayer(it[0], it[1], data.items) : set === "npcs" || ((set === "isles" || set === "bosses") && ["sailor", "fishmonger", "chest", "board"].includes(it)) ? buildNpc(it) : buildMonster(it);
         rig.root.position.x = (i - (n - 1) / 2) * gap; rig.root.rotation.y = Number(q.get("rot") || 0.35);
         scene.add(rig.root); rigs.push({ rig, a: { moving: q.get("walk") === "1" } });
       });

@@ -444,3 +444,22 @@ input[type="text"], input[type="email"], input[type="password"], input:not([type
 .admin-ban select, .admin-ban input { background: #0b0907; border: 1px solid #4a3a26; color: var(--text); padding: 7px 10px; outline: none; }
 .admin-tag.ban { background: #b8473a; color: #fff; }
 .admin-acc.banned { border-color: #8a3a2e; }
+.admin-ok { background: #13241599; border: 1px solid #3f7a48; color: #a8e3b0; padding: 8px 12px; font-size: 14px; margin-bottom: 12px; cursor: pointer; }
+.admin-ban input { min-width: 300px; flex: 1; max-width: 460px; }
+
+.bounty-panel { left: 50%; top: 64px; transform: translateX(-50%); width: min(640px, 96vw); animation: none; }
+.bounty-tabs { display: flex; align-items: center; gap: 4px; margin-bottom: 10px; }
+.bounty-tokens { margin-left: auto; color: var(--gold); display: inline-flex; gap: 6px; align-items: center; font-family: var(--serif); font-size: 16px; }
+.bounty-list, .bounty-shop { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; max-height: calc(100vh - 260px); padding-right: 4px; }
+.bounty-row, .bounty-shop-item { display: flex; align-items: center; gap: 12px; padding: 9px 12px; background: #0e0b08cc; border: 1px solid var(--edge2); border-left: 3px solid #6e5532; transition: border-color .15s, background-color .15s; }
+.bounty-row:hover, .bounty-shop-item:hover { background: #1a140dcc; }
+.bounty-row.st-active { border-left-color: #ff9a3a; } .bounty-row.st-done { border-left-color: #7fd38a; background: #12201499; } .bounty-row.st-claimed { opacity: .55; }
+.bounty-lv { display: flex; flex-direction: column; align-items: center; min-width: 34px; color: #c96a4a; }
+.bounty-lv b { font-family: var(--serif); color: var(--text); font-size: 17px; }
+.bounty-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.bounty-info b { font-family: var(--serif); color: var(--gold); font-weight: 400; font-size: 16px; }
+.bounty-info span { color: var(--muted); font-size: 13px; } .bounty-info em { font-style: normal; color: #d8c89a; font-size: 12px; }
+.bounty-acts { display: flex; gap: 6px; align-items: center; }
+.bounty-done { color: #7fd38a; font-size: 12px; font-family: var(--serif); }
+.btn.claim { background: linear-gradient(#2e5a2a, #1a3a18); border-color: #5aa84e; color: #d8ffd0; }
+.bounty-note { color: var(--muted); font-size: 12px; margin: 6px 0 0; }

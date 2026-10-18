@@ -7,7 +7,7 @@ export const Broadcast = ({ onMsg }) => {
   const send = async (e) => {
     e.preventDefault();
     try { const r = await adminHttp.post("/admin/broadcast", { text }); onMsg(`Broadcast sent to ${r.data.online} online player${r.data.online === 1 ? "" : "s"}`); setText(""); }
-    catch (x) { onMsg(errMsg(x)); }
+    catch (x) { onMsg(errMsg(x), false); }
   };
   return (
     <form className="admin-broadcast" onSubmit={send} data-testid="admin-broadcast-form">

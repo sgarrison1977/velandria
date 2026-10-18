@@ -2,7 +2,7 @@
 import asyncio, time, math, random, uuid, json, logging, re
 from datetime import datetime, timezone
 from game_data import (STORAGE_SLOTS, ITEMS, MONSTERS, ABILITIES, CLASSES, NPCS, MERCHANTS, QUESTS, XP_TABLE, MAX_LEVEL, INV_SLOTS, TICK, COMBAT,
-                       PLAYER_SPEED, PICKUP_RANGE, NPC_RANGE, LOOT_OWNER_SECS, LOOT_EXPIRE_SECS, ACTIONS, RESTOCK_SECS, sell_price, default_binds, EXTRA_ROLLS, BONUS_LOOT, WAYSTONE_COST, roll_props, random_gear, RANDOM_GEAR_CHANCE)
+                       PLAYER_SPEED, PICKUP_RANGE, NPC_RANGE, LOOT_OWNER_SECS, LOOT_EXPIRE_SECS, ACTIONS, RESTOCK_SECS, sell_price, default_binds, EXTRA_ROLLS, BONUS_LOOT, WAYSTONE_COST, roll_props, random_gear, RANDOM_GEAR_CHANCE, rare_gear, BOUNTIES, BOUNTY_SHOP)
 from world import PORTALS, World, in_safe, SAFE_ZONES, PIT_ROOMS, to_global
 from game_data import PIT_CHAMPION_KILLS, FERRY_COST, FERRY_DEST, CHEST_COOLDOWN
 
@@ -62,6 +62,7 @@ class Player:
             setattr(self, k, doc[k])
         self.look = doc.get("look") or {}
         self.home = doc.get("home")
+        self.bounties = doc.get("bounties") or {}
         self.ws, self.queue = ws, asyncio.Queue(maxsize=400)
         self.path, self.target, self.pending, self.queued = [], None, None, None
         self.last_attack, self.cds, self.buffs, self.dots = 0, {}, {}, []
@@ -130,7 +131,7 @@ class Player:
 
     def to_doc(self):
         return {k: getattr(self, k) for k in ("name", "cls", "level", "xp", "gold", "attrs", "attr_points", "skill_points", "abilities",
-                                              "inventory", "equipment", "quests", "binds", "hp", "mp", "marks", "home")} | {"x": round(self.x, 2), "z": round(self.z, 2)}
+                                              "inventory", "equipment", "quests", "binds", "hp", "mp", "marks", "home", "bounties")} | {"x": round(self.x, 2), "z": round(self.z, 2)}
 
     def self_view(self):
         return self.to_doc() | dict(id=self.id, look=self.look, max_hp=self.max_hp, max_mp=self.max_mp, tot=self.tot, armor=self.armor, attack_interval=self.attack_interval,
@@ -200,7 +201,8 @@ class Game:
 
     async def save(self, p):
         mark = getattr(p, "play_mark", now())
-        dt = int(now() - mark)
+        end = p.linkdead_at if p.ws is None and p.linkdead_at else now()
+        dt = int(max(0, end - mark))
         p.play_mark = mark + dt
         await self.db.characters.update_one({"id": p.doc_id}, {"$set": p.to_doc() | {"updated_at": datetime.now(timezone.utc).isoformat()}, "$inc": {"play_seconds": dt}})
         if dt:
@@ -211,7 +213,7 @@ class Game:
         p.ws = None
         if ws is not None:
             try:
-                await ws.close(code=4002, reason=reason[:110])
+                await ws.close(code=4002, reason=reason.encode()[:120].decode("utf-8", "ignore"))
             except Exception:
                 pass
         await self.remove_player(p)
@@ -236,6 +238,8 @@ class Game:
         p = self.players.get(doc["id"])
         if p:
             old = p.ws
+            if p.linkdead_at and hasattr(p, "play_mark"):
+                p.play_mark += now() - max(p.linkdead_at, p.play_mark)
             p.ws, p.linkdead_at, p.queue = ws, None, asyncio.Queue(maxsize=400)
             if old is not None and old is not ws:
                 try:
@@ -501,13 +505,27 @@ class Game:
             else:
                 m.path, m.moving = [], False
                 m.rot = math.atan2(tgt.x - m.x, tgt.z - m.z)
-                if d.get("slam") and t > getattr(m, "next_slam", 0):
-                    m.next_slam = t + d["slam"]["every"]
-                    self.fx(m.x, m.z, {"t": "fx", "k": "slam", "src": m.id, "r": d["slam"]["radius"]})
+                if d.get("enrage"):
+                    rage = m.hp < m.max_hp * d["enrage"]["at"]
+                    if rage and not getattr(m, "enraged", False):
+                        self.fx(m.x, m.z, {"t": "fx", "k": "slam", "src": m.id, "r": 4, "c1": "#ff2a1a", "c2": "#ff8a3a"})
+                        for pp in self.players.values():
+                            if dist(m, pp) < 40:
+                                pp.send({"t": "sys", "msg": f"{d['name']} flies into a rage!", "kind": "bad"})
+                    m.enraged = rage
+                sl = d.get("slam")
+                if sl and t > getattr(m, "next_slam", 0):
+                    m.next_slam = t + sl["every"]
+                    self.fx(m.x, m.z, {"t": "fx", "k": "slam", "src": m.id, "r": sl["radius"], "c1": sl.get("c1"), "c2": sl.get("c2"), "name": sl.get("name")})
                     for pp in list(self.players.values()):
-                        if not pp.dead_until and "invis" not in pp.buffs and dist(m, pp) <= d["slam"]["radius"]:
+                        if not pp.dead_until and "invis" not in pp.buffs and dist(m, pp) <= sl["radius"]:
                             k = COMBAT["armor_k"] + COMBAT["armor_k_per_level"] * d["level"]
-                            self.damage_player(pp, max(1, round(rnd.uniform(*d["dmg"]) * d["slam"]["mult"] * (1 - pp.armor / (pp.armor + k)))), m, "phys")
+                            dmg = max(1, round(rnd.uniform(*d["dmg"]) * sl["mult"] * (d["enrage"]["mult"] if getattr(m, "enraged", False) else 1) * (1 - pp.armor / (pp.armor + k))))
+                            self.damage_player(pp, dmg, m, sl.get("dtype", "phys"))
+                            if sl.get("poison"):
+                                pp.dots.append(dict(dmg=sl["poison"][0], n=sl["poison"][1], next=now() + 1, src=m.id))
+                            if sl.get("drain"):
+                                m.hp = min(m.max_hp, m.hp + dmg * sl["drain"])
                 elif t - m.last_attack >= d["interval"] * (1 / 0.7 if getattr(m, "chill_until", 0) > t else 1):
                     m.last_attack = t
                     self.monster_attack(m, tgt)
@@ -626,6 +644,8 @@ class Game:
             g = random_gear(m.d["level"], rnd)
             if g:
                 drops.append((g, -1))
+        if m.d.get("bounty"):
+            drops += [(g, -1) for g in (rare_gear(m.d["level"], rnd) for _ in range(2)) if g]
         if m.d.get("champion"):
             drops += [(g, -1) for g in (random_gear(m.d["level"], rnd) for _ in range(3)) if g]
             drops.append(("gold", rnd.randint(*m.d["gold"]) * 5))
@@ -633,7 +653,7 @@ class Game:
         if m.d.get("champion"):
             self.broadcast_sys(f"{killer.name} has slain the Wave Champion {m.d['name']}!")
         if m.d.get("boss"):
-            self.broadcast_sys(f"{killer.name} has slain {m.d['name']}! " + ("The Titus Barrows fall silent... for now." if m.d.get("barrow") else "The tides of the Offshore Isles grow calm... for now." if m.d.get("isle") else "The Hollow Deep falls silent... for now."))
+            self.broadcast_sys(f"{killer.name} has slain {m.d['name']}! " + ("Its lair lies quiet... for now." if m.d.get("bounty") else "The Titus Barrows fall silent... for now." if m.d.get("barrow") else "The tides of the Offshore Isles grow calm... for now." if m.d.get("isle") else "The Hollow Deep falls silent... for now."))
         for i, (item, qty) in enumerate(drops):
             a = i * 2.1 + rnd.uniform(0, 1)
             lx, lz = m.x + math.cos(a) * (0.6 + 0.4 * i), m.z + math.sin(a) * (0.6 + 0.4 * i)
@@ -644,6 +664,13 @@ class Game:
             qty = max(1, qty)
             self.loot[lid] = dict(id=lid, item=item, qty=qty, props=props, pname=pname, x=round(lx, 2), z=round(lz, 2), owner=killer.id,
                                   party=getattr(killer, "party", None), owner_until=t + LOOT_OWNER_SECS, expires=t + (8 if m.type.startswith("pit_") else LOOT_EXPIRE_SECS))
+        if m.type in BOUNTIES:
+            for o in sharers:
+                b = o.bounties.get(m.type)
+                if b and b.get("s") == "active":
+                    b["s"] = "done"
+                    o.send({"t": "sys", "msg": f"[Bounty] {m.d['name']} slain! Claim your reward at any town Bounty Board.", "kind": "quest"})
+                    o.dirty = True
         for o in sharers:
             for qid, q in o.quests.items():
                 qd = QUESTS[qid]
@@ -686,7 +713,7 @@ class Game:
         if rnd.random() > self.hit_chance(d["level"], p.level, p.tot["dex"]):
             self.fx(m.x, m.z, {"t": "fx", "k": "mattack", "src": m.id, "tgt": p.id, "style": style, "miss": 1})
             return
-        raw = rnd.uniform(*d["dmg"])
+        raw = rnd.uniform(*d["dmg"]) * (d["enrage"]["mult"] if getattr(m, "enraged", False) else 1)
         self.fx(m.x, m.z, {"t": "fx", "k": "mattack", "src": m.id, "tgt": p.id, "style": style})
         k = COMBAT["armor_k"] + COMBAT["armor_k_per_level"] * d["level"]
         dmg = max(1, round(raw * (1 - p.armor / (p.armor + k))))
@@ -1120,6 +1147,8 @@ class Game:
         n = self.near_npc(p, npc_id)
         if not n:
             return p.send({"t": "err", "msg": "You are too far away."})
+        if n.get("board"):
+            return self.bounty_view(p, npc_id)
         opts, text = [], {"smith": "Steel for the road, traveler?", "merchant": "Supplies for the journey? I've a fair price.",
                           "healer": "Rest a moment. The light will mend you.", "druid": "The grove's breath will restore you.",
                           "elder": "Titus has endured, but the woods grow restless.", "guard": "Keep your blade sharp out there.",
@@ -1442,6 +1471,82 @@ class Game:
             self.loot[lid] = dict(id=lid, item=item, qty=max(1, qty), props=props, pname=pname, x=round(lx, 2), z=round(lz, 2), owner=p.id,
                                   party=getattr(p, "party", None), owner_until=t + LOOT_OWNER_SECS, expires=t + LOOT_EXPIRE_SECS)
 
+    def drop_item(self, p, suid):
+        s = self.slot_of(p, suid)
+        if not s:
+            return "That item is gone."
+        if p.dead_until:
+            return "You cannot do that while dead."
+        if ITEMS[s["item"]]["type"] == "quest":
+            return "Quest items cannot be dropped."
+        p.inventory.remove(s)
+        t, a = now(), rnd.uniform(0, 6.283)
+        lx, lz = p.x + math.cos(a) * 0.8, p.z + math.sin(a) * 0.8
+        if not self.world.walkable(lx, lz):
+            lx, lz = p.x, p.z
+        lid = "l" + uid()
+        self.loot[lid] = dict(id=lid, item=s["item"], qty=s["qty"], props=s.get("props"), pname=s.get("pname"), x=round(lx, 2), z=round(lz, 2),
+                              owner=None, party=None, owner_until=0, expires=t + 300)
+        p.send({"t": "sys", "msg": f"You drop {s.get('pname') or ITEMS[s['item']]['name']}" + (f" ×{s['qty']}" if s["qty"] > 1 else "") + "."})
+        p.dirty = True
+        return None
+
+    @staticmethod
+    def bounty_state(p, k):
+        b = p.bounties.get(k) or {}
+        if b.get("s") in ("active", "done"):
+            return b["s"]
+        return "claimed" if b.get("s") == "claimed" and b.get("day") == datetime.now(timezone.utc).date().isoformat() else "available"
+
+    def bounty_view(self, p, npc_id):
+        p.send({"t": "bounty", "npc": npc_id, "tokens": self.count_item(p, "bounty_token"),
+                "list": [dict(id=k, **{kk: v for kk, v in b.items()}, state=self.bounty_state(p, k)) for k, b in BOUNTIES.items()],
+                "shop": [dict(item=i, cost=c) for i, c in BOUNTY_SHOP]})
+
+    def bounty_cmd(self, p, npc_id, action, bid):
+        n = self.near_npc(p, npc_id, "board")
+        if not n:
+            return "You are too far from a Bounty Board."
+        if action == "buy":
+            cost = dict(BOUNTY_SHOP).get(bid)
+            if not cost:
+                return "That item is not for trade."
+            if self.count_item(p, "bounty_token") < cost:
+                return f"You need {cost} Bounty Tokens."
+            if not self.can_add(p, bid, 1):
+                return "Your inventory is full."
+            self.take_item(p, "bounty_token", cost)
+            self.add_item(p, bid, 1)
+            p.send({"t": "trade", "msg": f"Traded {cost} Bounty Tokens for {ITEMS[bid]['name']}."})
+        elif bid not in BOUNTIES:
+            return "Unknown bounty."
+        else:
+            st, b = self.bounty_state(p, bid), BOUNTIES[bid]
+            if action == "accept":
+                if st != "available":
+                    return "You cannot take that bounty right now."
+                p.bounties[bid] = {"s": "active"}
+                p.send({"t": "sys", "msg": f"[Bounty] Accepted: slay {b['name']} — {b['where']}.", "kind": "quest"})
+            elif action == "abandon":
+                if st != "active":
+                    return "That bounty is not active."
+                p.bounties.pop(bid, None)
+            elif action == "turnin":
+                if st != "done":
+                    return "That bounty is not complete."
+                if not self.can_add(p, "bounty_token", b["tokens"]):
+                    return "Your inventory is full."
+                self.add_item(p, "bounty_token", b["tokens"])
+                p.gold += b["gold"]
+                p.bounties[bid] = {"s": "claimed", "day": datetime.now(timezone.utc).date().isoformat()}
+                p.send({"t": "trade", "msg": f"Bounty claimed: +{b['gold']} gold, +{b['tokens']} Bounty Token{'s' if b['tokens'] > 1 else ''}."})
+                self.give_xp(p, b["xp"])
+            else:
+                return "Unknown action."
+        p.dirty = True
+        self.bounty_view(p, npc_id)
+        return None
+
     async def admin_give(self, p, msg):
         if not getattr(p, "admin", False):
             return "Only the realm's keeper may do that."
@@ -1713,6 +1818,10 @@ class Game:
             err = self.use(p, msg.get("uid"))
         elif t == "destroy":
             err = self.destroy(p, msg.get("uid"))
+        elif t == "drop":
+            err = self.drop_item(p, msg.get("uid"))
+        elif t == "bounty":
+            err = self.bounty_cmd(p, msg.get("npc"), msg.get("action"), msg.get("id"))
         elif t == "give":
             err = await self.admin_give(p, msg)
         elif p.dead_until:

@@ -11,12 +11,13 @@ export default function AdminPage() {
   const [authed, setAuthed] = useState(!!sessionStorage.getItem("sx_admin"));
   const [accounts, setAccounts] = useState(null);
   const [q, setQ] = useState("");
-  const [msg, setMsg] = useState("");
+  const [msg, setMsgState] = useState(null);
+  const setMsg = useCallback((text, ok = true) => setMsgState(text ? { text, ok } : null), []);
   const load = useCallback(() => {
     adminHttp.get("/admin/accounts").then((r) => setAccounts(r.data)).catch((e) => {
-      if (e?.response?.status === 401) { sessionStorage.removeItem("sx_admin"); setAuthed(false); } else setMsg(errMsg(e));
+      if (e?.response?.status === 401) { sessionStorage.removeItem("sx_admin"); setAuthed(false); } else setMsg(errMsg(e), false);
     });
-  }, []);
+  }, [setMsg]);
   useEffect(() => { if (authed) load(); }, [authed, load]);
   const logout = () => { sessionStorage.removeItem("sx_admin"); setAuthed(false); setAccounts(null); };
   if (!authed) return <AdminLogin onDone={() => setAuthed(true)} onBack={() => nav("/")} />;
@@ -38,7 +39,7 @@ export default function AdminPage() {
         </div>
       </header>
       <Broadcast onMsg={setMsg} />
-      {msg && <div className="form-err" data-testid="admin-message" onClick={() => setMsg("")}>{msg}</div>}
+      {msg && <div className={msg.ok ? "admin-ok" : "form-err"} data-testid="admin-message" onClick={() => setMsg(null)}>{msg.text}</div>}
       <div className="admin-list" data-testid="admin-accounts-list">
         {list.map((a) => <AccountRow key={a.id} acc={a} onChange={load} onMsg={setMsg} />)}
         {accounts && !list.length && <p className="admin-sub" data-testid="admin-empty">No accounts match.</p>}

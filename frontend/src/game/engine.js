@@ -178,7 +178,7 @@ export class Engine {
       case "pdeath": if (tgt) tgt.anim.dead = true; if (f.tgt === this.meId) sfx("death"); break;
       case "heal": if (tgt) { this.burst(tgt, "#7aff9a", 14, 1.4); if (f.v) this.number(tgt, `+${f.v}`, "#7aff9a"); if (near(tgt)) sfx("heal"); } break;
       case "levelup": if (src) { this.pillar(src); sfx("levelup"); } break;
-      case "slam": if (src) { this.shock(src.x, src.z, "#b060ff", f.r); this.shock(src.x, src.z, "#ff6a3a", f.r * 0.6); src.anim.atk = 1; if (near(src)) { sfx("heavy"); this.shake = 0.4; } } break;
+      case "slam": if (src) { this.shock(src.x, src.z, f.c1 || "#b060ff", f.r); this.shock(src.x, src.z, f.c2 || "#ff6a3a", f.r * 0.6); src.anim.atk = 1; if (near(src)) { sfx("heavy"); this.shake = 0.4; } } break;
       case "rot": if (tgt) this.rotCloud(tgt); break;
       case "cast": if (src) this.castFx(src, tgt || (f.x != null ? { x: f.x, z: f.z, height: 0 } : null), f.ab); break;
       default:
