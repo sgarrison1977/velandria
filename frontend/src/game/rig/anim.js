@@ -33,7 +33,9 @@ function humanoidAnim(rig, a, dt, t, moving) {
   armL.sh.rotation.set(-sw * 0.55, 0, -out - (moving ? 0 : breath * 0.015)); armR.sh.rotation.set(sw * 0.55, 0, out + (moving ? 0 : breath * 0.015));
   armL.el.rotation.x = -0.22 - Math.max(0, sw) * 0.45; armR.el.rotation.x = -0.22 - Math.max(0, -sw) * 0.45;
   const wk = rig.weaponKind;
-  if (wk === "staff" || wk === "spear") { armR.sh.rotation.x = -0.25 + sw * 0.15; armR.el.rotation.x = -0.75; }
+  if (wk === "spear") { armR.sh.rotation.x = -0.25 + sw * 0.15; armR.el.rotation.x = -0.75; }
+  if (wk === "staff") { armR.sh.rotation.set(-0.12 + sw * 0.1, 0, out + 0.08); armR.el.rotation.x = -1.05; }
+  let staffFlip = 0;
   if (wk === "bow") { armL.el.rotation.x = -0.5; }
   if (a.atk > 0) {
     const q = 1 - a.atk, env = Math.sin(q * Math.PI);
@@ -43,7 +45,12 @@ function humanoidAnim(rig, a, dt, t, moving) {
       armR.sh.rotation.set(-1.5, 0.35, 0); armR.el.rotation.x = q < 0.6 ? -1.9 * draw : -1.9 + (q - 0.6) * 2;
       torso.rotation.y = -0.5 * env;
     } else if (wk === "staff") {
-      armR.sh.rotation.x = -0.3 - 1.4 * env; armR.el.rotation.x = -0.5 + env * 0.3; torso.rotation.x = rig.lean + 0.12 * env;
+      const wind = q < 0.35 ? q / 0.35 : 1, strike = q < 0.35 ? 0 : Math.min(1, (q - 0.35) / 0.3), back = q > 0.75 ? (q - 0.75) / 0.25 : 0;
+      const ease = 1 - (1 - strike) ** 3, base = armR.sh.rotation.x, sx = lerp(lerp(base, -2.8, wind) + ease * 2.95, base, back);
+      armR.sh.rotation.set(sx, 0, 0.12); armR.el.rotation.x = lerp(-0.25, -1.05, back);
+      armL.sh.rotation.set(sx * 0.85, 0, 0.42); armL.el.rotation.x = -0.35;
+      torso.rotation.x = rig.lean + 0.28 * strike * (1 - back) - 0.12 * wind * (1 - strike);
+      staffFlip = Math.min(1, q / 0.18) * (1 - back);
     } else {
       const wind = q < 0.3 ? q / 0.3 : 1, strike = q < 0.3 ? 0 : Math.min(1, (q - 0.3) / 0.35), back = q > 0.7 ? (q - 0.7) / 0.3 : 0;
       const ease = 1 - (1 - strike) ** 3;
@@ -55,7 +62,13 @@ function humanoidAnim(rig, a, dt, t, moving) {
       body.position.z = 0.12 * env;
     }
   }
-  if (a.cast > 0) {
+  if (a.cast > 0 && wk === "staff") {
+    const c = Math.sin(a.cast * Math.PI);
+    armR.sh.rotation.set(lerp(armR.sh.rotation.x, -1.5, c), 0, lerp(armR.sh.rotation.z, 0.05, c)); armR.el.rotation.x = lerp(armR.el.rotation.x, -0.05, c);
+    armL.sh.rotation.x = lerp(armL.sh.rotation.x, -0.6, c); armL.el.rotation.x = -0.8 * c;
+    torso.rotation.x = rig.lean - 0.06 * c; head.rotation.x = -0.1 * c;
+    staffFlip = Math.max(staffFlip, c);
+  } else if (a.cast > 0) {
     const c = Math.sin(a.cast * Math.PI);
     armL.sh.rotation.x = lerp(armL.sh.rotation.x, -1.9, c); armR.sh.rotation.x = lerp(armR.sh.rotation.x, -2.1, c);
     armL.sh.rotation.z = lerp(armL.sh.rotation.z, 0.2, c); armR.sh.rotation.z = lerp(armR.sh.rotation.z, -0.2, c);
@@ -71,6 +84,12 @@ function humanoidAnim(rig, a, dt, t, moving) {
     legL.knee.rotation.x = legR.knee.rotation.x = 0.35 * env; body.position.y = -0.06 * env;
   }
   if (a.hurt > 0) { torso.rotation.x -= a.hurt * 0.18; head.rotation.x -= a.hurt * 0.2; }
+  if (rig.staffHolder) {
+    // upright like a walking staff when idle; aligned with the arm (head outward) when swinging or pointing
+    const upright = -(torso.rotation.x + armR.sh.rotation.x + armR.el.rotation.x);
+    rig.staffHolder.rotation.x = lerp(upright, Math.PI * 0.95, staffFlip);
+    rig.staffHolder.children[0].position.y = lerp(-0.32, 0.3, staffFlip);
+  }
   if (rig.cape) rig.cape.rotation.x = lerp(rig.cape.rotation.x, (moving ? 0.3 : 0.06) + Math.sin(t * 2.3 + rig.seed) * 0.04 + Math.abs(sw) * 0.06, Math.min(1, dt * 5));
   if (rig.wings) rig.wings.forEach((w, i) => { w.rotation.y = (i ? -1 : 1) * (0.5 + Math.sin(t * 9) * 0.35); });
   if (rig.tail) { rig.tail.rotation.y = Math.sin(t * 2.2 + rig.seed) * 0.35; rig.tail.rotation.x = Math.sin(t * 1.3) * 0.08; }

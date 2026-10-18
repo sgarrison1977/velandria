@@ -36,7 +36,7 @@ export default function ModelGallery() {
       const w = (n - 1) * gap; cam.position.set(0, Number(q.get("cy") || 1.2) + Math.sin(pitch) * (dist + w * 0.5), Math.cos(pitch) * (dist + w * 0.5)); cam.lookAt(0, Number(q.get("ly") || 1.1), 0);
     });
     let last = performance.now();
-    const loop = () => { const now = performance.now(), dt = Math.min(0.05, (now - last) / 1000), t = now / 1000; last = now; rigs.forEach(({ rig, a }) => animateRig(rig, a, dt, t)); renderer.render(scene, cam); raf = requestAnimationFrame(loop); };
+    const loop = () => { const now = performance.now(), dt = Math.min(0.05, (now - last) / 1000), t = now / 1000; last = now; rigs.forEach(({ rig, a }) => { const an = q.get("anim"); if (an && !(a[an] > 0) && t % 1.6 < 0.05) a[an] = 1; if (q.get("freeze")) a[an] = Number(q.get("freeze")); animateRig(rig, a, dt, t); }); renderer.render(scene, cam); raf = requestAnimationFrame(loop); };
     loop();
     return () => { alive = false; cancelAnimationFrame(raf); renderer.dispose(); };
   }, []);

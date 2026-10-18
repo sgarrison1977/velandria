@@ -315,7 +315,9 @@ export function humanoid(o) {
   if (o.weapon) {
     const wm = typeof o.weapon === "string" ? weaponMesh(o.weapon, o.weaponColor, o.glow) : o.weapon;
     rig.weaponKind = o.weapon;
-    if (o.weapon === "bow") { wm.rotation.set(Math.PI / 2, 0, 0); rig.armL.hand.add(wm); } else rig.armR.hand.add(wm);
+    if (o.weapon === "bow") { wm.rotation.set(Math.PI / 2, 0, 0); rig.armL.hand.add(wm); }
+    else if (o.weapon === "staff") { rig.staffHolder = grp(0, 0, 0, rig.armR.hand); rig.staffHolder.add(wm); }
+    else rig.armR.hand.add(wm);
     rig.mainMesh = wm;
   }
   if (o.off === "shield") { const sm = shieldMesh(o.shieldKind, o.shieldColor || "#6a4a2a"); sm.position.set(-0.07, -0.12, 0.02); sm.rotation.y = -Math.PI / 2; rig.armL.el.add(sm); }
