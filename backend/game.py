@@ -537,7 +537,7 @@ class Game:
                 self.fx(m.x, m.z, {"t": "fx", "k": "arc", "src": m.id, "tgt": o.id})
                 self.damage_monster(o, shock * 0.5 * mult * rnd.uniform(0.9, 1.1), p, "lightning", False)
 
-    def damage_monster(self, m, raw, p, dtype, crit=False):
+    def damage_monster(self, m, raw, p, dtype, crit=False, quiet=False):
         if m.dead_until:
             return
         if p is not None and p.buffs.pop("invis", None):
@@ -551,7 +551,7 @@ class Game:
             m.dmg_by[p.id] = m.dmg_by.get(p.id, 0) + dmg
             if not m.target and m.state != "return":
                 m.target, m.state = p.id, "chase"
-        self.fx(m.x, m.z, {"t": "fx", "k": "dmg", "tgt": m.id, "v": dmg, "crit": 1 if crit else 0, "dt": dtype})
+        self.fx(m.x, m.z, {"t": "fx", "k": "dmg", "tgt": m.id, "v": dmg, "crit": 1 if crit else 0, "dt": dtype, **({"q": 1} if quiet else {})})
         if p and dtype != "poison" and not p.dead_until:
             ls, ms = p.tot.get("life_steal", 0), p.tot.get("mana_steal", 0)
             if ls:
@@ -868,7 +868,7 @@ class Game:
                 for mm in list(self.monsters.values()):
                     if mm is not m and not mm.dead_until and dist(mm, m) <= ab["splash"] + mm.d["radius"]:
                         self.damage_monster(mm, dmg * 0.5, p, "magic")
-            self.damage_monster(m, dmg, p, ab.get("dtype", "magic"), crit)
+            self.damage_monster(m, dmg, p, ab.get("dtype", "magic"), crit, quiet=ab.get("fast_cast", False))
             hit, cur = {m.id}, m
             for i in range(ab.get("chain", 0)):
                 nxt = min((mm for mm in self.monsters.values() if mm.id not in hit and not mm.dead_until and not in_safe(mm.x, mm.z) and dist(mm, cur) <= 8),

@@ -166,7 +166,7 @@ export class Engine {
       case "dmg": if (tgt) {
         tgt.anim.hurt = 1; tgt.lastHit = performance.now(); const el = EL_COLOR[f.dt];
         this.number(tgt, f.v, el || (f.crit ? "#ffcf3a" : f.dt === "poison" ? "#8aff5a" : f.dt === "magic" ? "#9ac8ff" : "#fff"), f.crit);
-        if (el) { this.burst(tgt, el, f.dt === "lightning" ? 6 : 8, f.dt === "frost" ? 0.6 : 1.2); if (near(tgt)) sfx(EL_SFX[f.dt]); } else if (near(tgt)) sfx(f.crit ? "crit" : "hit");
+        if (el) { this.burst(tgt, el, f.dt === "lightning" ? 6 : 8, f.dt === "frost" ? 0.6 : 1.2); if (near(tgt)) sfx(EL_SFX[f.dt]); } else if (near(tgt) && !f.q) sfx(f.crit ? "crit" : "hit");
       } break;
       case "arc": if (src && tgt) this.arc(src, tgt); break;
       case "pdmg": if (tgt) { tgt.anim.hurt = 1; this.number(tgt, f.v, "#ff5040"); if (f.tgt === this.meId) { sfx("hurt"); this.shake = 0.25; } } break;
