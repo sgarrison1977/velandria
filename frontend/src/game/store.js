@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-let state = { me: null, hp: 0, mp: 0, target: null, chat: [], panels: {}, dialog: null, merchant: null, inspect: null, ctx: null, toasts: [], conn: "connecting", region: "", fps: 0, levelup: null, capture: null };
+let state = { me: null, hp: 0, mp: 0, target: null, chat: [], panels: {}, dialog: null, merchant: null, inspect: null, ctx: null, toasts: [], conn: "connecting", region: "", fps: 0, showFps: !!localStorage.getItem("sx_show_fps"), levelup: null, capture: null };
 const subs = new Set();
 export const getState = () => state;
 export const setState = (p) => { state = { ...state, ...(typeof p === "function" ? p(state) : p) }; subs.forEach((f) => f()); };

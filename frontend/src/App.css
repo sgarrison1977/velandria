@@ -402,3 +402,6 @@ input[type="text"], input[type="email"], input[type="password"], input:not([type
 .admin-give .btn { margin-top: 6px; }
 .give-item.r-uncommon .gi-name, .give-chosen .r-uncommon { color: var(--r-uncommon); } .give-item.r-rare .gi-name, .give-chosen .r-rare { color: var(--r-rare); }
 .give-item.r-epic .gi-name, .give-chosen .r-epic { color: var(--r-epic); } .give-item.r-legendary .gi-name, .give-chosen .r-legendary { color: var(--r-legendary); }
+
+.fps-badge { position: fixed; left: 50%; top: 8px; transform: translateX(-50%); z-index: 40; padding: 3px 10px; font: 600 13px/1.2 ui-monospace, Menlo, monospace; background: rgba(10,8,6,0.72); border: 1px solid #3a2e20; pointer-events: none; letter-spacing: 0.5px; }
+.fps-badge.good { color: #7aff8a; } .fps-badge.ok { color: #ffd36b; } .fps-badge.bad { color: #ff6a5a; }

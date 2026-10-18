@@ -541,7 +541,7 @@ export class Engine {
     if (this.quality === "low") this.renderer.render(this.scene, this.camera); else this.composer.render();
     this.updatePlates(now);
     this.fpsAcc.push(dt);
-    if (this.fpsAcc.length >= 60) { const fps = Math.round(60 / this.fpsAcc.reduce((a, b) => a + b, 0)); this.fpsAcc = []; setState({ fps }); this.slow = fps < 24 ? (this.slow || 0) + 1 : 0; if (this.slow >= 2 && this.quality !== "low") { this.setQuality(this.quality === "high" ? "medium" : "low"); this.slow = 0; } if (this.discDirty) { this.discDirty = false; localStorage.setItem(`sx_disc_${this.meId}`, JSON.stringify([...this.discovered])); } }
+    if (this.fpsAcc.length >= 30) { const fps = Math.round(this.fpsAcc.length / this.fpsAcc.reduce((a, b) => a + b, 0)); this.fpsAcc = []; setState({ fps }); this.slow = fps < 24 ? (this.slow || 0) + 1 : 0; if (this.slow >= 2 && this.quality !== "low") { this.setQuality(this.quality === "high" ? "medium" : "low"); this.slow = 0; } if (this.discDirty) { this.discDirty = false; localStorage.setItem(`sx_disc_${this.meId}`, JSON.stringify([...this.discovered])); } }
   };
   holdWalk(now) {
     const h = this.hold, me = this.entities.get(this.meId);
