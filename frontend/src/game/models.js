@@ -141,9 +141,7 @@ function addGearGlow(rig, mainRarity, counts) {
   for (let i = 0; i < n; i++) { const a = i * 2.4, y = 0.15 + (i / n) * 2.0, r = 0.55 + Math.sin(i * 1.7) * 0.12; pos[i * 3] = Math.cos(a) * r; pos[i * 3 + 1] = y; pos[i * 3 + 2] = Math.sin(a) * r; }
   const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
   const aura = new THREE.Points(geo, new THREE.PointsMaterial({ color: col, size: 0.17, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending }));
-  const ring = new THREE.Mesh(new THREE.RingGeometry(0.45, 0.75, 28), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.3, depthWrite: false, blending: THREE.AdditiveBlending }));
-  ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04;
-  rig.aura = new THREE.Group(); rig.aura.add(aura, ring); rig.root.add(rig.aura);
+  rig.aura = new THREE.Group(); rig.aura.add(aura); rig.root.add(rig.aura);
   rig.auraStrength = Math.min(1, 0.4 + nl * 0.2 + ne * 0.08);
 }
 
@@ -154,7 +152,6 @@ export function animateGlow(rig, t) {
     rig.aura.rotation.y = t * 1.3;
     rig.aura.children[0].material.opacity = (0.45 + 0.4 * Math.sin(t * 5)) * rig.auraStrength + 0.15;
     rig.aura.children[0].position.y = Math.sin(t * 1.6) * 0.12;
-    rig.aura.children[1].material.opacity = 0.25 + 0.3 * k * rig.auraStrength;
   }
 }
 
