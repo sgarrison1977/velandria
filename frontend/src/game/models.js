@@ -51,6 +51,7 @@ const NPC_BUILD = {
   elder: () => humanoid(robe("#4a3a5a", { skin: "#d0a888", beard: "#ddd", beardStyle: "full", hair: "#ccc", hairStyle: "long", trim: "#c9a24e", weapon: "staff", weaponColor: "#5a4632", glow: "#ffcf7a" })),
   guard: () => humanoid({ skin: "#c8946e", beard: "#3a2414", beardStyle: "stubble", top: { style: "mail", color: "#8a8f96" }, trim: "#7a1f1f", legs: { style: "plate", color: "#8a8f96" }, boots: { style: "plate", color: "#6a6e74" }, gloves: { style: "gauntlet", color: "#8a8f96" }, helm: { style: "nasal", color: "#8a8f96" }, cape: "#7a1f1f", weapon: "spear", off: "shield", shieldKind: "iron", shieldColor: "#7a1f1f", pauldrons: "#8a8f96" }),
   villager: () => humanoid({ skin: pick(["#d0a080", "#c08a6a", "#e0b898", "#9a6a4a"]), top: { style: "tunic", color: pick(["#6a5a3a", "#5a6a4a", "#7a4a3a", "#4a5a6a"]) }, legs: { style: "cloth", color: "#4a3a2a" }, boots: { style: "shoe", color: "#3a2a1a" }, hair: pick(["#4a2a1a", "#8a6a3a", "#2a1a10", "#a8a090"]), hairStyle: pick(["short", "long", "tail"]), beard: Math.random() < 0.4 ? "#4a2a1a" : null, beardStyle: "stubble" }),
+  gravekeeper: () => humanoid({ skin: "#c8a890", beard: "#d0d0d0", beardStyle: "goatee", hair: "#b8b8b8", hairStyle: "bald", hunch: true, top: { style: "robe", color: "#2a2620" }, boots: { style: "boot", color: "#1a1410" }, helm: { style: "hood", color: "#1e1a16" }, belt: "#4a3a26", weapon: "staff", weaponColor: "#4a3a2a" }),
   sailor: () => humanoid({ bulk: 1.1, skin: "#b88466", beard: "#8a8a8a", beardStyle: "full", hair: "#7a7a7a", top: { style: "tunic", color: "#2a4a6a" }, legs: { style: "cloth", color: "#3a3428" }, boots: { style: "boot", color: "#2a1f16" }, helm: { style: "cap", color: "#1e2a3a" }, belt: "#4a3020" }),
   fishmonger: () => humanoid({ skin: "#d6a888", hair: "#8a4a2a", hairStyle: "tail", top: { style: "tunic", color: "#5a7a7a" }, legs: { style: "cloth", color: "#3a3428" }, boots: { style: "boot", color: "#2a1f16" }, belt: "#e4ddcc", weapon: "dagger" }),
   child: () => humanoid({ scale: 0.6, skin: "#e0b090", top: { style: "tunic", color: "#4a6a8a" }, hair: "#9a6a2a", headScale: 1.25 }),
@@ -81,7 +82,15 @@ function chest() {
   const glow = new THREE.PointLight("#ffcf5a", 6, 5, 1.6); glow.position.set(0, 1.2, 0); root.add(glow);
   return { root, kind: "prop", height: 1.4 };
 }
-export const buildNpc = (kind) => kind === "trunk" ? trunk() : kind === "chest" ? chest() : kind === "waystone" ? waystone() : (NPC_BUILD[kind] || NPC_BUILD.villager)();
+function cryptDoor() {
+  const root = new THREE.Group(), iron = mat("metal", "#2a2a2e"), glow = M("#7affc8", { emissive: "#3affa8", emissiveIntensity: 2.2 });
+  mesh(B(0.7, 0.9, 0.12), iron, 0, 1.4, 0, root);
+  const sk = mesh(new THREE.SphereGeometry(0.2, 10, 8), mat("cloth", "#d8d0b8"), 0, 1.5, 0.1, root); sk.scale.set(1, 1.1, 0.6);
+  mesh(new THREE.SphereGeometry(0.05, 6, 6), glow, -0.07, 1.52, 0.2, root); mesh(new THREE.SphereGeometry(0.05, 6, 6), glow, 0.07, 1.52, 0.2, root);
+  const l = new THREE.PointLight("#7affc8", 3, 4, 1.6); l.position.set(0, 1.5, 0.6); root.add(l);
+  return { root, kind: "prop", height: 1.9 };
+}
+export const buildNpc = (kind) => kind === "trunk" ? trunk() : kind === "chest" ? chest() : kind === "crypt_door" ? cryptDoor() : kind === "waystone" ? waystone() : (NPC_BUILD[kind] || NPC_BUILD.villager)();
 
 const CLASS_LOOK = {
   warrior: { skin: "#c8946e", hair: "#3a2414", hairStyle: "short", beard: "#3a2414", beardStyle: "stubble", top: { style: "tunic", color: "#6a5a48" }, legs: { style: "leather", color: "#3a3028" }, boots: { style: "boot", color: "#3a2a1c" }, bracers: "#4a3020", pauldrons: "#80868e", belt: "#3a2414" },

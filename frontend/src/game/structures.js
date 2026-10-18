@@ -298,7 +298,7 @@ function prop(p, terrain, lights) {
       box(2, 3, 0.1, M("#141210"), 0, 2.1, 2.85, g);
       const stat = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.6, 6), stn); stat.position.set(0, 7.4, 0); g.add(stat);
       const gl = new THREE.PointLight("#7affc8", 6, 9, 1.6); gl.position.set(0, 2, 4); g.add(gl);
-      break; }
+      g.rotation.y = p.rot || 0; break; }
     case "dead_tree": {
       const bark = M("#3a3028");
       const trunk = cyl(0.22, 0.4, 4.2, 6, bark, 0, 2.1, 0, g); trunk.rotation.z = 0.08;

@@ -110,9 +110,9 @@ input { font-family: inherit; }
 .slot-cd { position: absolute; left: 0; right: 0; bottom: 0; background: #000b; display: grid; place-items: center; z-index: 1; }
 .slot-cd b { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 13px; color: #fff; }
 .slot-lock { position: absolute; bottom: 1px; right: 3px; font-size: 10px; color: #ffcf7a; z-index: 2; }
-.xpbar { position: relative; width: 640px; max-width: 80vw; height: 12px; background: #070605; border: 1px solid #000; box-shadow: 0 0 0 1px #3a2c1c; pointer-events: auto; }
+.xpbar { position: relative; width: 640px; max-width: 80vw; height: 24px; background: #070605; border: 1px solid #000; box-shadow: 0 0 0 1px #3a2c1c; pointer-events: auto; }
 .xpbar i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(#e8c050, var(--xp) 60%, #6a4a0e); transition: width .4s; }
-.xpbar span { position: relative; display: block; text-align: center; font-size: 10px; line-height: 12px; text-shadow: 0 1px 1px #000; }
+.xpbar span { position: relative; display: block; text-align: center; font-size: 13px; line-height: 24px; text-shadow: 0 1px 1px #000; }
 
 .menubar { position: absolute; right: 16px; bottom: 14px; display: flex; gap: 4px; align-items: center; background: #120e0bdd; border: 1px solid var(--edge2); padding: 4px; }
 .mbtn { position: relative; width: 36px; height: 36px; background: #1a1510; border: 1px solid #3a2c1c; color: #cbb890; display: grid; place-items: center; transition: background-color .15s, color .15s, border-color .15s; }

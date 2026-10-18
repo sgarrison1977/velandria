@@ -541,7 +541,7 @@ class World:
         P.append(dict(kind="gate_iron", x=gx, z=gz - hz, rot=-math.pi / 2))
         P.append(dict(kind="sign", x=gx - 6, z=gz - hz - 3))
         for (mx, mz) in [(gx - 22, gz + 14), (gx + 22, gz + 14)]:
-            P.append(dict(kind="mausoleum", x=mx, z=mz)); self._block_rect(mx, mz, 9, 7)
+            P.append(dict(kind="mausoleum", x=mx, z=mz, rot=math.pi)); self._block_rect(mx, mz, 9, 7)
         for (x, z) in [(gx - 30, gz - 18), (gx + 29, gz - 17), (gx - 12, gz + 3), (gx + 13, gz - 6), (gx - 31, gz + 6), (gx + 31, gz + 2), (gx + 4, gz + 21), (gx - 5, gz - 12)]:
             P.append(dict(kind="dead_tree", x=x, z=z, rot=rr.uniform(0, 6.28), s=round(rr.uniform(0.9, 1.4), 2))); self._disc(x, z, 0.6)
         for (x, z) in [(gx - 4, gz - hz + 3), (gx + 4, gz - hz + 3), (gx - 4, gz + 6), (gx + 4, gz + 6)]:
@@ -561,7 +561,7 @@ class World:
             x, z = gx + ox, gz + oz
             if not self.walkable(x, z):
                 x, z = self.nearest_walkable(x, z) if hasattr(self, "nearest_walkable") else (gx, gz)
-            self.spawns.append(dict(monster=m, x=float(x), z=float(z), r=r, n=n))
+            self.spawns.append(dict(monster=m, x=float(x), z=float(z), r=r, n=n, rise=True))
 
     def _cave_sites(self):
         """global: clear the ground around dungeon cave mouths, block the rock mass, lay the Barrows shore trail"""

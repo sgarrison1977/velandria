@@ -50,6 +50,7 @@ class Monster:
         self.state, self.target, self.path, self.dots = "idle", None, [], []
         self.last_attack, self.next_wander, self.repath = 0, now() + rnd.uniform(1, 8), 0
         self.dead_until, self.dmg_by, self.rot, self.moving = 0, {}, rnd.uniform(0, 6.28), False
+        self.rise_until = now() + 1.3 if s.get("rise") else 0
 
 
 class Player:
@@ -276,7 +277,7 @@ class Game:
         for m in self.monsters.values():
             if (m.x - p.x) ** 2 + (m.z - p.z) ** 2 < VIEW_R2 and not (m.dead_until and now() - m.died_at > 4):
                 ms.append([m.id, m.type, round(m.x, 2), round(m.z, 2), round(m.rot, 2), 2 if m.dead_until else (1 if m.moving else 0),
-                           round(m.hp), m.max_hp, 1 if m.target == p.id else 0, 1 if getattr(m, "chill_until", 0) > now() and not m.dead_until else 0])
+                           round(m.hp), m.max_hp, 1 if m.target == p.id else 0, 1 if getattr(m, "chill_until", 0) > now() and not m.dead_until else 0, 1 if m.rise_until > now() else 0])
         t = now()
         for l in self.loot.values():
             if (l["x"] - p.x) ** 2 + (l["z"] - p.z) ** 2 < VIEW_R2:
@@ -423,6 +424,8 @@ class Game:
         if m.dead_until:
             if t > m.dead_until and not d.get("champion"):
                 m.respawn()
+            return
+        if m.rise_until > t:
             return
         if m.dots:
             self.tick_dots(m, t)
@@ -622,6 +625,10 @@ class Game:
         for o in sharers:
             for qid, q in o.quests.items():
                 qd = QUESTS[qid]
+                if q["s"] == "active" and qd["kind"] == "crypt" and m.type == qd["target"] and not q.get("opened") and not self.count_item(o, qd["item"]):
+                    if self.add_item(o, qd["item"], 1):
+                        o.send({"t": "sys", "msg": f"[{qd['name']}] The {ITEMS[qd['item']]['name']} falls from the Sexton's bones. Use it on a mausoleum door.", "kind": "quest"})
+                        o.dirty = True
                 if q["s"] == "active" and qd["kind"] in ("kill", "kill_collect") and qd["target"] == m.d.get("base", m.type) and q["k"] < qd["count"]:
                     q["k"] += 1
                     o.send({"t": "sys", "msg": f"[{qd['name']}] {MONSTERS[m.type]['name']} slain: {q['k']}/{qd['count']}", "kind": "quest"})
@@ -1081,6 +1088,8 @@ class Game:
             return q["k"] >= qd["count"] and self.count_item(p, qd["collect"]) >= qd["collect_count"]
         if qd["kind"] == "deliver":
             return self.count_item(p, qd["item"]) >= 1
+        if qd["kind"] == "crypt":
+            return bool(q.get("opened"))
         return False
 
     def npc_dialog(self, p, npc_id):
@@ -1107,6 +1116,15 @@ class Game:
         elif n.get("ferry") == "harbor":
             text = "Had your fill of the isles? Hop aboard — the ride back to Saltmere is on the house."
             opts.append(dict(id="ferry", label="Sail back to Saltmere Harbor (free)"))
+        if n.get("crypt"):
+            q = p.quests.get("q_sexton")
+            if q and q.get("opened"):
+                text = "The crypt door hangs open. Only dust and old bones remain inside."
+            elif q and q["s"] == "active" and self.count_item(p, "sexton_key"):
+                text = "A heavy door sealed with a rusted lock. The Sexton's key feels cold in your hand."
+                opts.append(dict(id="crypt", label="Unlock the Sealed Crypt"))
+            else:
+                text = "A heavy door sealed with a rusted lock shaped like a grinning skull. It will not budge."
         if n.get("chest"):
             left = getattr(p, "chest_cd", {}).get(npc_id, 0) - now()
             text = f"The chest lies empty. It will refill in about {int(left // 60) + 1} min." if left > 0 else "Salt-crusted iron bands hold the lid shut. Something glints inside."
@@ -1316,6 +1334,23 @@ class Game:
             dx, dz = FERRY_DEST[n["ferry"]]
             self.teleport(p, dx + rnd.uniform(-1.5, 1.5), dz + rnd.uniform(-1, 1))
             return p.send({"t": "trade", "msg": f"The ferry carries you across the waves to the Offshore Isles (-{FERRY_COST} gold)." if out else "The ferry carries you back to Saltmere Harbor."})
+        if action == "crypt" and n.get("crypt"):
+            q = p.quests.get("q_sexton")
+            if not q or q["s"] != "active" or q.get("opened") or not self.count_item(p, "sexton_key"):
+                return "The lock will not turn."
+            self.take_item(p, "sexton_key", 1)
+            q["opened"], p.dirty = True, True
+            pool = [k for k, it in ITEMS.items() if it["type"] in ("weapon", "armor") and it["rarity"] in ("rare", "epic", "legendary")
+                    and it.get("lvl", 1) <= 15 and it.get("price", 0) > 0 and (not it.get("cls") or p.cls in it["cls"])]
+            gear = rnd.choice(pool)
+            props, pname = roll_props(gear, 15, rnd, force=True)
+            t = now()
+            for item, qty, pr, pn, ox in [(gear, 1, props, pname, -0.8), ("gold", 1500, None, None, 0.8)]:
+                lid = "l" + uid()
+                self.loot[lid] = dict(id=lid, item=item, qty=qty, props=pr, pname=pn, x=round(n["pos"][0] + ox, 2), z=round(n["pos"][1] - 1.2, 2), owner=p.id,
+                                      party=None, owner_until=t + LOOT_EXPIRE_SECS, expires=t + LOOT_EXPIRE_SECS * 3)
+            self.fx(n["pos"][0], n["pos"][1], {"t": "fx", "k": "legendary_burst", "x": n["pos"][0], "z": n["pos"][1]})
+            return p.send({"t": "sys", "msg": "The lock grinds open! Treasure glitters in the Sealed Crypt. Return to Gravekeeper Morrow.", "kind": "quest"})
         if action == "chest" and n.get("chest"):
             cds = p.__dict__.setdefault("chest_cd", {})
             if cds.get(npc_id, 0) > now():

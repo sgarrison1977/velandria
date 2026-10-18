@@ -114,7 +114,7 @@ export class Engine {
       Object.assign(e, { tx: x, tz: z, trot: rot, level: lv, hp, max: mhp, linkdead: ld }); setInvis(e.rig, !!inv);
       e.anim.moving = !!mv; e.anim.dead = !!dead;
     }
-    for (const [id, type, x, z, rot, st, hp, mhp, aggro, chill] of s.m) {
+    for (const [id, type, x, z, rot, st, hp, mhp, aggro, chill, rise] of s.m) {
       seen.add(id);
       let e = this.entities.get(id);
       if (e && e.anim.dead && st !== 2) { this.removeEntity(e); e = null; }
@@ -124,6 +124,7 @@ export class Engine {
       if (chill && !e.ice) { e.ice = new THREE.Mesh(ICE_GEO, ICE_MAT); e.ice.scale.set(Math.max(0.8, e.px.geometry.parameters.radiusTop) * 1.3, e.height, Math.max(0.8, e.px.geometry.parameters.radiusTop) * 1.3); e.ice.position.y = e.height / 2; e.grp.add(e.ice); }
       if (e.ice) e.ice.visible = !!chill && st !== 2;
       e.anim.moving = st === 1; e.anim.dead = st === 2;
+      if (rise && !e.riseT) { e.riseT = performance.now(); this.dirtBurst(x, z); if (this.me && Math.hypot(x - this.me.x, z - this.me.z) < 25) sfx("heavy"); }
     }
     for (const [id, item, qty, x, z, mine, pname] of s.l) {
       seen.add(id);
@@ -169,6 +170,7 @@ export class Engine {
         if (el) { this.burst(tgt, el, f.dt === "lightning" ? 6 : 8, f.dt === "frost" ? 0.6 : 1.2); if (near(tgt)) sfx(EL_SFX[f.dt]); } else if (near(tgt) && !f.q) sfx(f.crit ? "crit" : "hit");
       } break;
       case "arc": if (src && tgt) this.arc(src, tgt); break;
+      case "legendary_burst": this.shock(f.x, f.z, "#ffd36b", 4); this.dirtBurst(f.x, f.z, "#ffd36b"); sfx("legendary"); break;
       case "pdmg": if (tgt) { tgt.anim.hurt = 1; this.number(tgt, f.v, "#ff5040"); if (f.tgt === this.meId) { sfx("hurt"); this.shake = 0.25; } } break;
       case "death": if (tgt) { tgt.anim.dead = true; if (near(tgt)) sfx("mdeath"); } break;
       case "pdeath": if (tgt) tgt.anim.dead = true; if (f.tgt === this.meId) sfx("death"); break;
@@ -284,6 +286,14 @@ export class Engine {
     this.addFx(g, 0.45, (t) => { const k = 1 - t, w = 1 + Math.sin(t * 40) * 0.12; core.material.opacity = k; glow.material.opacity = 0.55 * k; haze.material.opacity = 0.18 * k; glow.scale.set(w, 1, w); haze.scale.set(w * (1 + t), 1, w * (1 + t)); },
       () => g.traverse((o) => { o.geometry?.dispose(); o.material?.dispose(); }));
     this.shock(tgt.x, tgt.z, color, 2.2); this.burst(tgt, "#e8f4ff", 18, 2.5);
+  }
+  dirtBurst(x, z, col) {
+    const y = this.groundY(x, z);
+    for (let i = 0; i < 22; i++) {
+      const s = sprite(col || ["#5a4630", "#4a3a26", "#6e5a40", "#3a2e20"][i % 4], 0.35 + Math.random() * 0.35), a = Math.random() * 6.283, sp = 1 + Math.random() * 2.2, up = 2 + Math.random() * 3;
+      this.addFx(s, 0.9 + Math.random() * 0.4, (t) => { s.position.set(x + Math.cos(a) * sp * t, y + up * t - 5 * t * t + 0.1, z + Math.sin(a) * sp * t); s.material.opacity = 1 - t * t; });
+    }
+    if (!col) { const pit = new THREE.Mesh(new THREE.CircleGeometry(1.1, 14), new THREE.MeshBasicMaterial({ color: "#2a2014", transparent: true, opacity: 0.85, depthWrite: false })); pit.rotation.x = -Math.PI / 2; pit.position.set(x, y + 0.05, z); this.addFx(pit, 6, (t) => { pit.material.opacity = 0.85 * (1 - t); }, () => { pit.geometry.dispose(); pit.material.dispose(); }); }
   }
   trail(pos, el) {
     const c = EL_COLOR[el], s = sprite(Math.random() < 0.3 ? "#fff2c0" : c, 0.22 + Math.random() * 0.18), p = pos.clone(), dx = (Math.random() - 0.5) * 0.3, dz = (Math.random() - 0.5) * 0.3;
@@ -479,10 +489,11 @@ export class Engine {
       if (Math.hypot(dx, dz) > 8) { e.x = e.tx; e.z = e.tz; } else { e.x += dx * k; e.z += dz * k; }
       let dr = e.trot - e.rot; dr = Math.atan2(Math.sin(dr), Math.cos(dr)); e.rot += dr * Math.min(1, dt * 12);
       e.grp.position.set(e.x, this.groundY(e.x, e.z), e.z);
+      if (e.riseT) { const rk = (performance.now() - e.riseT) / 1300; if (rk >= 1) e.riseT = 0; else { e.grp.position.y -= (1 - (1 - (1 - rk) ** 3)) * (e.height || 1.6) * 1.05; e.grp.rotation.z = Math.sin(rk * 18) * 0.06 * (1 - rk); if (rk > 0.9) e.grp.rotation.z = 0; } }
       if (e.rig.gate) { const f = Math.max(0.02, Math.min(1, (e.endAt - performance.now() / 1000) / (e.total || 10))); e.rig.timer.scale.setScalar(f); e.rig.timer.material.color.set(f < 0.3 ? "#ff5a5a" : "#e0c8ff"); e.rig.gate.rotation.y = this.yaw || 0; e.rig.disc.rotation.z = t * 2; e.rig.disc.material.opacity = 0.4 + 0.2 * Math.sin(t * 4); continue; }
       if (e.pillar) { const k = 0.7 + 0.3 * Math.sin(t * 3 + e.x); e.pillar.core.material.opacity = 0.85 * k; e.pillar.glow.material.opacity = 0.3 * k; e.pillar.glow.scale.set(1 + 0.15 * k, 1, 1 + 0.15 * k); }
       if (e.rig.body) { if (e.rig.invisOn) SHIMMER.uniforms.uTime.value = t; e.rig.root.rotation.y = e.rot; animateRig(e.rig, e.anim, dt, t); if (e.rig.shimmer) animateGlow(e.rig, t); }
-      else if (e.kind === "npc") { if (e.rig.kind === "prop" && e.npcKind !== "trunk" && e.npcKind !== "chest") e.rig.root.rotation.y = t * 0.3; }
+      else if (e.kind === "npc") { if (e.rig.kind === "prop" && e.npcKind !== "trunk" && e.npcKind !== "chest" && e.npcKind !== "crypt_door") e.rig.root.rotation.y = t * 0.3; }
       else { e.rig.root.rotation.y = t * 1.2; e.rig.root.position.y = 0.05 + Math.sin(t * 2.5 + e.x) * 0.05; }
     }
     const me = this.entities.get(this.meId);

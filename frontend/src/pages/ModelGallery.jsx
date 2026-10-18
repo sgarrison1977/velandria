@@ -11,7 +11,7 @@ const SETS = {
   players: [["warrior", ""], ["wizard", "oak_staff"], ["warlock", "void_staff|spell_tome"], ["ranger", "hunting_bow"], ["warrior", "steel_longsword|iron_shield|iron_helm|chainmail|0,0|leather_boots|iron_greaves|leather_gloves"], ["warrior", "troll_maul||dreadknight_helm|dragonscale_plate|1,0|wolf_boots|titan_greaves|gauntlets_might"], ["ranger", "longbow||leather_cap|bandit_leathers|0,0|leather_boots|leather_pants"], ["wizard", "starfall_staff||crown_valor|archmage_vestments|1,0|tidecaller_boots"]],
   monsters: ["skeleton", "goblin_scout", "forest_bandit", "orc_warrior", "dark_cultist", "forest_troll", "crypt_ghoul", "death_knight"],
   monsters2: ["imp", "hollow_shade", "shadow_wraith", "stone_golem", "abyssal_fiend", "forest_wolf", "giant_spider", "bone_colossus"],
-  npcs: ["guard", "smith", "merchant", "healer", "druid", "elder", "gilded", "villager", "child"],
+  npcs: ["guard", "smith", "merchant", "healer", "druid", "elder", "gilded", "villager", "child", "gravekeeper", "crypt_door"],
   isles: ["reef_crawler", "drowned_corsair", "tidecursed_wraith", "coral_colossus", "captain_blackbrine", "sailor", "fishmonger", "chest"],
 };
 

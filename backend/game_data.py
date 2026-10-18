@@ -238,6 +238,7 @@ ITEMS = {
     "orc_tusk": M("Orc Tusk", "uncommon", 22, "Yellowed and chipped."),
     "cultist_sigil": M("Shadow Sigil", "rare", 35, "It seems to absorb light."),
     "troll_hide": M("Troll Hide", "rare", 50, "Regrows slowly even when cut."),
+    "sexton_key": dict(name="Sexton's Crypt Key", type="quest", rarity="rare", price=0, stack=1, desc="A cold iron key shaped like a grinning skull. It opens a mausoleum in the Titus Gravefields."),
     "sealed_letter": dict(name="Sealed Letter", type="quest", rarity="uncommon", price=0, stack=1, desc="Captain Rhea's letter for Warden Lyra of Elderglen."),
 }
 for _k, _v in ITEMS.items():
@@ -382,6 +383,9 @@ NPCS = {
     "mira": dict(name="Mira Vell", role="General Goods", town="semel", pos=[102, 191], kind="merchant", merchant="semel_goods"),
     "alys": dict(name="Sister Alys", role="Healer", town="semel", pos=[90, 211], kind="healer", healer=True),
     "toman": dict(name="Elder Toman", role="Village Elder", town="semel", pos=[83, 208], kind="elder", quests=["q_spiders", "q_imps"]),
+    "morrow": dict(name="Gravekeeper Morrow", role="Keeper of the Gravefields", town="semel", pos=[97, 247], kind="gravekeeper", quests=["q_sexton"]),
+    "crypt_w": dict(name="Sealed Crypt", role="West Mausoleum", town="graveyard", pos=[263, 591.4], kind="crypt_door", crypt=True, glob=True),
+    "crypt_e": dict(name="Sealed Crypt", role="East Mausoleum", town="graveyard", pos=[307, 591.4], kind="crypt_door", crypt=True, glob=True),
     "rhea": dict(name="Captain Rhea", role="Town Guard", town="semel", pos=[101, 206], kind="guard", quests=["q_letter"]),
     "thessaly": dict(name="Thessaly Weaponwright", role="Equipment Merchant", town="elderglen", pos=[990, 199], kind="smith", merchant="elder_arms"),
     "fenn": dict(name="Old Fenn", role="Provisions & Curios", town="elderglen", pos=[1011, 200], kind="merchant", merchant="elder_goods"),
@@ -495,6 +499,9 @@ QUESTS = {
     "q_imps": dict(name="Horns of Mischief", giver="toman", turnin="toman", kind="kill_collect", target="imp", count=5, collect="imp_horn", collect_count=3,
                    reward=dict(xp=260, gold=50, items=[("hp_potion", 5)]),
                    text="Imps from the southern hollow steal our grain. Slay five and bring me three of their horns."),
+    "q_sexton": dict(name="The Sexton's Key", giver="morrow", turnin="morrow", kind="crypt", target="sexton_of_bones", item="sexton_key", count=1,
+                     reward=dict(xp=4000, gold=0, items=[]),
+                     text="The dead won't rest in the Gravefields south of Titus. The old Sexton walks among them still, and he carries the key to the sealed crypt. Destroy him, take his key, unlock a mausoleum and claim what's inside, then come back to me."),
     "q_letter": dict(name="The Road to Elderglen", giver="rhea", turnin="lyra", kind="deliver", item="sealed_letter",
                      reward=dict(xp=600, gold=120, items=[("ring_vigor", 1)]),
                      text="Carry this sealed letter east along the forest road to Warden Lyra in Elderglen. Beware the woods."),
