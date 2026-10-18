@@ -17,7 +17,8 @@ ISLES = [dict(name="Isle of Thorns", x=1000.0, z=800.0, r=34.0), dict(name="Wrec
 ISLE_BARS = [(0, 1), (0, 2)]
 HARBOR = (1080.0, 582.0)
 GRAVEYARD = (285.0, 582.0)
-GRAVE_HALF = (36, 25)
+GRAVE_HALF = (26, 18)
+MAUS = [(GRAVEYARD[0] - 15, GRAVEYARD[1] + 9), (GRAVEYARD[0] + 15, GRAVEYARD[1] + 9)]
 HARBOR_R = (44, 28)
 HARBOR_ROAD = [(1080, 548), (1090, 520), (1098, 470), (1094, 420), (1098, 372)]
 ISLE_LANDING = (1000.0, 776.0)
@@ -193,8 +194,9 @@ SCATTER_BANDS = [(200, ["giant_spider", "imp"]), (330, ["forest_wolf", "imp", "g
                  (600, ["forest_bandit", "venomous_spider", "skeleton"]), (760, ["orc_warrior", "venomous_spider", "forest_bandit"]),
                  (900, ["dark_cultist", "orc_warrior"]), (1120, ["forest_troll", "dark_cultist"]),
                  (1350, ["dire_wolf", "shadow_wraith", "forest_troll"]), (99999, ["broodmother", "stone_golem", "shadow_wraith"])]
-TARGET_MONSTERS = 1500
+TARGET_MONSTERS = 1800
 CAMP_COUNT = 52
+OUTSKIRT_MOBS = ["giant_spider", "forest_wolf", "imp", "restless_bones", "goblin_scout"]
 CAMP_FAMILY = {"giant_spider": "spider", "venomous_spider": "spider", "broodmother": "spider", "imp": "imp", "abyssal_fiend": "imp", "forest_wolf": "beast",
                "dire_wolf": "beast", "goblin_scout": "goblin", "skeleton": "undead", "shadow_wraith": "undead", "death_knight": "undead",
                "forest_bandit": "bandit", "orc_warrior": "orc", "dark_cultist": "cultist", "forest_troll": "troll", "stone_golem": "golem"}
@@ -453,6 +455,14 @@ class World:
             name = f"{prefixes[i % len(prefixes)]} {CAMP_NOUN[fam]}" + ("" if i < len(prefixes) else f" {'II' if i < 2 * len(prefixes) else 'III'}")
             REGIONS.append(dict(name=name, x=round(x), z=round(z), r=15, lvl=(f"{min(lv)}-{max(lv)}" if min(lv) != max(lv) else f"{lv[0]}") + " Camp", camp=True))
             self._camp_props(x, z, fam, rr)
+        for tx, tz in towns[:5]:
+            for k in range(7):
+                a = k / 7 * 6.283 + rr.uniform(-0.25, 0.25)
+                for d in (82, 92, 104, 118):
+                    x, z = tx + math.cos(a) * d, tz + math.sin(a) * d
+                    if land(x, z, 8) and all(math.hypot(x - a2, z - b2) > 72 for a2, b2 in towns):
+                        self.spawns.append(dict(monster=rr.choice(OUTSKIRT_MOBS), x=round(x, 1), z=round(z, 1), r=10, n=rr.randint(3, 4)))
+                        break
         cur = sum(sp["n"] for sp in self.spawns)
         want, tries = max(0, TARGET_MONSTERS - cur), 0
         while want > 0 and tries < 60000:
@@ -540,24 +550,24 @@ class World:
         P = self.props
         P.append(dict(kind="gate_iron", x=gx, z=gz - hz, rot=-math.pi / 2))
         P.append(dict(kind="sign", x=gx - 6, z=gz - hz - 3))
-        for (mx, mz) in [(gx - 22, gz + 14), (gx + 22, gz + 14)]:
+        for (mx, mz) in MAUS:
             P.append(dict(kind="mausoleum", x=mx, z=mz, rot=math.pi)); self._block_rect(mx, mz, 9, 7)
-        for (x, z) in [(gx - 30, gz - 18), (gx + 29, gz - 17), (gx - 12, gz + 3), (gx + 13, gz - 6), (gx - 31, gz + 6), (gx + 31, gz + 2), (gx + 4, gz + 21), (gx - 5, gz - 12)]:
+        for (x, z) in [(gx - 22, gz - 13), (gx + 21, gz - 12), (gx - 9, gz + 2), (gx + 10, gz - 5), (gx - 23, gz + 4), (gx + 3, gz + 15)]:
             P.append(dict(kind="dead_tree", x=x, z=z, rot=rr.uniform(0, 6.28), s=round(rr.uniform(0.9, 1.4), 2))); self._disc(x, z, 0.6)
         for (x, z) in [(gx - 4, gz - hz + 3), (gx + 4, gz - hz + 3), (gx - 4, gz + 6), (gx + 4, gz + 6)]:
             P.append(dict(kind="brazier", x=x, z=z)); self._disc(x, z, 0.6)
         for z in np.arange(gz - hz + 6, gz + hz - 3, 5.0):
             for x in np.arange(gx - hx + 4, gx + hx - 3, 4.0):
-                if abs(x - gx) < 6 or any(abs(x - mx) < 7 and abs(z - mz) < 6 for mx, mz in [(gx - 22, gz + 14), (gx + 22, gz + 14)]) or rr.random() < 0.18:
+                if abs(x - gx) < 6 or any(abs(x - mx) < 7 and abs(z - mz) < 6 for mx, mz in MAUS) or rr.random() < 0.18:
                     continue
                 x2, z2 = x + rr.uniform(-0.6, 0.6), z + rr.uniform(-0.5, 0.5)
                 if self.walkable(x2, z2):
                     P.append(dict(kind="grave", x=round(float(x2), 1), z=round(float(z2), 1), rot=round(math.pi / 2 + rr.uniform(-0.15, 0.15), 2))); self._disc(x2, z2, 0.45)
                     if rr.random() < 0.12:
                         P.append(dict(kind="bones", x=round(float(x2) + 1.2, 1), z=round(float(z2) + 0.8, 1), s=0.9))
-        for (m, ox, oz, r, n) in [("restless_bones", -16, -15, 12, 15), ("restless_bones", 16, -15, 12, 15), ("skeleton", -18, -2, 12, 15),
-                                  ("skeleton", 18, -2, 12, 15), ("grave_warden", -14, 10, 10, 12), ("grave_warden", 14, 10, 10, 12),
-                                  ("crypt_knight", -22, 20, 6, 7), ("crypt_knight", 22, 20, 6, 8), ("sexton_of_bones", 0, 19, 3, 1)]:
+        for (m, ox, oz, r, n) in [("restless_bones", -12, -11, 8, 8), ("restless_bones", 12, -11, 8, 8), ("skeleton", -13, -2, 8, 8),
+                                  ("skeleton", 13, -2, 8, 8), ("grave_warden", -10, 7, 7, 6), ("grave_warden", 10, 7, 7, 6),
+                                  ("crypt_knight", -15, 14, 4, 3), ("crypt_knight", 15, 14, 4, 2), ("sexton_of_bones", 0, 13, 3, 1)]:
             x, z = gx + ox, gz + oz
             if not self.walkable(x, z):
                 x, z = self.nearest_walkable(x, z) if hasattr(self, "nearest_walkable") else (gx, gz)
