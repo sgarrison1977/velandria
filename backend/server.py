@@ -23,6 +23,7 @@ app = FastAPI()
 api = APIRouter(prefix="/api")
 game: Game = None
 _world_json = None
+ADMIN_EMAILS = {e.strip().lower() for e in os.environ["ADMIN_EMAILS"].split(",") if e.strip()}
 
 
 def hash_pw(p):
@@ -204,7 +205,7 @@ async def ws_endpoint(ws: WebSocket):
     if not doc:
         await ws.close(code=4401 if not u else 4403)
         return
-    p = await game.attach(doc, ws)
+    p = await game.attach(doc, ws, admin=u["email"].lower() in ADMIN_EMAILS)
     queue = p.queue
 
     async def writer():

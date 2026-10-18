@@ -22,6 +22,8 @@ const sprite = (color, size) => { const s = new THREE.Sprite(new THREE.SpriteMat
 const AB_SFX = { lunae_lumen_nex: "moonbeam", ignis: "fire", flamma_ventus: "fire", agredi: "arcane", multi_vis_nex: "arcane", radius: "zap", venenum: "poison", tabes_viscera: "poison",
   minor_mederi: "heal", minor_sanatio: "heal", teuri: "buff", velocitas: "buff", robur: "buff", contra_visus: "buff", creare_porta: "portal", pergere_trans: "portal",
   attack_run: "dash", multi_shot: "bow", arrow_barrage: "bow", double_stab: "swing", spin_attack: "swing", power_strike: "heavy", cleave: "swing" };
+const ICE_GEO = new THREE.CylinderGeometry(1, 1, 1, 12, 1, true), ICE_MAT = new THREE.MeshBasicMaterial({ color: "#9ae8ff", transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+const EL_COLOR = { fire: "#ff7a2a", frost: "#9ae8ff", lightning: "#fff27a" }, EL_SFX = { fire: "fire", frost: "frost", lightning: "zap" };
 const growlFor = (type) => /skeleton|wraith|ghoul|knight|colossus|shade|cultist|king/.test(type) ? "growl_undead" : /golem|fiend|champion|brood/.test(type) ? "roar" : /wolf|spider|crawler|imp/.test(type) ? "growl_beast" : null;
 const AB_COLOR = { lunae_lumen_nex: "#cfe6ff", arcane_bolt: "#7fb8ff", flame_burst: "#ff7a2a", aimed_shot: "#ffd36b", venom_arrow: "#7aff5a", power_strike: "#ffe0a0", cleave: "#ffc080", minor_heal: "#7aff9a", iron_guard: "#9ac8ff", quickstep: "#c8f0ff", whirlwind: "#ffc080", earthshatter: "#d8a060", frost_nova: "#a8e8ff", meteor_storm: "#ff5a1a", volley: "#ffd36b", multishot: "#ffe08a",
   agredi: "#7fb8ff", minor_mederi: "#7aff9a", minor_sanatio: "#c8ff7a", double_stab: "#ffe0a0", attack_run: "#ffb070", spin_attack: "#ffc080", multi_shot: "#ffe08a",
@@ -112,13 +114,15 @@ export class Engine {
       Object.assign(e, { tx: x, tz: z, trot: rot, level: lv, hp, max: mhp, linkdead: ld }); setInvis(e.rig, !!inv);
       e.anim.moving = !!mv; e.anim.dead = !!dead;
     }
-    for (const [id, type, x, z, rot, st, hp, mhp, aggro] of s.m) {
+    for (const [id, type, x, z, rot, st, hp, mhp, aggro, chill] of s.m) {
       seen.add(id);
       let e = this.entities.get(id);
       if (e && e.anim.dead && st !== 2) { this.removeEntity(e); e = null; }
       if (!e) e = this.addEntity(id, "monster", { type, name: this.data.monsters[type].name, level: this.data.monsters[type].level, x, z, rot });
       if (aggro && !e.aggro && st !== 2 && this.me && Math.hypot(x - this.me.x, z - this.me.z) < 18) { const gr = growlFor(type); if (gr) sfx(gr); }
       Object.assign(e, { tx: x, tz: z, trot: rot, hp, max: mhp, aggro });
+      if (chill && !e.ice) { e.ice = new THREE.Mesh(ICE_GEO, ICE_MAT); e.ice.scale.set(Math.max(0.8, e.px.geometry.parameters.radiusTop) * 1.3, e.height, Math.max(0.8, e.px.geometry.parameters.radiusTop) * 1.3); e.ice.position.y = e.height / 2; e.grp.add(e.ice); }
+      if (e.ice) e.ice.visible = !!chill && st !== 2;
       e.anim.moving = st === 1; e.anim.dead = st === 2;
     }
     for (const [id, item, qty, x, z, mine, pname] of s.l) {
@@ -155,11 +159,16 @@ export class Engine {
     switch (f.k) {
       case "attack": case "mattack":
         if (src) { src.anim.atk = 1; if (f.style !== "melee") src.anim.cast = 0; }
-        if (src && tgt && f.style !== "melee") this.projectile(src, tgt, f.style === "arrow" ? "#e8d8b0" : f.style === "spell" ? "#b05cff" : "#7fb8ff", f.style === "arrow");
+        if (src && tgt && f.style !== "melee") this.projectile(src, tgt, f.el ? EL_COLOR[f.el] : f.style === "arrow" ? "#e8d8b0" : f.style === "spell" ? "#b05cff" : "#7fb8ff", f.style === "arrow", 0.6, null, f.el);
         if (near(src)) { sfx(f.style === "melee" ? "swing" : f.style === "arrow" ? "bow" : "zap"); if (src.kind === "monster" && Math.random() < 0.22) { const gr = growlFor(src.type || ""); if (gr) sfx(gr); } }
         if (f.miss && tgt) this.number(tgt, "miss", "#bbb");
         break;
-      case "dmg": if (tgt) { tgt.anim.hurt = 1; tgt.lastHit = performance.now(); this.number(tgt, f.v, f.crit ? "#ffcf3a" : f.dt === "poison" ? "#8aff5a" : f.dt === "magic" ? "#9ac8ff" : f.dt === "fire" ? "#ff8a3a" : "#fff", f.crit); if (near(tgt) && f.dt !== "fire") sfx(f.crit ? "crit" : "hit"); } break;
+      case "dmg": if (tgt) {
+        tgt.anim.hurt = 1; tgt.lastHit = performance.now(); const el = EL_COLOR[f.dt];
+        this.number(tgt, f.v, el || (f.crit ? "#ffcf3a" : f.dt === "poison" ? "#8aff5a" : f.dt === "magic" ? "#9ac8ff" : "#fff"), f.crit);
+        if (el) { this.burst(tgt, el, f.dt === "lightning" ? 6 : 8, f.dt === "frost" ? 0.6 : 1.2); if (near(tgt)) sfx(EL_SFX[f.dt]); } else if (near(tgt)) sfx(f.crit ? "crit" : "hit");
+      } break;
+      case "arc": if (src && tgt) this.arc(src, tgt); break;
       case "pdmg": if (tgt) { tgt.anim.hurt = 1; this.number(tgt, f.v, "#ff5040"); if (f.tgt === this.meId) { sfx("hurt"); this.shake = 0.25; } } break;
       case "death": if (tgt) { tgt.anim.dead = true; if (near(tgt)) sfx("mdeath"); } break;
       case "pdeath": if (tgt) tgt.anim.dead = true; if (f.tgt === this.meId) sfx("death"); break;
@@ -251,15 +260,23 @@ export class Engine {
 
   // ---------- effects
   addFx(obj, dur, upd, done) { this.scene.add(obj); this.fxList.push({ obj, t: 0, dur, upd, done }); }
-  projectile(src, tgt, color, arrow, size = 0.6, done) {
+  arc(a, b) {
+    const y0 = this.groundY(a.x, a.z) + (a.height || 1.4) * 0.55, y1 = this.groundY(b.x, b.z) + (b.height || 1.4) * 0.55, pts = [];
+    for (let i = 0; i <= 8; i++) { const t = i / 8, j = i && i < 8 ? 0.6 : 0; pts.push(new THREE.Vector3(a.x + (b.x - a.x) * t + (Math.random() - 0.5) * j, y0 + (y1 - y0) * t + (Math.random() - 0.5) * j, a.z + (b.z - a.z) * t + (Math.random() - 0.5) * j)); }
+    const ln = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: "#fff6a0", transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+    this.addFx(ln, 0.3, (t) => { ln.material.opacity = (1 - t) * (0.6 + Math.random() * 0.4); }, () => { ln.geometry.dispose(); ln.material.dispose(); });
+    this.burst(b, "#fff27a", 6, 1.2);
+  }
+  projectile(src, tgt, color, arrow, size = 0.6, done, el) {
     const o = new THREE.Group();
-    if (arrow) { const a = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.8), new THREE.MeshBasicMaterial({ color })); o.add(a); o.add(sprite(color, 0.5)); }
+    if (arrow) { const a = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.8), new THREE.MeshBasicMaterial({ color })); o.add(a); o.add(sprite(color, el ? 1.1 : 0.5)); if (el) { const tip = sprite("#ffffff", 0.35); tip.position.z = 0.4; o.add(tip); } }
     else { o.add(sprite(color, size * 1.6)); o.add(new THREE.Mesh(new THREE.IcosahedronGeometry(size * 0.25, 1), new THREE.MeshBasicMaterial({ color: "#fff" }))); }
     const from = new THREE.Vector3(src.x, this.groundY(src.x, src.z) + 1.3, src.z);
     const d = Math.hypot(tgt.x - src.x, tgt.z - src.z);
     this.addFx(o, Math.max(0.12, d / (arrow ? 38 : 26)), (t) => {
       const to = new THREE.Vector3(tgt.x, this.groundY(tgt.x, tgt.z) + tgt.height * 0.55, tgt.z);
       o.position.lerpVectors(from, to, t); o.position.y += Math.sin(t * Math.PI) * (arrow ? 0.6 : 0.3); o.lookAt(to);
+      if (el) this.trail(o.position, el);
     }, done);
   }
   beam(src, tgt, color) {
@@ -271,6 +288,10 @@ export class Engine {
     this.addFx(g, 0.45, (t) => { const k = 1 - t, w = 1 + Math.sin(t * 40) * 0.12; core.material.opacity = k; glow.material.opacity = 0.55 * k; haze.material.opacity = 0.18 * k; glow.scale.set(w, 1, w); haze.scale.set(w * (1 + t), 1, w * (1 + t)); },
       () => g.traverse((o) => { o.geometry?.dispose(); o.material?.dispose(); }));
     this.shock(tgt.x, tgt.z, color, 2.2); this.burst(tgt, "#e8f4ff", 18, 2.5);
+  }
+  trail(pos, el) {
+    const c = EL_COLOR[el], s = sprite(Math.random() < 0.3 ? "#fff2c0" : c, 0.22 + Math.random() * 0.18), p = pos.clone(), dx = (Math.random() - 0.5) * 0.3, dz = (Math.random() - 0.5) * 0.3;
+    this.addFx(s, 0.45 + Math.random() * 0.3, (t) => { s.position.set(p.x + dx * t + (el === "lightning" ? (Math.random() - 0.5) * 0.2 : 0), p.y + (el === "fire" ? t * 0.6 : el === "frost" ? -t * 0.5 : 0), p.z + dz * t); s.material.opacity = 1 - t; s.scale.setScalar((1 - t * 0.6) * 0.4); });
   }
   shock(x, z, color, r) {
     const fl = sprite(color, r * 1.4); fl.position.set(x, this.groundY(x, z) + 0.8, z);

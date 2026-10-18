@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Backpack, User, Sparkles, Map as MapIcon, ScrollText, Settings as Cog, Coins, LogOut, Trophy, LifeBuoy } from "lucide-react";
+import { Backpack, User, Sparkles, Map as MapIcon, ScrollText, Settings as Cog, Coins, LogOut, Trophy, LifeBuoy, Gift } from "lucide-react";
 import { useStore, setState, togglePanel } from "../../game/store";
 import { Bar, Panel, Hover, AbIcon } from "./ui";
 import { sfx } from "../../game/audio";
@@ -95,6 +95,7 @@ export function MenuBar({ onLogout }) {
           <I size={18} />{(k === "character" && me.attr_points > 0) || (k === "skills" && me.skill_points > 0) ? <span className="pip" /> : null}
         </button>
       ))}
+      {me.admin && <button type="button" className={`mbtn ${panels.give ? "on" : ""}`} data-testid="menu-give-btn" title="Keeper's Gift (admin)" onClick={() => { sfx("open"); togglePanel("give"); }}><Gift size={18} /></button>}
       <button type="button" className="mbtn" data-testid="logout-btn" title="Exit game" onClick={() => setState({ exitMenu: true })}><LogOut size={18} /></button>
     </div>
   );

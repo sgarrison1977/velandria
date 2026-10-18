@@ -13,6 +13,7 @@ import { InventoryPanel, CharacterPanel, SkillsPanel, QuestPanel } from "@/compo
 import { MerchantWindow, SettingsPanel } from "@/components/game/Merchant";
 import { Minimap, WorldMap, Chat } from "@/components/game/Maps";
 import { LeaderboardPanel } from "@/components/game/Leaderboard";
+import { AdminGivePanel } from "@/components/game/AdminGive";
 import { getLootFilter } from "@/components/game/LootFilter";
 
 export default function GamePage() {
@@ -136,6 +137,7 @@ export default function GamePage() {
         {panels.quests && <QuestPanel data={data} />}
         {panels.map && <WorldMap engine={e} />}
         {panels.leaderboard && <LeaderboardPanel />}
+        {panels.give && <AdminGivePanel data={data} net={n} />}
         {panels.settings && <SettingsPanel data={data} net={n} engine={e} />}
       </div>}
     </div>

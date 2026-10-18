@@ -69,3 +69,9 @@ Later requests: hold-to-walk toward pointer; ranged/spell abilities fire at the 
 - Stuck button moved into the Exit/logout popup. World map: dungeons hidden by default (click "Show dungeons"), aspect-correct marker placement.
 - Fixed inland low terrain being flooded by the sea plane.
 - /gallery?set=world&x=&z=&d= — isolated 3D world preview (no login) for verification; /gallery?set=isles for new models.
+
+## Update — Elemental gear, admin gifts (Jun 2026)
+- Mana Steal: monsters have hidden mana pool (200+20*lvl, x3 boss/champion); each hit steals mana_steal% x enemy max mana until drained.
+- Elemental per-hit stats: fire_dmg, frost_dmg (30% slow move+attack 3s, icy aura), lightning_dmg (arcs to 2 enemies within 7m for 50%). Colored numbers, bursts, sfx; elemental arrows glow with ember/ice/spark trails.
+- Admin "Keeper's Gift" popup (Gift icon in menubar, ws msg t=give) — only for ADMIN_EMAILS in backend/.env (sgarrison1977@gmail.com). Gives to online or offline characters by name, custom stats + custom name.
+- Custom gifts to Gribb: Hawkeye Cap, Emberstrike bow (item emberstrike_bow), Heart of the Wilds amulet.

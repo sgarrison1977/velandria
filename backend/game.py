@@ -18,6 +18,8 @@ ATTR_POINTS_PER_LEVEL = 3
 PORTAL_SECS = 10
 RING_SLOTS = [f"ring{i}" for i in range(1, 7)]
 LOOT_ALL_R = 8.0
+GIVE_STATS = {"dmg", "str", "sta", "wis", "int", "dex", "hp_regen", "mp_regen", "life_steal", "mana_steal", "crit", "max_hp", "max_mp", "armor",
+              "move_speed", "fire_dmg", "frost_dmg", "lightning_dmg"}
 TOWN_NAMES = {"semel": "Titus", "elderglen": "Elderglen", "ironhold": "Ironhold", "sunhollow": "Sunhollow", "harbor": "Saltmere Harbor", "isles": "the Isle of Thorns"}
 
 
@@ -132,7 +134,7 @@ class Player:
     def self_view(self):
         return self.to_doc() | dict(id=self.id, look=self.look, max_hp=self.max_hp, max_mp=self.max_mp, tot=self.tot, armor=self.armor, attack_interval=self.attack_interval,
                                     range=self.range, crit=round(self.crit, 3), dmg=[self.dmg_lo, self.dmg_hi], buffs={k: round(v[1] - now(), 1) for k, v in self.buffs.items()},
-                                    cds={k: round(v - now(), 2) for k, v in self.cds.items() if v > now()})
+                                    cds={k: round(v - now(), 2) for k, v in self.cds.items() if v > now()}, admin=getattr(self, "admin", False))
 
     def send(self, msg):
         if self.ws is None:
@@ -208,7 +210,7 @@ class Game:
                     m.target = None
             self.broadcast_sys(f"{p.name} has left the world.")
 
-    async def attach(self, doc, ws):
+    async def attach(self, doc, ws, admin=False):
         p = self.players.get(doc["id"])
         if p:
             old = p.ws
@@ -224,6 +226,7 @@ class Game:
                 p.x, p.z = self.world.nearest_walkable(p.x, p.z, 10) or (SAFE_ZONES[0]["x"], SAFE_ZONES[0]["z"] - 6)
             self.players[p.id] = p
             self.broadcast_sys(f"{p.name} has entered the world.")
+        p.admin = admin
         chat = await self.db.chat.find({}, {"_id": 0}).sort("ts", -1).to_list(40)
         p.send({"t": "init", "me": p.self_view(), "chat": list(reversed(chat)), "stock": None})
         return p
@@ -273,7 +276,7 @@ class Game:
         for m in self.monsters.values():
             if (m.x - p.x) ** 2 + (m.z - p.z) ** 2 < VIEW_R2 and not (m.dead_until and now() - m.died_at > 4):
                 ms.append([m.id, m.type, round(m.x, 2), round(m.z, 2), round(m.rot, 2), 2 if m.dead_until else (1 if m.moving else 0),
-                           round(m.hp), m.max_hp, 1 if m.target == p.id else 0])
+                           round(m.hp), m.max_hp, 1 if m.target == p.id else 0, 1 if getattr(m, "chill_until", 0) > now() and not m.dead_until else 0])
         t = now()
         for l in self.loot.values():
             if (l["x"] - p.x) ** 2 + (l["z"] - p.z) ** 2 < VIEW_R2:
@@ -467,7 +470,7 @@ class Game:
                     lx, lz = m.path[-1]
                     if math.hypot(lx - tgt.x, lz - tgt.z) > 1.5 and len(m.path) == 1:
                         m.path = [(tgt.x, tgt.z)]
-                self.step_along(m, d["speed"], dt, monster=True)
+                self.step_along(m, d["speed"] * (0.7 if getattr(m, "chill_until", 0) > t else 1), dt, monster=True)
                 if m.path and dist(m, tgt) <= d["range"]:
                     m.path = []
             else:
@@ -480,7 +483,7 @@ class Game:
                         if not pp.dead_until and "invis" not in pp.buffs and dist(m, pp) <= d["slam"]["radius"]:
                             k = COMBAT["armor_k"] + COMBAT["armor_k_per_level"] * d["level"]
                             self.damage_player(pp, max(1, round(rnd.uniform(*d["dmg"]) * d["slam"]["mult"] * (1 - pp.armor / (pp.armor + k)))), m, "phys")
-                elif t - m.last_attack >= d["interval"]:
+                elif t - m.last_attack >= d["interval"] * (1 / 0.7 if getattr(m, "chill_until", 0) > t else 1):
                     m.last_attack = t
                     self.monster_attack(m, tgt)
             return
@@ -512,11 +515,27 @@ class Game:
         crit = rnd.random() < p.crit
         if crit:
             dmg *= COMBAT["crit_mult"]
-        self.fx(m.x, m.z, {"t": "fx", "k": "attack", "src": p.id, "tgt": m.id, "style": kind})
+        els = {k: p.tot.get(k + "_dmg", 0) for k in ("fire", "frost", "lightning")}
+        el = max(els, key=els.get) if any(els.values()) else None
+        self.fx(m.x, m.z, {"t": "fx", "k": "attack", "src": p.id, "tgt": m.id, "style": kind, **({"el": el} if el else {})})
         self.damage_monster(m, dmg, p, "magic" if magic else "phys", crit)
-        fire = p.tot.get("fire_dmg", 0)
+        self.elemental_hits(p, m, crit)
+
+    def elemental_hits(self, p, m, crit):
+        mult = COMBAT["crit_mult"] if crit else 1
+        fire, frost, shock = p.tot.get("fire_dmg", 0), p.tot.get("frost_dmg", 0), p.tot.get("lightning_dmg", 0)
         if fire and not m.dead_until:
-            self.damage_monster(m, fire * (COMBAT["crit_mult"] if crit else 1) * rnd.uniform(0.9, 1.1), p, "fire", crit)
+            self.damage_monster(m, fire * mult * rnd.uniform(0.9, 1.1), p, "fire", crit)
+        if frost and not m.dead_until:
+            m.chill_until = now() + 3.0
+            self.damage_monster(m, frost * mult * rnd.uniform(0.9, 1.1), p, "frost", crit)
+        if shock and not m.dead_until:
+            self.damage_monster(m, shock * mult * rnd.uniform(0.9, 1.1), p, "lightning", crit)
+        if shock:
+            near = sorted((o for o in self.monsters.values() if o is not m and not o.dead_until and dist(o, m) < 7), key=lambda o: dist(o, m))[:2]
+            for o in near:
+                self.fx(m.x, m.z, {"t": "fx", "k": "arc", "src": m.id, "tgt": o.id})
+                self.damage_monster(o, shock * 0.5 * mult * rnd.uniform(0.9, 1.1), p, "lightning", False)
 
     def damage_monster(self, m, raw, p, dtype, crit=False):
         if m.dead_until:
@@ -524,7 +543,7 @@ class Game:
         if p is not None and p.buffs.pop("invis", None):
             p.dirty = True
             p.send({"t": "sys", "msg": "You attacked — Contra Visus fades and you are visible again."})
-        res = m.d["resist"].get("magic" if dtype in ("magic", "poison", "fire") else "phys", 1.0)
+        res = m.d["resist"].get("magic" if dtype in ("magic", "poison", "fire", "frost", "lightning") else "phys", 1.0)
         armor = 0 if dtype != "phys" else m.d["armor"]
         dmg = max(1, round(raw * (1 - armor / (armor + COMBAT["armor_k"])) * res))
         m.hp -= dmg
@@ -1342,6 +1361,45 @@ class Game:
             self.loot[lid] = dict(id=lid, item=item, qty=max(1, qty), props=props, pname=pname, x=round(lx, 2), z=round(lz, 2), owner=p.id,
                                   party=getattr(p, "party", None), owner_until=t + LOOT_OWNER_SECS, expires=t + LOOT_EXPIRE_SECS)
 
+    async def admin_give(self, p, msg):
+        if not getattr(p, "admin", False):
+            return "Only the realm's keeper may do that."
+        name, item, pname = str(msg.get("to", "")).strip().lower(), msg.get("item"), str(msg.get("pname") or "").strip()[:48] or None
+        it = ITEMS.get(item)
+        if not it or it["type"] == "quest":
+            return "Unknown item."
+        props = {}
+        for k, v in (msg.get("props") or {}).items():
+            if k not in GIVE_STATS or not isinstance(v, (int, float)) or not -100000 <= v <= 100000:
+                return f"Invalid stat: {k}"
+            if v:
+                props[k] = round(v, 1) if v % 1 else int(v)
+        qty = max(1, min(it["stack"], int(msg.get("qty") or 1)))
+        gear = it["type"] in ("weapon", "armor")
+        props = props if gear and props else None
+        slot = dict(uid=uid(), item=item, qty=1 if props else qty, props=props, pname=pname if gear else None) if props or (gear and pname) else None
+        o = next((o for o in self.players.values() if o.name.lower() == name), None)
+        label = f"{pname or it['name']}" + (f" x{qty}" if not slot and qty > 1 else "")
+        if o:
+            if slot:
+                if len(o.inventory) >= INV_SLOTS:
+                    return f"{o.name}'s inventory is full."
+                o.inventory.append(slot)
+                o.dirty = True
+            elif not self.add_item(o, item, qty):
+                return f"{o.name}'s inventory is full."
+            o.send({"t": "sys", "msg": f"A gift from the realm's keeper: {label}", "kind": "quest"})
+            asyncio.create_task(self.save(o))
+        else:
+            doc = await self.db.characters.find_one({"name_lower": name}, {"_id": 0, "inventory": 1, "name": 1})
+            if not doc:
+                return "No character by that name."
+            if len(doc["inventory"]) >= INV_SLOTS:
+                return f"{doc['name']}'s inventory is full."
+            await self.db.characters.update_one({"name_lower": name}, {"$push": {"inventory": slot or dict(uid=uid(), item=item, qty=qty)}})
+        p.send({"t": "sys", "msg": f"Gave {label} to {o.name if o else doc['name']}.", "kind": "quest"})
+        return None
+
     def merchant_view(self, mk, npc_id):
         return {"t": "merchant", "npc": npc_id, "mk": mk, "name": MERCHANTS[mk]["name"],
                 "stock": [dict(item=i, qty=q, price=ITEMS[i]["price"]) for i, q in self.stock[mk].items()]}
@@ -1574,6 +1632,8 @@ class Game:
             err = self.use(p, msg.get("uid"))
         elif t == "destroy":
             err = self.destroy(p, msg.get("uid"))
+        elif t == "give":
+            err = await self.admin_give(p, msg)
         elif p.dead_until:
             err = "You are dead."
         elif t == "move":

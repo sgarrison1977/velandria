@@ -383,3 +383,10 @@ input[type="text"], input[type="email"], input[type="password"], input:not([type
 .lf-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .lf-names { background: #0f0c09; border: 1px solid var(--edge2); color: var(--text); padding: 8px 10px; font-size: 14px; }
 .lf-names:focus { outline: none; border-color: var(--gold); }
+
+.admin-give { right: 230px; top: 90px; width: 360px; animation: none; }
+.admin-give label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+.admin-give input, .admin-give select { background: #120f0c; color: #e8dcc0; border: 1px solid #4a3a26; padding: 6px 8px; font-size: 13px; }
+.give-stats { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.give-row { display: grid; grid-template-columns: 1fr 90px 32px; gap: 6px; }
+.admin-give .btn { margin-top: 6px; }

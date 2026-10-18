@@ -31,7 +31,7 @@ export function ItemIcon({ id, item, qty, size = 44, dim, testid, onClick, onCon
   );
 }
 
-const STAT = { dmg: "Damage", str: "Strength", sta: "Stamina", wis: "Wisdom", int: "Intelligence", dex: "Dexterity", hp_regen: "HP Regen /s", mp_regen: "Mana Regen /s", life_steal: "% Life Steal", mana_steal: "% Mana Steal", fire_dmg: "Fire Damage per hit",
+const STAT = { dmg: "Damage", str: "Strength", sta: "Stamina", wis: "Wisdom", int: "Intelligence", dex: "Dexterity", hp_regen: "HP Regen /s", mp_regen: "Mana Regen /s", life_steal: "% Life Steal", mana_steal: "% Mana Steal", fire_dmg: "Fire Damage per hit", frost_dmg: "Frost Damage per hit (slows)", lightning_dmg: "Lightning Damage per hit (chains)",
   crit: "% Critical Hit Chance", max_hp: "Max Health", max_mp: "Max Mana", armor: "Armor", move_speed: "% Movement Speed" };
 export const cantUse = (it, me) => !!(it && me && it.slot && ((it.lvl || 1) > me.level || (it.cls && !it.cls.includes(me.cls))));
 function Compare({ item, cur }) {
