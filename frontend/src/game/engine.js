@@ -21,7 +21,7 @@ const sprite = (color, size) => { const s = new THREE.Sprite(new THREE.SpriteMat
 const AB_SFX = { ignis: "fire", flamma_ventus: "fire", agredi: "arcane", multi_vis_nex: "arcane", radius: "zap", venenum: "poison", tabes_viscera: "poison",
   minor_mederi: "heal", minor_sanatio: "heal", teuri: "buff", velocitas: "buff", robur: "buff", contra_visus: "buff", creare_porta: "portal", pergere_trans: "portal",
   attack_run: "dash", multi_shot: "bow", arrow_barrage: "bow", double_stab: "swing", spin_attack: "swing", power_strike: "heavy", cleave: "swing" };
-const growlFor = (type) => /skeleton|wraith|ghoul|knight|colossus|shade|cultist|king/.test(type) ? "growl_undead" : /golem|fiend|troll|champion|brood/.test(type) ? "roar" : /wolf|spider|crawler|imp/.test(type) ? "growl_beast" : null;
+const growlFor = (type) => /skeleton|wraith|ghoul|knight|colossus|shade|cultist|king/.test(type) ? "growl_undead" : /golem|fiend|champion|brood/.test(type) ? "roar" : /wolf|spider|crawler|imp/.test(type) ? "growl_beast" : null;
 const AB_COLOR = { arcane_bolt: "#7fb8ff", flame_burst: "#ff7a2a", aimed_shot: "#ffd36b", venom_arrow: "#7aff5a", power_strike: "#ffe0a0", cleave: "#ffc080", minor_heal: "#7aff9a", iron_guard: "#9ac8ff", quickstep: "#c8f0ff", whirlwind: "#ffc080", earthshatter: "#d8a060", frost_nova: "#a8e8ff", meteor_storm: "#ff5a1a", volley: "#ffd36b", multishot: "#ffe08a",
   agredi: "#7fb8ff", minor_mederi: "#7aff9a", minor_sanatio: "#c8ff7a", double_stab: "#ffe0a0", attack_run: "#ffb070", spin_attack: "#ffc080", multi_shot: "#ffe08a",
   arrow_barrage: "#ffd36b", ignis: "#ff6a1a", multi_vis_nex: "#a0d0ff", radius: "#e8f4ff", venenum: "#7aff5a", flamma_ventus: "#ff7a2a", tabes_viscera: "#a8ff5a",
