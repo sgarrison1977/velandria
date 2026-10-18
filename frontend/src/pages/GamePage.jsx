@@ -60,7 +60,7 @@ export default function GamePage() {
           case "equip": sfx("open"); break;
           case "levelup": setState({ levelup: m.lv }); setTimeout(() => setState({ levelup: null }), 3500); break;
           case "announce": { const id = Date.now(); setState({ announce: { id, text: m.text } }); sfx("levelup"); setTimeout(() => getState().announce?.id === id && setState({ announce: null }), 8000); break; }
-          case "bounty": setState({ bounty: m, dialog: null }); break;
+          case "bounty": setState({ bounty: { ...m, at: Date.now() }, dialog: null }); break;
           case "inspect": setState({ inspect: m.d }); break;
           case "party": e.party = m.id ? m : null; setState({ party: m.id ? m : null }); break;
           case "party_invite": setState({ partyInvite: m }); sfx("open"); break;

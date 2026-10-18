@@ -463,3 +463,11 @@ input[type="text"], input[type="email"], input[type="password"], input:not([type
 .bounty-done { color: #7fd38a; font-size: 12px; font-family: var(--serif); }
 .btn.claim { background: linear-gradient(#2e5a2a, #1a3a18); border-color: #5aa84e; color: #d8ffd0; }
 .bounty-note { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
+.boss-status { font-family: var(--sans, inherit); font-size: 11px; padding: 1px 7px; margin-left: 6px; border: 1px solid; vertical-align: middle; letter-spacing: .04em; }
+.boss-status.alive { color: #7fd38a; border-color: #3f7a48; background: #13241599; }
+.boss-status.dead { color: #ff9a6a; border-color: #8a4a2e; background: #2a140c99; font-variant-numeric: tabular-nums; }
+.bounty-rank-row { display: grid; grid-template-columns: 36px 1fr 90px 70px; gap: 10px; align-items: center; padding: 7px 12px; background: #0e0b08cc; border: 1px solid var(--edge2); }
+.bounty-rank-row.me { border-color: var(--gold); background: #2a200c99; }
+.bounty-rank-row .rk { font-family: var(--serif); color: var(--gold); font-size: 17px; text-align: center; }
+.bounty-rank-row .ct { text-align: right; color: var(--gold); font-family: var(--serif); }
+.bounty-rank-row .cl { color: var(--muted); font-size: 12px; text-transform: capitalize; }

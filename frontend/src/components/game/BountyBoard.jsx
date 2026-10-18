@@ -1,16 +1,25 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { BountyRankings } from "./BountyRankings";
 import { Crosshair, Coins, Skull } from "lucide-react";
 import { useStore, setState, toast } from "../../game/store";
 import { Panel, ItemIcon, ItemTip, Hover, inst } from "./ui";
 import { sfx } from "../../game/audio";
 
-function BountyRow({ b, send, engine }) {
+const fmt = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+function BossStatus({ b, at }) {
+  const [, tick] = useState(0);
+  const left = Math.max(0, Math.round(b.respawn_in - (Date.now() - at) / 1000));
+  useEffect(() => { if (!left) return undefined; const id = setInterval(() => tick((x) => x + 1), 1000); return () => clearInterval(id); }, [left > 0]); // eslint-disable-line react-hooks/exhaustive-deps
+  return left ? <span className="boss-status dead" data-testid={`bounty-respawn-${b.id}`}>Returns in {fmt(left)}</span> : <span className="boss-status alive" data-testid={`bounty-alive-${b.id}`}>Alive</span>;
+}
+
+function BountyRow({ b, send, engine, at }) {
   const track = () => { engine?.setWaypoint({ x: b.track[0], z: b.track[1] }); sfx("click"); toast(`Waypoint set: ${b.where}`, "good"); };
   return (
     <div className={`bounty-row st-${b.state}`} data-testid={`bounty-row-${b.id}`}>
       <div className="bounty-lv"><Skull size={16} /><b>{b.level}</b></div>
       <div className="bounty-info">
-        <b>{b.name}</b>
+        <b>{b.name} <BossStatus b={b} at={at} /></b>
         <span>{b.where}</span>
         <em>{b.gold.toLocaleString()} gold · {b.xp.toLocaleString()} xp · {b.tokens} token{b.tokens > 1 ? "s" : ""}</em>
       </div>
@@ -49,10 +58,11 @@ export function BountyBoard({ net, data, engine }) {
       <div className="tabs bounty-tabs">
         <button type="button" className={tab === "bounties" ? "on" : ""} onClick={() => setTab("bounties")} data-testid="bounty-tab-bounties">Bounties</button>
         <button type="button" className={tab === "shop" ? "on" : ""} onClick={() => setTab("shop")} data-testid="bounty-tab-shop">Token Shop</button>
+        <button type="button" className={tab === "rank" ? "on" : ""} onClick={() => setTab("rank")} data-testid="bounty-tab-rankings">Rankings</button>
         <span className="bounty-tokens" data-testid="bounty-token-count"><Coins size={14} /> {b.tokens}</span>
       </div>
-      {tab === "bounties"
-        ? <div className="bounty-list">{b.list.map((x) => <BountyRow key={x.id} b={x} send={send} engine={engine} />)}<p className="bounty-note">Party kills count. Bounties reset daily at midnight UTC.</p></div>
+      {tab === "rank" ? <BountyRankings meId={me.id} /> : tab === "bounties"
+        ? <div className="bounty-list">{b.list.map((x) => <BountyRow key={x.id} b={x} send={send} engine={engine} at={b.at} />)}<p className="bounty-note">Party kills count. Bounties reset daily at midnight UTC.</p></div>
         : <TokenShop shop={b.shop} tokens={b.tokens} data={data} me={me} send={send} />}
     </Panel>
   );

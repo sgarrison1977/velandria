@@ -1498,9 +1498,13 @@ class Game:
             return b["s"]
         return "claimed" if b.get("s") == "claimed" and b.get("day") == datetime.now(timezone.utc).date().isoformat() else "available"
 
+    def boss_respawn_in(self, key):
+        t = now()
+        return max([0] + [round(m.dead_until - t) for m in self.monsters.values() if m.type == key and m.dead_until and m.dead_until > t])
+
     def bounty_view(self, p, npc_id):
         p.send({"t": "bounty", "npc": npc_id, "tokens": self.count_item(p, "bounty_token"),
-                "list": [dict(id=k, **{kk: v for kk, v in b.items()}, state=self.bounty_state(p, k)) for k, b in BOUNTIES.items()],
+                "list": [dict(id=k, **{kk: v for kk, v in b.items()}, state=self.bounty_state(p, k), respawn_in=self.boss_respawn_in(k)) for k, b in BOUNTIES.items()],
                 "shop": [dict(item=i, cost=c) for i, c in BOUNTY_SHOP]})
 
     def bounty_cmd(self, p, npc_id, action, bid):
@@ -1539,6 +1543,7 @@ class Game:
                 self.add_item(p, "bounty_token", b["tokens"])
                 p.gold += b["gold"]
                 p.bounties[bid] = {"s": "claimed", "day": datetime.now(timezone.utc).date().isoformat()}
+                asyncio.ensure_future(self.db.bounty_claims.insert_one({"char_id": p.id, "name": p.name, "cls": p.cls, "boss": bid, "ts": datetime.now(timezone.utc)}))
                 p.send({"t": "trade", "msg": f"Bounty claimed: +{b['gold']} gold, +{b['tokens']} Bounty Token{'s' if b['tokens'] > 1 else ''}."})
                 self.give_xp(p, b["xp"])
             else:

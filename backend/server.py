@@ -172,6 +172,21 @@ async def gear_leaderboard(u=Depends(current_user)):
     return {"top": rows[:10], "mine": mine, "total": len(rows)}
 
 
+@api.get("/leaderboard/bounties")
+async def bounty_leaderboard(u=Depends(current_user)):
+    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    start = today - timedelta(days=today.weekday())
+    rows = await db.bounty_claims.aggregate([
+        {"$match": {"ts": {"$gte": start}}},
+        {"$group": {"_id": "$char_id", "count": {"$sum": 1}, "name": {"$last": "$name"}, "cls": {"$last": "$cls"}, "last": {"$max": "$ts"}}},
+        {"$sort": {"count": -1, "last": 1}},
+    ]).to_list(5000)
+    out = [dict(id=r["_id"], name=r["name"], cls=r["cls"], count=r["count"], rank=i + 1) for i, r in enumerate(rows)]
+    mine_ids = {c["id"] async for c in db.characters.find({"account_id": u["id"]}, {"id": 1})}
+    return {"top": out[:10], "mine": [r for r in out if r["id"] in mine_ids], "total": len(out),
+            "resets_at": (start + timedelta(days=7)).isoformat()}
+
+
 @api.put("/characters/{cid}/look")
 async def set_look(cid: str, body: LookIn, u=Depends(current_user)):
     look = clean_look(body.look)
@@ -437,6 +452,7 @@ async def startup():
     await db.characters.create_index("account_id")
     await db.login_attempts.create_index("identifier")
     await db.chat.create_index("ts")
+    await db.bounty_claims.create_index("ts")
     await db.meta.update_one({"_id": "schema"}, {"$set": {"version": 1}}, upsert=True)
     from world import GOH, OLD_GOH
     if not await db.meta.find_one({"_id": "map_south_sea"}):
