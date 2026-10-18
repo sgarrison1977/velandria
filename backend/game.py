@@ -629,7 +629,9 @@ class Game:
                     if self.add_item(o, qd["item"], 1):
                         o.send({"t": "sys", "msg": f"[{qd['name']}] The {ITEMS[qd['item']]['name']} falls from the Sexton's bones. Use it on a mausoleum door.", "kind": "quest"})
                         o.dirty = True
-                if q["s"] == "active" and qd["kind"] in ("kill", "kill_collect") and qd["target"] == m.d.get("base", m.type) and q["k"] < qd["count"]:
+                if q["s"] == "active" and qd.get("drop") and m.type == qd["target"] and self.count_item(o, qd["collect"]) < qd["collect_count"] and self.add_item(o, qd["collect"], 1):
+                    o.send({"t": "sys", "msg": f"[{qd['name']}] You claim the {ITEMS[qd['collect']]['name']}.", "kind": "quest"})
+                if q["s"] == "active" and qd["kind"] in ("kill", "kill_collect") and qd["target"] in (m.d.get("base", m.type), m.type) and q["k"] < qd["count"]:
                     q["k"] += 1
                     o.send({"t": "sys", "msg": f"[{qd['name']}] {MONSTERS[m.type]['name']} slain: {q['k']}/{qd['count']}", "kind": "quest"})
                     o.dirty = True
@@ -1375,7 +1377,7 @@ class Game:
             if not qd or qd["turnin"] != npc_id or not self.quest_ready(p, qid):
                 return "That task is not complete."
             r = qd["reward"]
-            if not all(self.can_add(p, i, q) for i, q in r["items"]):
+            if not all(self.can_add(p, i, q) for i, q in r["items"]) or (r.get("gear") and len(p.inventory) >= INV_SLOTS):
                 return "Make room in your inventory first."
             if qd["kind"] == "kill_collect":
                 self.take_item(p, qd["collect"], qd["collect_count"])
@@ -1384,6 +1386,14 @@ class Game:
             p.quests[qid]["s"] = "done"
             for i, q in r["items"]:
                 self.add_item(p, i, q)
+            if r.get("gear"):
+                rar, lvl = r["gear"]
+                pool = [k for k, it in ITEMS.items() if it["type"] in ("weapon", "armor") and it["rarity"] == rar and it.get("lvl", 1) <= lvl
+                        and it.get("price", 0) > 0 and (not it.get("cls") or p.cls in it["cls"])]
+                g = rnd.choice(pool)
+                props, pname = roll_props(g, lvl, rnd, force=True)
+                p.inventory.append(dict(uid=uid(), item=g, qty=1, props=props, pname=pname))
+                p.send({"t": "sys", "msg": f"Reward: {pname or ITEMS[g]['name']}", "kind": "quest"})
             p.gold += r["gold"]
             p.send({"t": "sys", "msg": f"Quest complete: {qd['name']} (+{r['gold']} gold)", "kind": "quest"})
             self.give_xp(p, r["xp"])
