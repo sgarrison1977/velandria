@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { Terrain, buildVegetation, buildWater, windUniform, cutUniform } from "./world3d";
 import { buildStructures, animateStructures } from "./structures";
+import { LightPool } from "./lightpool";
 import { buildMonster, buildNpc, buildPlayer, buildLoot, proxy, animateGlow, animateRig, setInvis, SHIMMER, RARITY } from "./models";
 import { getState, setState } from "./store";
 import { lootWanted } from "../components/game/LootFilter";
@@ -47,7 +48,7 @@ export class Engine {
     this.waypoint = JSON.parse(localStorage.getItem(`sx_wp_${meId}`) || "null");
     this.wpBeam = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.9, 40, 12, 1, true), new THREE.MeshBasicMaterial({ color: "#ffd36b", transparent: true, opacity: 0.28, depthWrite: false, side: THREE.DoubleSide }));
     this.wpBeam.visible = false; scene.add(this.wpBeam);
-    this.lantern = new THREE.PointLight("#ffb070", 0, 30, 1.2); scene.add(this.lantern); this.cave = 0;
+    this.lantern = new THREE.PointLight("#ffb070", 0, 30, 1.2); this.lantern.userData.keep = true; scene.add(this.lantern); this.cave = 0;
     const rim = (this.rim = new THREE.DirectionalLight("#8fb0ff", 0.6)); rim.position.set(60, 40, -80); scene.add(rim);
     const sun = (this.sun = new THREE.DirectionalLight("#ffe2b8", 3.0));
     sun.castShadow = true; const sz = this.quality === "high" ? 2048 : 1024; sun.shadow.mapSize.set(sz, sz);
@@ -58,6 +59,7 @@ export class Engine {
     buildVegetation(world, this.terrain, scene);
     buildWater(world, this.terrain, scene);
     this.animatedProps = buildStructures(world, this.terrain, scene);
+    this.lightPool = new LightPool(scene, 8); this.lightPool.harvest(scene);
     this.ring = new THREE.Mesh(new THREE.RingGeometry(0.75, 0.95, 32), new THREE.MeshBasicMaterial({ color: "#ff4a3a", transparent: true, opacity: 0.85, depthWrite: false }));
     this.ring.rotation.x = -Math.PI / 2; this.ring.visible = false; scene.add(this.ring);
     this.marker = new THREE.Mesh(new THREE.RingGeometry(0.2, 0.4, 20), new THREE.MeshBasicMaterial({ color: "#ffe08a", transparent: true, depthWrite: false }));
@@ -533,6 +535,7 @@ export class Engine {
       if (p >= 1) { this.scene.remove(f.obj); this.fxList.splice(i, 1); f.done && f.done(); }
     }
     animateStructures(this.animatedProps, t);
+    this.lightPool.update(ct.x, ct.z, t);
     this.updateHover();
     this.holdWalk(now);
     if (this.quality === "low") this.renderer.render(this.scene, this.camera); else this.composer.render();

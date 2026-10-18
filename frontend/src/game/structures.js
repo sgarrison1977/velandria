@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { plazaTexture } from "./world3d";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 const mats = {};
 const M = (color, o = {}) => {
@@ -361,8 +362,36 @@ export function buildStructures(world, terrain, scene) {
     root.add(im);
   }
   root.traverse((o) => { if (o.isMesh) { o.castShadow = !o.material.transparent && o.geometry.type !== "PlaneGeometry"; o.receiveShadow = true; } });
+  mergeStatic(root, animated);
   scene.add(root);
   return animated;
+}
+
+// batch every static mesh into one mesh per (material, 64m chunk): thousands of draw calls -> a few hundred
+function mergeStatic(root, animated) {
+  root.updateMatrixWorld(true);
+  const live = new Set(animated), groups = new Map(), victims = [];
+  root.traverse((o) => {
+    if (!o.isMesh || o.isInstancedMesh || Array.isArray(o.material)) return;
+    for (let q = o; q && q !== root; q = q.parent) if (live.has(q)) return;
+    const wp = new THREE.Vector3().setFromMatrixPosition(o.matrixWorld);
+    const key = `${o.material.uuid}|${Math.floor(wp.x / 64)}|${Math.floor(wp.z / 64)}|${o.castShadow ? 1 : 0}`;
+    let g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone();
+    for (const k of Object.keys(g.attributes)) if (k !== "position" && k !== "normal" && k !== "uv") g.deleteAttribute(k);
+    if (!g.attributes.normal) g.computeVertexNormals();
+    if (!g.attributes.uv) g.setAttribute("uv", new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
+    g.clearGroups(); g.applyMatrix4(o.matrixWorld);
+    if (!groups.has(key)) groups.set(key, { mat: o.material, cast: o.castShadow, geos: [] });
+    groups.get(key).geos.push(g); victims.push(o);
+  });
+  for (const o of victims) { o.parent.remove(o); o.geometry.dispose(); }
+  for (const { mat, cast, geos } of groups.values()) {
+    const merged = mergeGeometries(geos, false);
+    geos.forEach((g) => g.dispose());
+    if (!merged) continue;
+    const m = new THREE.Mesh(merged, mat); m.castShadow = cast; m.receiveShadow = true; m.matrixAutoUpdate = false;
+    root.add(m);
+  }
 }
 
 export function animateStructures(list, t) {

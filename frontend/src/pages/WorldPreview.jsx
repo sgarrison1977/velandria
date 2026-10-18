@@ -25,7 +25,7 @@ export default function WorldPreview() {
       scene.add(terrain.buildMesh()); buildVegetation(world, terrain, scene); buildWater(world, terrain, scene);
       anim = buildStructures(world, terrain, scene);
       for (const n of Object.values(data.npcs)) { if (Math.hypot(n.pos[0] - x, n.pos[1] - z) > 80) continue; const r = buildNpc(n.kind); r.root.position.set(n.pos[0], terrain.height(n.pos[0], n.pos[1]), n.pos[1]); scene.add(r.root); }
-      window.__worldReady = true;
+      window.__worldReady = true; window.__info = renderer.info; window.__scene = scene;
     });
     const loop = () => { const t = performance.now() / 1000; windUniform.value = t; animateStructures(anim, t); renderer.render(scene, cam); raf = requestAnimationFrame(loop); };
     loop();

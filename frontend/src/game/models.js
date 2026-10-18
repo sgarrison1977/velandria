@@ -79,7 +79,6 @@ function chest() {
   for (const x of [-0.55, 0.55]) mesh(B(0.1, 0.8, 1.0), iron, x, 0.4, 0, root);
   for (let i = 0; i < 7; i++) mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.03, 8), gold, -0.5 + (i % 4) * 0.33, 0.8 + (i > 3 ? 0.05 : 0), 0.1 + (i % 2) * 0.12, root);
   for (let i = 0; i < 5; i++) mesh(new THREE.DodecahedronGeometry(0.12 + (i % 2) * 0.06, 0), M("#6a8a7a"), Math.cos(i * 1.3) * 0.95, 0.08, Math.sin(i * 1.3) * 0.7, root);
-  const glow = new THREE.PointLight("#ffcf5a", 6, 5, 1.6); glow.position.set(0, 1.2, 0); root.add(glow);
   return { root, kind: "prop", height: 1.4 };
 }
 function cryptDoor() {
@@ -87,7 +86,6 @@ function cryptDoor() {
   mesh(B(0.7, 0.9, 0.12), iron, 0, 1.4, 0, root);
   const sk = mesh(new THREE.SphereGeometry(0.2, 10, 8), mat("cloth", "#d8d0b8"), 0, 1.5, 0.1, root); sk.scale.set(1, 1.1, 0.6);
   mesh(new THREE.SphereGeometry(0.05, 6, 6), glow, -0.07, 1.52, 0.2, root); mesh(new THREE.SphereGeometry(0.05, 6, 6), glow, 0.07, 1.52, 0.2, root);
-  const l = new THREE.PointLight("#7affc8", 3, 4, 1.6); l.position.set(0, 1.5, 0.6); root.add(l);
   return { root, kind: "prop", height: 1.9 };
 }
 export const buildNpc = (kind) => kind === "trunk" ? trunk() : kind === "chest" ? chest() : kind === "crypt_door" ? cryptDoor() : kind === "waystone" ? waystone() : (NPC_BUILD[kind] || NPC_BUILD.villager)();
