@@ -882,7 +882,9 @@ class Game:
             p.buffs[ab["buff"]] = (round(ab["value"] + ab.get("per_level", 0) * p.level, 2), t + ab["dur"])
             p.recalc()
         elif k == "blink":
-            p.x, p.z, p.path = center[0], center[1], []
+            if math.hypot(center[0] - p.x, center[1] - p.z) > 0.1:
+                p.rot = math.atan2(center[0] - p.x, center[1] - p.z)
+            p.x, p.z, p.path, p.dirty = center[0], center[1], [], True
         elif k == "portal":
             for gid in [g["id"] for g in self.gates.values() if g["owner"] == p.id]:
                 del self.gates[gid]
