@@ -75,3 +75,5 @@ Later requests: hold-to-walk toward pointer; ranged/spell abilities fire at the 
 - Elemental per-hit stats: fire_dmg, frost_dmg (30% slow move+attack 3s, icy aura), lightning_dmg (arcs to 2 enemies within 7m for 50%). Colored numbers, bursts, sfx; elemental arrows glow with ember/ice/spark trails.
 - Admin "Keeper's Gift" popup (Gift icon in menubar, ws msg t=give) — only for ADMIN_EMAILS in backend/.env (sgarrison1977@gmail.com). Gives to online or offline characters by name, custom stats + custom name.
 - Custom gifts to Gribb: Hawkeye Cap, Emberstrike bow (item emberstrike_bow), Heart of the Wilds amulet.
+- Keeper's Gift popup: category tabs (Weapons, Off-hand, Helms, Chest, Limbs, Rings & Amulets, Potions & Food, Materials) + search + icon grid. Preview: /gallery?set=give
+- New spells (lvl 8, learn with skill points): Wizard Glacies Nova (8m frost AoE, 30% slow 3s), Warlock Fulmen Catena (lightning bolt chaining to 4 more enemies, -20% per jump).

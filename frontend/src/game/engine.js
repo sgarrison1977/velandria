@@ -19,13 +19,13 @@ const glowTex = (() => {
   return new THREE.CanvasTexture(c);
 })();
 const sprite = (color, size) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); s.scale.setScalar(size); return s; };
-const AB_SFX = { lunae_lumen_nex: "moonbeam", ignis: "fire", flamma_ventus: "fire", agredi: "arcane", multi_vis_nex: "arcane", radius: "zap", venenum: "poison", tabes_viscera: "poison",
+const AB_SFX = { glacies_nova: "frost", fulmen_catena: "zap", lunae_lumen_nex: "moonbeam", ignis: "fire", flamma_ventus: "fire", agredi: "arcane", multi_vis_nex: "arcane", radius: "zap", venenum: "poison", tabes_viscera: "poison",
   minor_mederi: "heal", minor_sanatio: "heal", teuri: "buff", velocitas: "buff", robur: "buff", contra_visus: "buff", creare_porta: "portal", pergere_trans: "portal",
   attack_run: "dash", multi_shot: "bow", arrow_barrage: "bow", double_stab: "swing", spin_attack: "swing", power_strike: "heavy", cleave: "swing" };
 const ICE_GEO = new THREE.CylinderGeometry(1, 1, 1, 12, 1, true), ICE_MAT = new THREE.MeshBasicMaterial({ color: "#9ae8ff", transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
 const EL_COLOR = { fire: "#ff7a2a", frost: "#9ae8ff", lightning: "#fff27a" }, EL_SFX = { fire: "fire", frost: "frost", lightning: "zap" };
 const growlFor = (type) => /skeleton|wraith|ghoul|knight|colossus|shade|cultist|king/.test(type) ? "growl_undead" : /golem|fiend|champion|brood/.test(type) ? "roar" : /wolf|spider|crawler|imp/.test(type) ? "growl_beast" : null;
-const AB_COLOR = { lunae_lumen_nex: "#cfe6ff", arcane_bolt: "#7fb8ff", flame_burst: "#ff7a2a", aimed_shot: "#ffd36b", venom_arrow: "#7aff5a", power_strike: "#ffe0a0", cleave: "#ffc080", minor_heal: "#7aff9a", iron_guard: "#9ac8ff", quickstep: "#c8f0ff", whirlwind: "#ffc080", earthshatter: "#d8a060", frost_nova: "#a8e8ff", meteor_storm: "#ff5a1a", volley: "#ffd36b", multishot: "#ffe08a",
+const AB_COLOR = { glacies_nova: "#9ae8ff", fulmen_catena: "#fff27a", lunae_lumen_nex: "#cfe6ff", arcane_bolt: "#7fb8ff", flame_burst: "#ff7a2a", aimed_shot: "#ffd36b", venom_arrow: "#7aff5a", power_strike: "#ffe0a0", cleave: "#ffc080", minor_heal: "#7aff9a", iron_guard: "#9ac8ff", quickstep: "#c8f0ff", whirlwind: "#ffc080", earthshatter: "#d8a060", frost_nova: "#a8e8ff", meteor_storm: "#ff5a1a", volley: "#ffd36b", multishot: "#ffe08a",
   agredi: "#7fb8ff", minor_mederi: "#7aff9a", minor_sanatio: "#c8ff7a", double_stab: "#ffe0a0", attack_run: "#ffb070", spin_attack: "#ffc080", multi_shot: "#ffe08a",
   arrow_barrage: "#ffd36b", ignis: "#ff6a1a", multi_vis_nex: "#a0d0ff", radius: "#e8f4ff", venenum: "#7aff5a", flamma_ventus: "#ff7a2a", tabes_viscera: "#a8ff5a",
   teuri: "#9ac8ff", velocitas: "#c8f0ff", robur: "#ffb060", contra_visus: "#c0a8ff", pergere_trans: "#c0a0ff", creare_porta: "#b080ff" };
@@ -228,6 +228,8 @@ export class Engine {
     if (ab === "venenum" && tgt) this.projectile(src, tgt, c, false, 0.7, () => this.burst(tgt, c, 10, 1));
     if (ab === "flamma_ventus" && tgt) this.cone(src, tgt, c);
     if (ab === "tabes_viscera") this.aura(src, "#c01818", 2);
+    if (ab === "glacies_nova") { this.shock(src.x, src.z, c, 8); this.shock(src.x, src.z, "#e8fbff", 5); this.burst(src, c, 34, 3.5); this.burst(src, "#ffffff", 14, 2); if (src.id === this.meId) this.shake = 0.12; }
+    if (ab === "fulmen_catena" && tgt) { this.arc(src, tgt); setTimeout(() => this.arc(src, tgt), 60); }
     if (["teuri", "velocitas", "robur", "contra_visus"].includes(ab)) { this.aura(src, c, 3); this.burst(src, c, 14, 2); }
     if (ab === "pergere_trans") { this.burst(src, c, 18, 2); this.shock(src.x, src.z, c, 2); }
     if (ab === "creare_porta" && tgt) this.shock(tgt.x, tgt.z, c, 2.5);

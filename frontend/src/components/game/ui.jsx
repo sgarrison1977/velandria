@@ -1,6 +1,6 @@
 import React, { useState, useRef, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
-import { Sword, Wand2, Crosshair, Shield, BookOpen, HardHat, Shirt, Footprints, Hand, Gem, FlaskConical, Coins, Bone, ScrollText, Package, Layers, Circle, X, Swords, Flame, Skull, EyeOff, Wind, Zap, DoorOpen, HeartPulse, Droplet, Move, Bug, Dumbbell, Radiation, Orbit, MoonStar } from "lucide-react";
+import { Sword, Wand2, Crosshair, Shield, BookOpen, HardHat, Shirt, Footprints, Hand, Gem, FlaskConical, Coins, Bone, ScrollText, Package, Layers, Circle, X, Swords, Flame, Skull, EyeOff, Wind, Zap, DoorOpen, HeartPulse, Droplet, Move, Bug, Dumbbell, Radiation, Orbit, MoonStar, Snowflake, Cable } from "lucide-react";
 import { RARITY } from "../../game/models";
 
 export const RARITY_COLOR = RARITY;
@@ -127,7 +127,7 @@ export const inst = (item, s) => {
   return { ...item, name: s.pname || item.name, stats, armor, props: s.props, lvl: s.lvl ?? item.lvl };
 };
 const AB_ICONS = {
-  agredi: [Wand2, "#9ac8ff", "#1a1a5a"], lunae_lumen_nex: [MoonStar, "#e8f4ff", "#101a3a"], minor_mederi: [HeartPulse, "#9affb0", "#0a3a1a"], minor_sanatio: [Droplet, "#c8ff9a", "#1a3a0a"],
+  agredi: [Wand2, "#9ac8ff", "#1a1a5a"], glacies_nova: [Snowflake, "#bff4ff", "#0a2a3a"], fulmen_catena: [Cable, "#fff27a", "#2a2a0a"], lunae_lumen_nex: [MoonStar, "#e8f4ff", "#101a3a"], minor_mederi: [HeartPulse, "#9affb0", "#0a3a1a"], minor_sanatio: [Droplet, "#c8ff9a", "#1a3a0a"],
   double_stab: [Swords, "#ffe0a0", "#5a2a12"], attack_run: [Footprints, "#ffb070", "#4a1a0a"], spin_attack: [Layers, "#ffd0a0", "#4a2a0a"],
   multi_shot: [Orbit, "#ffe08a", "#3a1a2a"], arrow_barrage: [Crosshair, "#ffd36b", "#2a200a"], ignis: [Flame, "#ff8a3a", "#4a0a00"],
   multi_vis_nex: [Radiation, "#b0d8ff", "#0a1a4a"], radius: [Zap, "#e0f0ff", "#1a2a5a"], venenum: [Bug, "#9aff6a", "#13300a"],

@@ -2,6 +2,8 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { setEnv } from "@/game/rig/tex";
 import WorldPreview from "./WorldPreview";
+import { AdminGivePanel } from "@/components/game/AdminGive";
+import { useState } from "react";
 import { buildPlayer, buildMonster, buildNpc, animateRig } from "@/game/models";
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -14,7 +16,9 @@ const SETS = {
 };
 
 export default function ModelGallery() {
-  if (new URLSearchParams(window.location.search).get("set") === "world") return <WorldPreview />;
+  const set = new URLSearchParams(window.location.search).get("set");
+  if (set === "world") return <WorldPreview />;
+  if (set === "give") return <GivePreview />;
   return <ModelSet />;
 }
 
@@ -48,4 +52,10 @@ function ModelSet() {
     return () => { alive = false; cancelAnimationFrame(raf); renderer.dispose(); };
   }, []);
   return <canvas ref={ref} data-testid="model-gallery-canvas" style={{ display: "block", width: "100vw", height: "100vh" }} />;
+}
+
+function GivePreview() {
+  const [data, setData] = useState(null);
+  useEffect(() => { fetch(`${process.env.REACT_APP_BACKEND_URL}/api/game/data`).then((r) => r.json()).then(setData); }, []);
+  return <div className="game-root" style={{ width: "100vw", height: "100vh", background: "#222" }}>{data && <AdminGivePanel data={data} net={{ send: () => {} }} />}</div>;
 }

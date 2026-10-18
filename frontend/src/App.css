@@ -384,9 +384,21 @@ input[type="text"], input[type="email"], input[type="password"], input:not([type
 .lf-names { background: #0f0c09; border: 1px solid var(--edge2); color: var(--text); padding: 8px 10px; font-size: 14px; }
 .lf-names:focus { outline: none; border-color: var(--gold); }
 
-.admin-give { right: 230px; top: 90px; width: 360px; animation: none; }
+.admin-give { right: 230px; top: 70px; width: 640px; max-height: calc(100vh - 150px); overflow-y: auto; animation: none; }
+.give-picker { margin-bottom: 10px; }
+.give-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+.give-tab { background: #1a1510; color: #b8a888; border: 1px solid #3a2e20; padding: 4px 8px; font-size: 11px; cursor: pointer; transition: background-color .15s, color .15s; }
+.give-tab:hover { color: #f0e2c0; } .give-tab.on { background: #5a3f1e; color: #ffe2a8; border-color: #9a7038; }
+.admin-give .give-search { width: 100%; margin-bottom: 6px; }
+.give-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; max-height: 260px; overflow-y: auto; padding-right: 4px; }
+.give-item { display: grid; grid-template-columns: 38px 1fr auto; align-items: center; gap: 6px; background: #14110d; border: 1px solid #2e251a; padding: 3px 6px; cursor: pointer; text-align: left; color: #e8dcc0; font-size: 12px; transition: border-color .15s, background-color .15s; }
+.give-item:hover { border-color: #7a5a30; } .give-item.on { border-color: #ffcf5a; background: #2a2014; }
+.gi-lvl { color: #8a7a60; font-size: 11px; } .gi-empty { color: #8a7a60; padding: 10px; }
+.give-chosen { font-size: 12px; margin-bottom: 8px; color: #b8a888; }
 .admin-give label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); margin-bottom: 10px; }
 .admin-give input, .admin-give select { background: #120f0c; color: #e8dcc0; border: 1px solid #4a3a26; padding: 6px 8px; font-size: 13px; }
 .give-stats { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
 .give-row { display: grid; grid-template-columns: 1fr 90px 32px; gap: 6px; }
 .admin-give .btn { margin-top: 6px; }
+.give-item.r-uncommon .gi-name, .give-chosen .r-uncommon { color: var(--r-uncommon); } .give-item.r-rare .gi-name, .give-chosen .r-rare { color: var(--r-rare); }
+.give-item.r-epic .gi-name, .give-chosen .r-epic { color: var(--r-epic); } .give-item.r-legendary .gi-name, .give-chosen .r-legendary { color: var(--r-legendary); }

@@ -865,7 +865,16 @@ class Game:
                 for mm in list(self.monsters.values()):
                     if mm is not m and not mm.dead_until and dist(mm, m) <= ab["splash"] + mm.d["radius"]:
                         self.damage_monster(mm, dmg * 0.5, p, "magic")
-            self.damage_monster(m, dmg, p, "magic", crit)
+            self.damage_monster(m, dmg, p, ab.get("dtype", "magic"), crit)
+            hit, cur = {m.id}, m
+            for i in range(ab.get("chain", 0)):
+                nxt = min((mm for mm in self.monsters.values() if mm.id not in hit and not mm.dead_until and not in_safe(mm.x, mm.z) and dist(mm, cur) <= 8),
+                          key=lambda mm: dist(mm, cur), default=None)
+                if not nxt:
+                    break
+                self.fx(cur.x, cur.z, {"t": "fx", "k": "arc", "src": cur.id, "tgt": nxt.id})
+                self.damage_monster(nxt, dmg * 0.8 ** (i + 1), p, ab["dtype"])
+                hit.add(nxt.id); cur = nxt
         elif k in ("aoe_target", "aoe_self", "cone"):
             cx, cz = (m.x, m.z) if m else (center or (p.x, p.z))
             if k == "cone":
@@ -884,7 +893,9 @@ class Game:
                 if "base" in ab:
                     if ab.get("rot"):
                         self.fx(mm.x, mm.z, {"t": "fx", "k": "rot", "tgt": mm.id})
-                    self.damage_monster(mm, self.spell_dmg(p, ab), p, "magic")
+                    if ab.get("chill"):
+                        mm.chill_until = t + 3.0
+                    self.damage_monster(mm, self.spell_dmg(p, ab), p, ab.get("dtype", "magic"))
                     if ab.get("rot") and not mm.dead_until:
                         mm.dots.append(dict(dmg=4 + p.tot["int"] * ab["rot"], n=5, next=t + 1, src=p.id))
                 else:
