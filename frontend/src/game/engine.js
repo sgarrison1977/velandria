@@ -3,6 +3,7 @@ import { Terrain, buildVegetation, buildWater, windUniform, cutUniform } from ".
 import { buildStructures, animateStructures } from "./structures";
 import { buildMonster, buildNpc, buildPlayer, buildLoot, proxy, animateGlow, animateRig, setInvis, SHIMMER, RARITY } from "./models";
 import { getState, setState } from "./store";
+import { lootWanted } from "../components/game/LootFilter";
 import { sfx } from "./audio";
 import { setEnv } from "./rig/tex";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
@@ -120,7 +121,7 @@ export class Engine {
     for (const [id, item, qty, x, z, mine, pname] of s.l) {
       seen.add(id);
       let e = this.entities.get(id);
-      if (!e) e = this.addEntity(id, "loot", { item, qty, x, z, mine, name: pname || this.data.items[item].name });
+      if (!e) { e = this.addEntity(id, "loot", { item, qty, x, z, mine, name: pname || this.data.items[item].name, magic: !!pname }); this.applyLootFilter(e); }
       e.mine = mine;
     }
     for (const [id, x, z, owner, rem] of s.g || []) {
@@ -302,7 +303,7 @@ export class Engine {
     this.ray.setFromCamera(this.mouse, this.camera);
     const hits = this.ray.intersectObjects(this.proxies, false);
     const pri = { monster: 0, loot: 1, npc: 2, player: 3 };
-    const list = hits.map((h) => this.entities.get(h.object.userData.id)).filter((e) => e && !(e.kind === "monster" && e.anim.dead) && e.id !== this.meId);
+    const list = hits.map((h) => this.entities.get(h.object.userData.id)).filter((e) => e && !(e.kind === "monster" && e.anim.dead) && !(e.kind === "loot" && e.filtered === "hide") && e.id !== this.meId);
     list.sort((a, b) => pri[a.kind] - pri[b.kind]);
     return list[0] || null;
   }
@@ -383,7 +384,7 @@ export class Engine {
       else if (e.kind === "monster") { show = !e.anim.dead && (hovered || targeted || e.aggro || (e.lastHit && now - e.lastHit < 5000)); sub = `Lv ${e.level}`; hp = e.hp / e.max; }
       else if (e.kind === "npc") { show = hovered || (!e.ambient && d < 18); sub = hovered ? e.role : ""; }
       else if (e.kind === "gate") { show = d < 25; }
-      else { const rar = this.data.items[e.item].rarity; show = hovered || (rar !== "common" && d < 14); name = e.qty > 1 ? `${e.name} ×${e.qty}` : e.name; }
+      else { const rar = this.data.items[e.item].rarity; show = e.filtered === "hide" ? false : hovered || (e.filtered !== "dim" && rar !== "common" && d < 14); name = e.qty > 1 ? `${e.name} ×${e.qty}` : e.name; }
       if (!show) { if (e.plate) e.plate.style.display = "none"; continue; }
       v.set(e.x, e.grp.position.y + e.height + 0.35, e.z).project(this.camera);
       if (v.z > 1 || Math.abs(v.x) > 1.1 || Math.abs(v.y) > 1.1) { if (e.plate) e.plate.style.display = "none"; continue; }
@@ -407,6 +408,20 @@ export class Engine {
     }
   }
 
+  setLootFilter(f) { this.lootFilter = f; for (const e of this.entities.values()) if (e.kind === "loot") this.applyLootFilter(e); }
+  applyLootFilter(e) {
+    const f = this.lootFilter, it = this.data.items[e.item];
+    const mode = !f || f.unwanted === "show" || lootWanted(it, e.name, e.magic, f) ? "show" : f.unwanted;
+    if (e.filtered === mode) return;
+    e.filtered = mode;
+    e.grp.visible = mode !== "hide";
+    e.rig.root.traverse((o) => {
+      if (!o.material) return;
+      if (!o.userData.baseMat) o.userData.baseMat = o.material;
+      if (mode === "dim") { o.material = o.userData.baseMat.clone(); o.material.transparent = true; o.material.opacity = (o.userData.baseMat.opacity ?? 1) * 0.22; o.material.depthWrite = false; }
+      else if (o.material !== o.userData.baseMat) { o.material.dispose(); o.material = o.userData.baseMat; }
+    });
+  }
   // ---------- main loop
   dungeonAt(x) { return (this.world.dungeons || []).find((d) => x >= d.x0 - 20 && x <= d.x0 + d.w + 20); }
   regionAt(x, z) {
@@ -555,7 +570,7 @@ export class Engine {
       else if (e.kind === "monster" && opts.radius && !e.anim.dead) dot(e.x, e.z, "#e04030", 2.2);
       else if (e.kind === "player" && e.id !== this.meId) dot(e.x, e.z, "#5ab0ff", 3);
       else if (e.kind === "gate") dot(e.x, e.z, "#b080ff", 3.5);
-      else if (e.kind === "loot" && opts.radius) dot(e.x, e.z, RARITY[this.data.items[e.item].rarity], 1.6);
+      else if (e.kind === "loot" && opts.radius && e.filtered !== "hide") dot(e.x, e.z, RARITY[this.data.items[e.item].rarity], 1.6);
     }
     if (!opts.radius) {
       ctx.font = "600 13px 'IM Fell English SC', serif"; ctx.textAlign = "center";

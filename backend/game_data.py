@@ -9,7 +9,7 @@ PLAYER_SPEED = 5.0
 PICKUP_RANGE = 1.8
 NPC_RANGE = 5.0
 LOOT_OWNER_SECS = 25
-LOOT_EXPIRE_SECS = 150
+LOOT_EXPIRE_SECS = 60
 
 COMBAT = dict(
     crit_base=0.05, crit_per_dex=0.003, crit_mult=1.6,

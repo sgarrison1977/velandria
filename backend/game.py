@@ -343,6 +343,9 @@ class Game:
             mult = COMBAT["safe_regen_mult"] if in_safe(p.x, p.z) else 1.0
             p.hp = min(p.max_hp, p.hp + (COMBAT["hp_regen_base"] + p.tot["sta"] * COMBAT["hp_regen_per_sta"]) * mult + p.tot.get("hp_regen", 0))
             p.mp = min(p.max_mp, p.mp + (COMBAT["mp_regen_base"] + p.tot["wis"] * COMBAT["mp_regen_per_wis"]) * mult + p.tot.get("mp_regen", 0))
+        if getattr(p, "autoloot", None) and self.loot and t > getattr(p, "next_autoloot", 0):
+            p.next_autoloot = t + 0.4
+            self.loot_all(p, p.autoloot, radius=1.8, quiet=True)
         if p.dash:
             tx, tz = p.dash
             d, step = math.hypot(tx - p.x, tz - p.z), DASH_SPEED * dt
@@ -984,10 +987,10 @@ class Game:
             return False
         return it["rarity"] in (f.get("rarities") or ["common", "uncommon", "rare", "epic", "legendary"])
 
-    def loot_all(self, p, flt=None):
+    def loot_all(self, p, flt=None, radius=None, quiet=False):
         t, got, full, owned, skipped = now(), {}, False, 0, 0
         for lid, l in sorted(self.loot.items(), key=lambda kv: math.hypot(kv[1]["x"] - p.x, kv[1]["z"] - p.z)):
-            if math.hypot(l["x"] - p.x, l["z"] - p.z) > LOOT_ALL_R:
+            if math.hypot(l["x"] - p.x, l["z"] - p.z) > (radius or LOOT_ALL_R):
                 continue
             if not self.loot_wanted(l, flt):
                 skipped += 1
@@ -1004,6 +1007,11 @@ class Game:
         if got:
             p.send({"t": "pickup", "item": "gold" if list(got) == ["gold"] else "loot_all", "qty": 1,
                     "name": ", ".join(f"{q}× {n}" if q > 1 else n for n, q in got.items())})
+        if quiet:
+            if full and t > getattr(p, "full_warn", 0):
+                p.full_warn = t + 10
+                p.send({"t": "err", "msg": "Your inventory is full. Auto-loot left items on the ground."})
+            return
         if full:
             p.send({"t": "err", "msg": "Your inventory is full. Some items were left on the ground."})
         elif not got:
@@ -1553,6 +1561,8 @@ class Game:
             err = self.cast(p, msg.get("ab"), msg.get("id"), pt, msg.get("mark"))
         elif t == "loot_all":
             self.loot_all(p, msg.get("filter"))
+        elif t == "autoloot":
+            p.autoloot = msg.get("filter") if isinstance(msg.get("filter"), dict) else None
         elif t == "pickup":
             if msg.get("id") in self.loot:
                 p.pending, p.target = ("loot", msg["id"]), None

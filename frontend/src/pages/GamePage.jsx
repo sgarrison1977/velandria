@@ -44,7 +44,7 @@ export default function GamePage() {
         switch (m.t) {
           case "s": e.onSnapshot(m); break;
           case "fx": e.onFx(m); break;
-          case "init": setState({ me: m.me, meAt: performance.now(), chat: m.chat, hp: m.me.hp, mp: m.me.mp }); break;
+          case "init": setState({ me: m.me, meAt: performance.now(), chat: m.chat, hp: m.me.hp, mp: m.me.mp }); { const lf = getLootFilter(); net.current?.send({ t: "autoloot", filter: lf.auto ? lf : null }); } break;
           case "me": setState({ me: m.me, meAt: performance.now() }); break;
           case "chat": setState((s) => ({ chat: [...s.chat.slice(-150), m.m] })); break;
           case "sys": toast(m.msg, m.kind || "info"); if (m.kind === "quest") sfx("loot"); break;
@@ -65,11 +65,14 @@ export default function GamePage() {
       net.current = new Net(localStorage.getItem("sx_token"), charId, onMsg);
       try {
         eng.current = new Engine({ canvas: canvas.current, overlay: overlay.current, data: d.data, world: w.data, net: net.current, meId: charId, quality: localStorage.getItem("sx_quality") || "high" });
+        eng.current.setLootFilter(getLootFilter());
       } catch (err) { console.error(err); setStep("WebGL failed to start. Please use a modern desktop browser with hardware acceleration."); return; }
       queue.forEach(handle);
       if (!dead) setReady(true);
     })().catch(() => setStep("Could not reach the world server."));
-    return () => { dead = true; net.current?.close(); eng.current?.dispose(); eng.current = null; };
+    const onLf = (ev) => { eng.current?.setLootFilter(ev.detail); net.current?.send({ t: "autoloot", filter: ev.detail.auto ? ev.detail : null }); };
+    window.addEventListener("sx-lootfilter", onLf);
+    return () => { dead = true; window.removeEventListener("sx-lootfilter", onLf); net.current?.close(); eng.current?.dispose(); eng.current = null; };
   }, [charId]);
 
   useEffect(() => {
