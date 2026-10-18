@@ -769,7 +769,7 @@ class Game:
         return None
 
     def cast_gcd(self, p, ab):
-        return max(0.1, GLOBAL_CD - (min(p.level, 50) - 1) * 0.2 / 49) if ab.get("fast_cast") else GLOBAL_CD
+        return GLOBAL_CD - (min(p.level, 50) - 1) * 0.1 / 49 if ab.get("fast_cast") else GLOBAL_CD
 
     def cast_miss(self, p, ab_id, pt):
         ab = ABILITIES[ab_id]
