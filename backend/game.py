@@ -43,6 +43,8 @@ class Monster:
         self.x, self.z = self.world.random_point(s["x"], s["z"], s["r"], rnd)
         self.hx, self.hz = self.x, self.z
         self.hp, self.max_hp = self.d["hp"], self.d["hp"]
+        self.max_mp = round((200 + self.d["level"] * 20) * (3 if self.d.get("boss") or self.d.get("champion") else 1))
+        self.mp = self.max_mp
         self.state, self.target, self.path, self.dots = "idle", None, [], []
         self.last_attack, self.next_wander, self.repath = 0, now() + rnd.uniform(1, 8), 0
         self.dead_until, self.dmg_by, self.rot, self.moving = 0, {}, rnd.uniform(0, 6.28), False
@@ -429,7 +431,7 @@ class Game:
         if m.state == "return":
             if not m.path:
                 if math.hypot(m.x - m.hx, m.z - m.hz) < 2 or t > m.repath:
-                    m.state, m.hp, m.dmg_by = "idle", m.max_hp, {}
+                    m.state, m.hp, m.mp, m.dmg_by = "idle", m.max_hp, m.max_mp, {}
                     m.next_wander = t + rnd.uniform(3, 8)
             self.step_along(m, d["speed"] * 1.4, dt, monster=True)
             return
@@ -532,8 +534,10 @@ class Game:
             ls, ms = p.tot.get("life_steal", 0), p.tot.get("mana_steal", 0)
             if ls:
                 p.hp = min(p.max_hp, p.hp + dmg * ls / 100)
-            if ms:
-                p.mp = min(p.max_mp, p.mp + dmg * ms / 100)
+            if ms and m.mp > 0:
+                take = min(m.mp, m.max_mp * ms / 100)
+                m.mp -= take
+                p.mp = min(p.max_mp, p.mp + take)
         if m.hp <= 0:
             self.kill_monster(m)
 
