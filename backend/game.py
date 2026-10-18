@@ -218,11 +218,12 @@ class Game:
                 pass
         await self.remove_player(p)
 
-    def announce(self, text):
+    def announce(self, text, title=None, chat=True):
         ts = datetime.now(timezone.utc).isoformat()
         for p in self.players.values():
-            p.send({"t": "announce", "text": text})
-            p.send({"t": "chat", "m": dict(kind="system", text=f"[Announcement] {text}", ts=ts)})
+            p.send({"t": "announce", "text": text, "title": title})
+            if chat:
+                p.send({"t": "chat", "m": dict(kind="system", text=f"[Announcement] {text}", ts=ts)})
 
     async def remove_player(self, p):
         if self.players.get(p.id) is p:
@@ -653,7 +654,10 @@ class Game:
         if m.d.get("champion"):
             self.broadcast_sys(f"{killer.name} has slain the Wave Champion {m.d['name']}!")
         if m.d.get("boss"):
-            self.broadcast_sys(f"{killer.name} has slain {m.d['name']}! " + ("Its lair lies quiet... for now." if m.d.get("bounty") else "The Titus Barrows fall silent... for now." if m.d.get("barrow") else "The tides of the Offshore Isles grow calm... for now." if m.d.get("isle") else "The Hollow Deep falls silent... for now."))
+            names = [killer.name] + [o.name for o in sharers if o is not killer]
+            who = names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
+            self.announce(f"{who} {'has' if len(names) == 1 else 'have'} slain {m.d['name']}!", "World Boss Slain", chat=False)
+            self.broadcast_sys(f"{who} {'has' if len(names) == 1 else 'have'} slain {m.d['name']}! " + ("Its lair lies quiet... for now." if m.d.get("bounty") else "The Titus Barrows fall silent... for now." if m.d.get("barrow") else "The tides of the Offshore Isles grow calm... for now." if m.d.get("isle") else "The Hollow Deep falls silent... for now."))
         for i, (item, qty) in enumerate(drops):
             a = i * 2.1 + rnd.uniform(0, 1)
             lx, lz = m.x + math.cos(a) * (0.6 + 0.4 * i), m.z + math.sin(a) * (0.6 + 0.4 * i)
