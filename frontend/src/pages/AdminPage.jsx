@@ -4,6 +4,7 @@ import { adminHttp } from "@/lib/adminApi";
 import { errMsg } from "@/lib/api";
 import { AdminLogin } from "@/components/admin/AdminLogin";
 import { AccountRow } from "@/components/admin/AccountRow";
+import { Broadcast } from "@/components/admin/Broadcast";
 
 export default function AdminPage() {
   const nav = useNavigate();
@@ -36,6 +37,7 @@ export default function AdminPage() {
           <button className="btn" onClick={logout} data-testid="admin-logout-btn">Log Out</button>
         </div>
       </header>
+      <Broadcast onMsg={setMsg} />
       {msg && <div className="form-err" data-testid="admin-message" onClick={() => setMsg("")}>{msg}</div>}
       <div className="admin-list" data-testid="admin-accounts-list">
         {list.map((a) => <AccountRow key={a.id} acc={a} onChange={load} onMsg={setMsg} />)}

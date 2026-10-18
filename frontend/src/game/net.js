@@ -13,6 +13,7 @@ export class Net {
     this.ws.onmessage = (ev) => { try { this.onMsg(JSON.parse(ev.data)); } catch (e) { console.error(e); } };
     this.ws.onclose = (ev) => {
       if (this.closed) return;
+      if (ev.code === 4002) { setState({ conn: "kicked", connMsg: ev.reason || "You were removed from the world." }); return; }
       if (ev.code === 4001) { setState({ conn: "replaced" }); return; }
       if (ev.code === 4401 || ev.code === 4403) { setState({ conn: "denied" }); return; }
       this.retry++;

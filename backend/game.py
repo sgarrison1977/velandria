@@ -199,7 +199,28 @@ class Game:
             self.stock = {k: {i: q for i, q in v["stock"]} for k, v in MERCHANTS.items()}
 
     async def save(self, p):
-        await self.db.characters.update_one({"id": p.doc_id}, {"$set": p.to_doc() | {"updated_at": datetime.now(timezone.utc).isoformat()}})
+        mark = getattr(p, "play_mark", now())
+        dt = int(now() - mark)
+        p.play_mark = mark + dt
+        await self.db.characters.update_one({"id": p.doc_id}, {"$set": p.to_doc() | {"updated_at": datetime.now(timezone.utc).isoformat()}, "$inc": {"play_seconds": dt}})
+        if dt:
+            await self.db.users.update_one({"id": p.account_id}, {"$inc": {"play_seconds": dt}})
+
+    async def kick(self, p, reason):
+        ws = p.ws
+        p.ws = None
+        if ws is not None:
+            try:
+                await ws.close(code=4002, reason=reason[:110])
+            except Exception:
+                pass
+        await self.remove_player(p)
+
+    def announce(self, text):
+        ts = datetime.now(timezone.utc).isoformat()
+        for p in self.players.values():
+            p.send({"t": "announce", "text": text})
+            p.send({"t": "chat", "m": dict(kind="system", text=f"[Announcement] {text}", ts=ts)})
 
     async def remove_player(self, p):
         if self.players.get(p.id) is p:
@@ -223,6 +244,7 @@ class Game:
                     pass
         else:
             p = Player(doc, ws)
+            p.play_mark = now()
             if not self.world.walkable(p.x, p.z):
                 p.x, p.z = self.world.nearest_walkable(p.x, p.z, 10) or (SAFE_ZONES[0]["x"], SAFE_ZONES[0]["z"] - 6)
             self.players[p.id] = p

@@ -11,7 +11,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field
-from game import Game, new_character_doc
+from game import Game, new_character_doc, ATTR_POINTS_PER_LEVEL, SKILL_POINTS_PER_LEVEL
 from game_data import public_data, CLASSES, clean_look, gear_score, MAX_LEVEL, XP_TABLE
 
 logging.basicConfig(level=logging.INFO)
@@ -46,7 +46,18 @@ async def user_from_token(token):
         return None
     if payload.get("type") != "access":
         return None
-    return await db.users.find_one({"id": payload["sub"]}, {"_id": 0, "password_hash": 0})
+    u = await db.users.find_one({"id": payload["sub"]}, {"_id": 0, "password_hash": 0})
+    return None if u and ban_text(u) else u
+
+
+def ban_text(u):
+    b = u.get("ban")
+    if not b:
+        return None
+    if b.get("until") and datetime.fromisoformat(b["until"]) <= datetime.now(timezone.utc):
+        return None
+    when = f"until {datetime.fromisoformat(b['until']).strftime('%b %d, %Y %H:%M UTC')}" if b.get("until") else "permanently"
+    return f"This account is banned {when}." + (f" Reason: {b['reason']}" if b.get("reason") else "")
 
 
 async def current_user(request: Request):
@@ -107,6 +118,9 @@ async def login(body: AuthIn, request: Request):
         await db.login_attempts.update_one({"identifier": ident}, {"$set": {"count": cnt, "until": (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat()}}, upsert=True)
         raise HTTPException(401, "Invalid email or password")
     await db.login_attempts.delete_many({"identifier": ident})
+    if ban_text(u):
+        raise HTTPException(403, ban_text(u))
+    await db.users.update_one({"id": u["id"]}, {"$set": {"last_login": datetime.now(timezone.utc).isoformat()}})
     return {"token": make_token(u["id"], email), "user": {"id": u["id"], "email": email}}
 
 
@@ -195,6 +209,15 @@ class AdminCharIn(BaseModel):
     gold: int | None = Field(None, ge=0, le=1_000_000_000)
 
 
+class AdminBanIn(BaseModel):
+    days: int | None = Field(None, ge=1, le=3650)
+    reason: str = Field("", max_length=200)
+
+
+class AdminTextIn(BaseModel):
+    text: str = Field(min_length=1, max_length=300)
+
+
 async def current_admin(request: Request):
     h = request.headers.get("Authorization", "")
     try:
@@ -227,16 +250,17 @@ def admin_char(c):
     live = game.players.get(c["id"])
     eq = live.equipment if live else c.get("equipment")
     return dict(id=c["id"], name=c["name"], cls=c["cls"], level=live.level if live else c["level"], gold=live.gold if live else c.get("gold", 0),
-                score=gear_score(eq), online=bool(live))
+                score=gear_score(eq), online=bool(live), play_seconds=c.get("play_seconds", 0))
 
 
 @api.get("/admin/accounts")
 async def admin_accounts(_=Depends(current_admin)):
     chars = {}
-    async for c in db.characters.find({}, {"_id": 0, "id": 1, "account_id": 1, "name": 1, "cls": 1, "level": 1, "gold": 1, "equipment": 1}):
+    async for c in db.characters.find({}, {"_id": 0, "id": 1, "account_id": 1, "name": 1, "cls": 1, "level": 1, "gold": 1, "equipment": 1, "play_seconds": 1}):
         chars.setdefault(c["account_id"], []).append(admin_char(c))
     users = await db.users.find({}, {"_id": 0, "password_hash": 0}).sort("created_at", -1).to_list(5000)
     return [dict(id=u["id"], email=u["email"], created_at=u.get("created_at"), admin=u["email"] in ADMIN_EMAILS,
+                 last_login=u.get("last_login"), play_seconds=u.get("play_seconds", 0), ban=u.get("ban") if ban_text(u) else None,
                  characters=sorted(chars.get(u["id"], []), key=lambda c: -c["level"])) for u in users]
 
 
@@ -260,20 +284,77 @@ async def admin_delete_account(uid: str, _=Depends(current_admin)):
     return {"ok": True}
 
 
+@api.put("/admin/accounts/{uid}/ban")
+async def admin_ban(uid: str, body: AdminBanIn, _=Depends(current_admin)):
+    until = (datetime.now(timezone.utc) + timedelta(days=body.days)).isoformat() if body.days else None
+    r = await db.users.update_one({"id": uid}, {"$set": {"ban": {"until": until, "reason": body.reason.strip()}}})
+    if not r.matched_count:
+        raise HTTPException(404, "Account not found")
+    msg = ban_text(await db.users.find_one({"id": uid}))
+    for p in [p for p in game.players.values() if p.account_id == uid]:
+        await game.kick(p, msg)
+    return {"ok": True, "message": msg}
+
+
+@api.delete("/admin/accounts/{uid}/ban")
+async def admin_unban(uid: str, _=Depends(current_admin)):
+    r = await db.users.update_one({"id": uid}, {"$unset": {"ban": ""}})
+    if not r.matched_count:
+        raise HTTPException(404, "Account not found")
+    return {"ok": True}
+
+
+@api.post("/admin/characters/{cid}/kick")
+async def admin_kick(cid: str, body: AdminTextIn | None = None, _=Depends(current_admin)):
+    p = game.players.get(cid)
+    if not p:
+        raise HTTPException(400, "Character is not in the world")
+    await game.kick(p, "You were kicked by an admin." + (f" Reason: {body.text}" if body else ""))
+    return {"ok": True}
+
+
+@api.post("/admin/broadcast")
+async def admin_broadcast(body: AdminTextIn, _=Depends(current_admin)):
+    game.announce(body.text.strip())
+    return {"ok": True, "online": len(game.players)}
+
+
+def live_edit(p, level, gold):
+    if level is not None and level != p.level:
+        if level > p.level:
+            p.attr_points += ATTR_POINTS_PER_LEVEL * (level - p.level)
+            p.skill_points += SKILL_POINTS_PER_LEVEL * (level - p.level)
+        p.level, p.xp = level, XP_TABLE[level]
+        p.recalc()
+        p.hp, p.mp = p.max_hp, p.max_mp
+    if gold is not None:
+        p.gold = gold
+    p.dirty = True
+    p.send({"t": "sys", "msg": "An admin has adjusted your character.", "kind": "info"})
+
+
 @api.put("/admin/characters/{cid}")
 async def admin_edit_char(cid: str, body: AdminCharIn, _=Depends(current_admin)):
-    if cid in game.players:
-        raise HTTPException(400, "Character is currently in the world")
-    upd = {}
+    live = game.players.get(cid)
+    if live:
+        live_edit(live, body.level, body.gold)
+        await game.save(live)
+        return admin_char(await db.characters.find_one({"id": cid}, {"_id": 0}))
+    old = await db.characters.find_one({"id": cid}, {"_id": 0, "level": 1})
+    if not old:
+        raise HTTPException(404, "Character not found")
+    upd, inc = {}, {}
+    if body.level is not None and body.level != old["level"]:
+        upd |= {"level": body.level, "xp": XP_TABLE[body.level]}
+        if body.level > old["level"]:
+            inc = {"attr_points": ATTR_POINTS_PER_LEVEL * (body.level - old["level"]), "skill_points": SKILL_POINTS_PER_LEVEL * (body.level - old["level"])}
     if body.level is not None:
         upd |= {"level": body.level, "xp": XP_TABLE[body.level]}
     if body.gold is not None:
         upd["gold"] = body.gold
     if not upd:
         raise HTTPException(400, "Nothing to update")
-    r = await db.characters.update_one({"id": cid}, {"$set": upd})
-    if not r.matched_count:
-        raise HTTPException(404, "Character not found")
+    await db.characters.update_one({"id": cid}, {"$set": upd} | ({"$inc": inc} if inc else {}))
     return admin_char(await db.characters.find_one({"id": cid}, {"_id": 0}))
 
 
@@ -311,6 +392,7 @@ async def ws_endpoint(ws: WebSocket):
     if not doc:
         await ws.close(code=4401 if not u else 4403)
         return
+    await db.users.update_one({"id": u["id"]}, {"$set": {"last_login": datetime.now(timezone.utc).isoformat()}})
     p = await game.attach(doc, ws, admin=u["email"].lower() in ADMIN_EMAILS)
     queue = p.queue
 

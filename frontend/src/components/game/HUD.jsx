@@ -124,13 +124,14 @@ export function Toasts() {
 }
 
 export function Banners() {
-  const region = useStore((s) => s.region), conn = useStore((s) => s.conn), lv = useStore((s) => s.levelup), fps = useStore((s) => s.fps), showFps = useStore((s) => s.showFps), ping = useStore((s) => s.ping);
+  const region = useStore((s) => s.region), conn = useStore((s) => s.conn), lv = useStore((s) => s.levelup), fps = useStore((s) => s.fps), showFps = useStore((s) => s.showFps), ping = useStore((s) => s.ping), connMsg = useStore((s) => s.connMsg), announce = useStore((s) => s.announce);
   const [show, setShow] = useState(region);
   useEffect(() => { setShow(region); const t = setTimeout(() => setShow(""), 3500); return () => clearTimeout(t); }, [region]);
   return (
     <>
       {show && <div className="region-banner" data-testid="region-banner" key={show}>{show}</div>}
-      {conn !== "online" && <div className="conn-banner" data-testid="connection-status">{{ connecting: "Connecting to the world…", reconnecting: "Connection lost — reconnecting…", replaced: "This character was opened in another session.", denied: "Session expired. Please log in again." }[conn]}</div>}
+      {conn !== "online" && <div className="conn-banner" data-testid="connection-status">{{ connecting: "Connecting to the world…", reconnecting: "Connection lost — reconnecting…", replaced: "This character was opened in another session.", denied: "Session expired. Please log in again.", kicked: connMsg }[conn]}</div>}
+      {announce && <div className="announce-banner" key={announce.id} data-testid="announce-banner"><small>Royal Proclamation</small><b>{announce.text}</b></div>}
       {lv && <div className="levelup" data-testid="levelup-banner"><small>Level Up</small><b>{lv}</b><em>+3 attribute points · +3 skill points</em></div>}
       <div className="hud-meta"><span data-testid="region-name">{region}</span></div>
       {showFps && <div className="fps-badge" data-testid="fps-counter">

@@ -58,6 +58,7 @@ export default function GamePage() {
           case "pickup": toast(`Picked up ${m.qty > 1 ? m.qty + "× " : ""}${m.name || d.data.items[m.item]?.name}`, "good"); sfx(m.item === "gold" ? "coin" : "loot"); break;
           case "equip": sfx("open"); break;
           case "levelup": setState({ levelup: m.lv }); setTimeout(() => setState({ levelup: null }), 3500); break;
+          case "announce": { const id = Date.now(); setState({ announce: { id, text: m.text } }); sfx("levelup"); setTimeout(() => getState().announce?.id === id && setState({ announce: null }), 8000); break; }
           case "inspect": setState({ inspect: m.d }); break;
           case "party": e.party = m.id ? m : null; setState({ party: m.id ? m : null }); break;
           case "party_invite": setState({ partyInvite: m }); sfx("open"); break;
