@@ -64,10 +64,8 @@ function humanoidAnim(rig, a, dt, t, moving) {
   }
   if (a.cast > 0 && wk === "staff") {
     const c = Math.sin(a.cast * Math.PI);
-    armR.sh.rotation.set(lerp(armR.sh.rotation.x, -2.85, c), 0, lerp(armR.sh.rotation.z, 0.12, c)); armR.el.rotation.x = lerp(armR.el.rotation.x, -0.08, c);
-    armL.sh.rotation.x = lerp(armL.sh.rotation.x, -0.6, c); armL.el.rotation.x = -0.8 * c;
-    torso.rotation.x = rig.lean - 0.06 * c; head.rotation.x = -0.1 * c;
-    staffFlip = Math.max(staffFlip, c);
+    armL.sh.rotation.set(lerp(armL.sh.rotation.x, -1.45, c), 0, lerp(armL.sh.rotation.z, 0.15, c)); armL.el.rotation.x = -0.25 * c;
+    torso.rotation.x = rig.lean - 0.04 * c;
   } else if (a.cast > 0) {
     const c = Math.sin(a.cast * Math.PI);
     armL.sh.rotation.x = lerp(armL.sh.rotation.x, -1.9, c); armR.sh.rotation.x = lerp(armR.sh.rotation.x, -2.1, c);
