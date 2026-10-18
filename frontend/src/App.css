@@ -374,3 +374,12 @@ html, body, body *, canvas { cursor: var(--cur, auto) !important; }
 input[type="text"], input[type="email"], input[type="password"], input:not([type]), textarea { cursor: text !important; }
 .exit-btn.stuck-btn { right: 318px; }
 @media (max-width: 900px) { .exit-btn.stuck-btn { right: 240px; } }
+.loot-filter { display: flex; flex-direction: column; gap: 8px; }
+.loot-filter h4 { font-family: var(--serif); color: var(--gold); font-size: 15px; margin: 8px 0 0; letter-spacing: .04em; }
+.lf-row { display: flex; flex-wrap: wrap; gap: 8px 16px; }
+.lf-check { display: flex; align-items: center; gap: 7px; font-size: 14px; color: var(--text); padding: 4px 8px; border: 1px solid #2a2016; background: #15110d; transition: border-color .15s; }
+.lf-check:hover { border-color: var(--edge); }
+.lf-check input { accent-color: #c99a2e; width: 15px; height: 15px; }
+.lf-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.lf-names { background: #0f0c09; border: 1px solid var(--edge2); color: var(--text); padding: 8px 10px; font-size: 14px; }
+.lf-names:focus { outline: none; border-color: var(--gold); }

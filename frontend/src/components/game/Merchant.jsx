@@ -1,3 +1,4 @@
+import { LootFilterSettings } from "./LootFilter";
 import React, { useState, useEffect, useRef } from "react";
 import { Coins } from "lucide-react";
 import { useStore, setState, togglePanel } from "../../game/store";
@@ -96,7 +97,7 @@ export function SettingsPanel({ data, net, engine }) {
   const dirty = JSON.stringify(binds) !== JSON.stringify(me.binds);
   return (
     <Panel title="Settings" testid="settings-panel" className="settings" onClose={() => { setState({ capture: null }); togglePanel("settings", false); }}>
-      <div className="tabs">{[["keys", "Key Bindings"], ["audio", "Audio"], ["gfx", "Graphics"]].map(([k, l]) => <button type="button" key={k} data-testid={`settings-tab-${k}`} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>{l}</button>)}</div>
+      <div className="tabs">{[["keys", "Key Bindings"], ["audio", "Audio"], ["gfx", "Graphics"], ["loot", "Loot Filter"]].map(([k, l]) => <button type="button" key={k} data-testid={`settings-tab-${k}`} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>{l}</button>)}</div>
       {tab === "keys" && <div>
         <h4 className="bind-head">Spells & Skills <small>— click a key box, then press the hotkey you want</small></h4>
         <div className="binds spells" data-testid="spell-bind-list">
@@ -145,6 +146,7 @@ export function SettingsPanel({ data, net, engine }) {
         <label className="row"><input type="checkbox" data-testid="audio-mute-toggle" checked={aud.muted} onChange={(e) => { setAudio({ muted: e.target.checked }); setAud(audioCfg()); }} /> Mute all sound</label>
         <label>Master volume {Math.round(aud.vol * 100)}%<input type="range" min={0} max={1} step={0.05} value={aud.vol} data-testid="audio-volume-slider" onChange={(e) => { setAudio({ vol: +e.target.value }); setAud(audioCfg()); }} onMouseUp={() => sfx("click")} /></label>
       </div>}
+      {tab === "loot" && <LootFilterSettings />}
       {tab === "gfx" && <div className="audio-set">
         {["high", "medium", "low"].map((k) => <label key={k} className="row"><input type="radio" name="q" data-testid={`gfx-${k}`} checked={q === k} onChange={() => { setQ(k); localStorage.setItem("sx_quality", k); engine?.setQuality(k); }} /> {k[0].toUpperCase() + k.slice(1)} quality</label>)}
         <label className="row ui-scale">Window size <input type="range" min="0.8" max="1.8" step="0.05" value={pz} data-testid="settings-ui-scale" onChange={(e) => { const v = Number(e.target.value); setPz(v); applyUiScale(v); }} /> <b data-testid="settings-ui-scale-value">{Math.round(pz * 100)}%</b></label>

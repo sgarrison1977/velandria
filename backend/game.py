@@ -962,10 +962,35 @@ class Game:
         del self.loot[lid]
         p.send({"t": "pickup", "item": l["item"], "qty": l["qty"], "name": l.get("pname")})
 
-    def loot_all(self, p):
-        t, got, full, owned = now(), {}, False, 0
+    @staticmethod
+    def loot_wanted(l, f):
+        if not isinstance(f, dict):
+            return True
+        it = ITEMS[l["item"]]
+        name = (l.get("pname") or it["name"]).lower()
+        names = [n.strip().lower() for n in (f.get("names") or []) if isinstance(n, str) and n.strip()][:30]
+        if any(n in name for n in names):
+            return True
+        if f.get("names_only"):
+            return False
+        kind = it["type"]
+        if kind == "gold":
+            return f.get("gold", True)
+        if kind == "consumable":
+            return f.get("consumables", True)
+        if kind in ("material", "quest"):
+            return f.get("materials", True) or kind == "quest"
+        if f.get("props_only") and not l.get("props"):
+            return False
+        return it["rarity"] in (f.get("rarities") or ["common", "uncommon", "rare", "epic", "legendary"])
+
+    def loot_all(self, p, flt=None):
+        t, got, full, owned, skipped = now(), {}, False, 0, 0
         for lid, l in sorted(self.loot.items(), key=lambda kv: math.hypot(kv[1]["x"] - p.x, kv[1]["z"] - p.z)):
             if math.hypot(l["x"] - p.x, l["z"] - p.z) > LOOT_ALL_R:
+                continue
+            if not self.loot_wanted(l, flt):
+                skipped += 1
                 continue
             if l["owner"] and l["owner"] != p.id and t < l["owner_until"] and not (l.get("party") and l["party"] == getattr(p, "party", None)):
                 owned += 1
@@ -982,7 +1007,8 @@ class Game:
         if full:
             p.send({"t": "err", "msg": "Your inventory is full. Some items were left on the ground."})
         elif not got:
-            p.send({"t": "err", "msg": "Some loot nearby belongs to another adventurer." if owned else "There is no loot nearby."})
+            p.send({"t": "err", "msg": "Some loot nearby belongs to another adventurer." if owned else
+                    f"Your loot filter skipped {skipped} item{'s' if skipped != 1 else ''} nearby." if skipped else "There is no loot nearby."})
 
     # ------------- npcs / quests / merchants
     def near_npc(self, p, npc_id, flag=None):
@@ -1526,7 +1552,7 @@ class Game:
             pt = (float(pt[0]), float(pt[1])) if isinstance(pt, list) and len(pt) == 2 and all(isinstance(v, (int, float)) for v in pt) else None
             err = self.cast(p, msg.get("ab"), msg.get("id"), pt, msg.get("mark"))
         elif t == "loot_all":
-            self.loot_all(p)
+            self.loot_all(p, msg.get("filter"))
         elif t == "pickup":
             if msg.get("id") in self.loot:
                 p.pending, p.target = ("loot", msg["id"]), None
