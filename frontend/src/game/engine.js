@@ -196,7 +196,7 @@ export class Engine {
     return e;
   }
   castFx(src, tgt, ab) {
-    if (ab === "lunae_lumen_nex" && tgt) { src.anim.cast = 1; this.beam(src, tgt, AB_COLOR[ab]); if (Math.hypot(src.x - (this.me?.x || 0), src.z - (this.me?.z || 0)) < 30) sfx("beam"); return; }
+    if (ab === "lunae_lumen_nex" && tgt) { src.anim.cast = 1; this.beam(src, tgt, AB_COLOR[ab], this.beamCharge(src)); if (Math.hypot(src.x - (this.me?.x || 0), src.z - (this.me?.z || 0)) < 30) sfx("beam"); return; }
     const c = AB_COLOR[ab] || "#fff";
     const melee = ["power_strike", "cleave", "whirlwind", "earthshatter", "double_stab", "attack_run", "spin_attack"].includes(ab);
     src.anim.cast = melee ? 0 : 1;
@@ -224,7 +224,7 @@ export class Engine {
     if (ab === "agredi" && tgt) this.projectile(src, tgt, c, false, 0.9);
     if (ab === "ignis" && tgt) this.projectile(src, tgt, c, false, 1.3, () => this.shock(tgt.x, tgt.z, c, 2.5));
     if (ab === "multi_vis_nex" && tgt) this.projectile(src, tgt, c, false, 0.8, () => this.puff(tgt.x, tgt.z, c));
-    if (ab === "radius" && tgt) this.beam(src, tgt, c);
+    if (ab === "radius" && tgt) this.beam(src, tgt, c, this.beamCharge(src));
     if (ab === "venenum" && tgt) this.projectile(src, tgt, c, false, 0.7, () => this.burst(tgt, c, 10, 1));
     if (ab === "flamma_ventus" && tgt) this.cone(src, tgt, c);
     if (ab === "tabes_viscera") this.aura(src, "#c01818", 2);
@@ -245,12 +245,6 @@ export class Engine {
       const d = sprite("#d01c1c", 0.18), ox = (Math.random() - 0.5) * 0.9, oz = (Math.random() - 0.5) * 0.9, dl = Math.random() * 1.4;
       this.addFx(d, 2.2, (t) => { const k = Math.max(0, (t * 2.2 - dl) / 0.8); d.visible = k > 0 && k < 1; d.position.set(e.x + ox, top() - k * ((e.height || 1.5) + 0.6), e.z + oz); d.material.opacity = 1 - k; });
     }
-  }
-  beam(src, tgt, color) {
-    const a = new THREE.Vector3(src.x, this.groundY(src.x, src.z) + 1.3, src.z), b = new THREE.Vector3(tgt.x, this.groundY(tgt.x, tgt.z) + (tgt.height || 1) * 0.55, tgt.z);
-    const len = a.distanceTo(b), m = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, len, 6, 1, true), new THREE.MeshBasicMaterial({ color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
-    m.position.copy(a).lerp(b, 0.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
-    this.addFx(m, 0.35, (t) => { m.material.opacity = 1 - t; m.scale.set(1 + t * 2, 1, 1 + t * 2); });
   }
   cone(src, tgt, color) {
     const ang = Math.atan2(tgt.x - src.x, tgt.z - src.z);
@@ -281,15 +275,24 @@ export class Engine {
       if (el) this.trail(o.position, el);
     }, done);
   }
-  beam(src, tgt, color) {
+  // chaining beam casts quickly builds "overcharge" (0..1): thicker, brighter, longer beams
+  beamCharge(src) {
+    const n = performance.now(), quick = n - (src._beamT || 0) < 750;
+    src._beamT = n; src._beamN = quick ? Math.min(8, (src._beamN || 0) + 1) : 0;
+    return src._beamN / 8;
+  }
+  beam(src, tgt, color, q = 0) {
     const y0 = this.groundY(src.x, src.z) + (src.height || 2) * 1.12, y1 = this.groundY(tgt.x, tgt.z) + (tgt.height || 1.4) * 0.55;
     const a = new THREE.Vector3(src.x, y0, src.z), b = new THREE.Vector3(tgt.x, y1, tgt.z), len = a.distanceTo(b);
     const g = new THREE.Group(); g.position.copy(a).lerp(b, 0.5); g.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
     const mk = (r, c, o) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 10, 1, true), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, blending: THREE.AdditiveBlending, depthWrite: false })); g.add(m); return m; };
-    const core = mk(0.05, "#ffffff", 1), glow = mk(0.2, color, 0.55), haze = mk(0.45, "#6a8aff", 0.18);
-    this.addFx(g, 0.45, (t) => { const k = 1 - t, w = 1 + Math.sin(t * 40) * 0.12; core.material.opacity = k; glow.material.opacity = 0.55 * k; haze.material.opacity = 0.18 * k; glow.scale.set(w, 1, w); haze.scale.set(w * (1 + t), 1, w * (1 + t)); },
+    const th = 1 + q * 1.6, go = Math.min(1, 0.55 + q * 0.45), ho = 0.18 + q * 0.3;
+    const core = mk(0.05 * (1 + q), "#ffffff", 1), glow = mk(0.2 * th, color, go), haze = mk(0.45 * th, q > 0.6 ? "#a8c8ff" : "#6a8aff", ho);
+    if (q > 0.3) { const pl = new THREE.PointLight(color, 10 + q * 30, 8 + q * 8, 1.6); pl.position.y = 0; g.add(pl); }
+    this.addFx(g, 0.45 + q * 0.25, (t) => { const k = 1 - t, w = 1 + Math.sin(t * (40 + q * 30)) * (0.12 + q * 0.18); core.material.opacity = k; glow.material.opacity = go * k; haze.material.opacity = ho * k; glow.scale.set(w, 1, w); haze.scale.set(w * (1 + t), 1, w * (1 + t)); },
       () => g.traverse((o) => { o.geometry?.dispose(); o.material?.dispose(); }));
-    this.shock(tgt.x, tgt.z, color, 2.2); this.burst(tgt, "#e8f4ff", 18, 2.5);
+    this.shock(tgt.x, tgt.z, color, 2.2 + q * 2.2); this.burst(tgt, "#e8f4ff", 18 + Math.round(q * 22), 2.5 + q * 2);
+    if (q > 0.5) { this.burst(src, color, Math.round(q * 12), 1.5); if (src.id === this.meId) this.shake = Math.max(this.shake || 0, 0.05 + q * 0.08); }
   }
   trail(pos, el) {
     const c = EL_COLOR[el], s = sprite(Math.random() < 0.3 ? "#fff2c0" : c, 0.22 + Math.random() * 0.18), p = pos.clone(), dx = (Math.random() - 0.5) * 0.3, dz = (Math.random() - 0.5) * 0.3;
