@@ -124,7 +124,7 @@ export function Toasts() {
 }
 
 export function Banners() {
-  const region = useStore((s) => s.region), conn = useStore((s) => s.conn), lv = useStore((s) => s.levelup), fps = useStore((s) => s.fps), showFps = useStore((s) => s.showFps);
+  const region = useStore((s) => s.region), conn = useStore((s) => s.conn), lv = useStore((s) => s.levelup), fps = useStore((s) => s.fps), showFps = useStore((s) => s.showFps), ping = useStore((s) => s.ping);
   const [show, setShow] = useState(region);
   useEffect(() => { setShow(region); const t = setTimeout(() => setShow(""), 3500); return () => clearTimeout(t); }, [region]);
   return (
@@ -133,7 +133,11 @@ export function Banners() {
       {conn !== "online" && <div className="conn-banner" data-testid="connection-status">{{ connecting: "Connecting to the world…", reconnecting: "Connection lost — reconnecting…", replaced: "This character was opened in another session.", denied: "Session expired. Please log in again." }[conn]}</div>}
       {lv && <div className="levelup" data-testid="levelup-banner"><small>Level Up</small><b>{lv}</b><em>+3 attribute points · +3 skill points</em></div>}
       <div className="hud-meta"><span data-testid="region-name">{region}</span></div>
-      {showFps && <div className={`fps-badge ${fps >= 50 ? "good" : fps >= 30 ? "ok" : "bad"}`} data-testid="fps-counter">{fps} FPS</div>}
+      {showFps && <div className="fps-badge" data-testid="fps-counter">
+        <span className={fps >= 50 ? "good" : fps >= 30 ? "ok" : "bad"}>{fps} FPS</span>
+        <span className="sep">·</span>
+        <span data-testid="ping-counter" className={!ping ? "" : ping <= 120 ? "good" : ping <= 250 ? "ok" : "bad"}>{ping ? `${ping} ms` : "— ms"}</span>
+      </div>}
     </>
   );
 }

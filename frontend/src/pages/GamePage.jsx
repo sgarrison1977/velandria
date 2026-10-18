@@ -48,6 +48,7 @@ export default function GamePage() {
           case "init": setState({ me: m.me, meAt: performance.now(), chat: m.chat, hp: m.me.hp, mp: m.me.mp }); { const lf = getLootFilter(); net.current?.send({ t: "autoloot", filter: lf.auto ? lf : null }); } break;
           case "me": setState({ me: m.me, meAt: performance.now() }); break;
           case "chat": setState((s) => ({ chat: [...s.chat.slice(-150), m.m] })); break;
+          case "pong": setState((st) => { const v = Math.round(performance.now() - m.c); return { ping: st.ping ? Math.round(st.ping * 0.6 + v * 0.4) : v }; }); break;
           case "sys": toast(m.msg, m.kind || "info"); if (m.kind === "quest") sfx("loot"); break;
           case "err": toast(m.msg, "error"); sfx("error"); break;
           case "dialog": setState({ dialog: m, merchant: null }); sfx("open"); break;
@@ -73,7 +74,8 @@ export default function GamePage() {
     })().catch(() => setStep("Could not reach the world server."));
     const onLf = (ev) => { eng.current?.setLootFilter(ev.detail); net.current?.send({ t: "autoloot", filter: ev.detail.auto ? ev.detail : null }); };
     window.addEventListener("sx-lootfilter", onLf);
-    return () => { dead = true; window.removeEventListener("sx-lootfilter", onLf); net.current?.close(); eng.current?.dispose(); eng.current = null; };
+    const pinger = setInterval(() => net.current?.send({ t: "ping", c: performance.now() }), 2000);
+    return () => { dead = true; clearInterval(pinger); window.removeEventListener("sx-lootfilter", onLf); net.current?.close(); eng.current?.dispose(); eng.current = null; };
   }, [charId]);
 
   useEffect(() => {
