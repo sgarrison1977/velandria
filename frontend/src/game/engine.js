@@ -19,7 +19,7 @@ const glowTex = (() => {
   return new THREE.CanvasTexture(c);
 })();
 const sprite = (color, size) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); s.scale.setScalar(size); return s; };
-const AB_SFX = { glacies_nova: "frost", fulmen_catena: "zap", lunae_lumen_nex: "moonbeam", ignis: "fire", flamma_ventus: "fire", agredi: "arcane", multi_vis_nex: "arcane", radius: "zap", venenum: "poison", tabes_viscera: "poison",
+const AB_SFX = { glacies_nova: "frost", fulmen_catena: "zap", lunae_lumen_nex: "beam", ignis: "fire", flamma_ventus: "fire", agredi: "arcane", multi_vis_nex: "arcane", radius: "beam", venenum: "poison", tabes_viscera: "poison",
   minor_mederi: "heal", minor_sanatio: "heal", teuri: "buff", velocitas: "buff", robur: "buff", contra_visus: "buff", creare_porta: "portal", pergere_trans: "portal",
   attack_run: "dash", multi_shot: "bow", arrow_barrage: "bow", double_stab: "swing", spin_attack: "swing", power_strike: "heavy", cleave: "swing" };
 const ICE_GEO = new THREE.CylinderGeometry(1, 1, 1, 12, 1, true), ICE_MAT = new THREE.MeshBasicMaterial({ color: "#9ae8ff", transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
@@ -196,7 +196,7 @@ export class Engine {
     return e;
   }
   castFx(src, tgt, ab) {
-    if (ab === "lunae_lumen_nex" && tgt) { src.anim.cast = 1; this.beam(src, tgt, AB_COLOR[ab]); if (Math.hypot(src.x - (this.me?.x || 0), src.z - (this.me?.z || 0)) < 30) sfx("moonbeam"); return; }
+    if (ab === "lunae_lumen_nex" && tgt) { src.anim.cast = 1; this.beam(src, tgt, AB_COLOR[ab]); if (Math.hypot(src.x - (this.me?.x || 0), src.z - (this.me?.z || 0)) < 30) sfx("beam"); return; }
     const c = AB_COLOR[ab] || "#fff";
     const melee = ["power_strike", "cleave", "whirlwind", "earthshatter", "double_stab", "attack_run", "spin_attack"].includes(ab);
     src.anim.cast = melee ? 0 : 1;

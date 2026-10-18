@@ -768,9 +768,12 @@ class Game:
         self.fx(p.x, p.z, {"t": "fx", "k": "cast", "src": p.id, "ab": ab_id, "tgt": None, "fx0": fx0, "x": round(nx, 2), "z": round(nz, 2)})
         return None
 
+    def cast_gcd(self, p, ab):
+        return max(0.1, GLOBAL_CD - (min(p.level, 50) - 1) * 0.2 / 49) if ab.get("fast_cast") else GLOBAL_CD
+
     def cast_miss(self, p, ab_id, pt):
-        p.next_cast = now() + GLOBAL_CD
         ab = ABILITIES[ab_id]
+        p.next_cast = now() + self.cast_gcd(p, ab)
         if in_safe(p.x, p.z):
             return "You cannot fight from within a safe square."
         dx, dz = pt[0] - p.x, pt[1] - p.z
@@ -826,7 +829,7 @@ class Game:
     def do_cast(self, p, ab_id, m, center=None, dest=None):
         ab = ABILITIES[ab_id]
         t = now()
-        p.next_cast = t + GLOBAL_CD
+        p.next_cast = t + self.cast_gcd(p, ab)
         if p.mp < ab["cost"]:
             return "Not enough mana."
         if m and in_safe(p.x, p.z):
