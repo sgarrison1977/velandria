@@ -46,6 +46,7 @@ export default function AuthPage() {
         <button className="btn big" data-testid="auth-submit-btn" disabled={busy}>{busy ? "…" : mode === "login" ? "Log In" : "Register"}</button>
         <p className="hint">Passwords are hashed with bcrypt. Accounts and characters persist on the server.</p>
       </form>
+      <button className="admin-link" onClick={() => nav("/admin")} data-testid="admin-login-link">Admin Login</button>
     </div>
   );
 }

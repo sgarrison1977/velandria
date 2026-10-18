@@ -12,7 +12,7 @@ from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field
 from game import Game, new_character_doc
-from game_data import public_data, CLASSES, clean_look, gear_score
+from game_data import public_data, CLASSES, clean_look, gear_score, MAX_LEVEL, XP_TABLE
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("server")
@@ -176,6 +176,110 @@ async def delete_char(cid: str, u=Depends(current_user)):
     if cid in game.players:
         raise HTTPException(400, "Character is currently in the world")
     r = await db.characters.delete_one({"id": cid, "account_id": u["id"]})
+    if not r.deleted_count:
+        raise HTTPException(404, "Character not found")
+    return {"ok": True}
+
+
+class AdminLoginIn(BaseModel):
+    username: str = Field(min_length=1, max_length=64)
+    password: str = Field(min_length=1, max_length=128)
+
+
+class AdminPwIn(BaseModel):
+    password: str = Field(min_length=6, max_length=128)
+
+
+class AdminCharIn(BaseModel):
+    level: int | None = Field(None, ge=1, le=MAX_LEVEL)
+    gold: int | None = Field(None, ge=0, le=1_000_000_000)
+
+
+async def current_admin(request: Request):
+    h = request.headers.get("Authorization", "")
+    try:
+        payload = jwt.decode(h[7:], os.environ["JWT_SECRET"], algorithms=[JWT_ALG]) if h.startswith("Bearer ") else {}
+    except jwt.PyJWTError:
+        payload = {}
+    if payload.get("type") != "admin" or payload.get("sub") != os.environ["ADMIN_USERNAME"]:
+        raise HTTPException(401, "Admin authentication required")
+    return payload["sub"]
+
+
+@api.post("/admin/login")
+async def admin_login(body: AdminLoginIn, request: Request):
+    ident = f"admin:{request.client.host if request.client else 'x'}"
+    att = await db.login_attempts.find_one({"identifier": ident})
+    if att and att.get("count", 0) >= 5 and datetime.fromisoformat(att["until"]) > datetime.now(timezone.utc):
+        raise HTTPException(429, "Too many failed attempts. Try again in 15 minutes.")
+    if body.username != os.environ["ADMIN_USERNAME"] or body.password != os.environ["ADMIN_PASSWORD"]:
+        cnt = (att or {}).get("count", 0) + 1
+        await db.login_attempts.update_one({"identifier": ident}, {"$set": {"count": cnt, "until": (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat()}}, upsert=True)
+        raise HTTPException(401, "Invalid admin username or password")
+    await db.login_attempts.delete_many({"identifier": ident})
+    token = jwt.encode({"sub": body.username, "type": "admin", "exp": datetime.now(timezone.utc) + timedelta(hours=8)}, os.environ["JWT_SECRET"], algorithm=JWT_ALG)
+    return {"token": token}
+
+
+def admin_char(c):
+    live = game.players.get(c["id"])
+    eq = live.equipment if live else c.get("equipment")
+    return dict(id=c["id"], name=c["name"], cls=c["cls"], level=live.level if live else c["level"], gold=live.gold if live else c.get("gold", 0),
+                score=gear_score(eq), online=bool(live))
+
+
+@api.get("/admin/accounts")
+async def admin_accounts(_=Depends(current_admin)):
+    chars = {}
+    async for c in db.characters.find({}, {"_id": 0, "id": 1, "account_id": 1, "name": 1, "cls": 1, "level": 1, "gold": 1, "equipment": 1}):
+        chars.setdefault(c["account_id"], []).append(admin_char(c))
+    users = await db.users.find({}, {"_id": 0, "password_hash": 0}).sort("created_at", -1).to_list(5000)
+    return [dict(id=u["id"], email=u["email"], created_at=u.get("created_at"), admin=u["email"] in ADMIN_EMAILS,
+                 characters=sorted(chars.get(u["id"], []), key=lambda c: -c["level"])) for u in users]
+
+
+@api.put("/admin/accounts/{uid}/password")
+async def admin_reset_pw(uid: str, body: AdminPwIn, _=Depends(current_admin)):
+    r = await db.users.update_one({"id": uid}, {"$set": {"password_hash": hash_pw(body.password)}})
+    if not r.matched_count:
+        raise HTTPException(404, "Account not found")
+    return {"ok": True}
+
+
+@api.delete("/admin/accounts/{uid}")
+async def admin_delete_account(uid: str, _=Depends(current_admin)):
+    ids = [c["id"] async for c in db.characters.find({"account_id": uid}, {"id": 1})]
+    if any(i in game.players for i in ids):
+        raise HTTPException(400, "A character on this account is currently in the world")
+    r = await db.users.delete_one({"id": uid})
+    if not r.deleted_count:
+        raise HTTPException(404, "Account not found")
+    await db.characters.delete_many({"account_id": uid})
+    return {"ok": True}
+
+
+@api.put("/admin/characters/{cid}")
+async def admin_edit_char(cid: str, body: AdminCharIn, _=Depends(current_admin)):
+    if cid in game.players:
+        raise HTTPException(400, "Character is currently in the world")
+    upd = {}
+    if body.level is not None:
+        upd |= {"level": body.level, "xp": XP_TABLE[body.level]}
+    if body.gold is not None:
+        upd["gold"] = body.gold
+    if not upd:
+        raise HTTPException(400, "Nothing to update")
+    r = await db.characters.update_one({"id": cid}, {"$set": upd})
+    if not r.matched_count:
+        raise HTTPException(404, "Character not found")
+    return admin_char(await db.characters.find_one({"id": cid}, {"_id": 0}))
+
+
+@api.delete("/admin/characters/{cid}")
+async def admin_delete_char(cid: str, _=Depends(current_admin)):
+    if cid in game.players:
+        raise HTTPException(400, "Character is currently in the world")
+    r = await db.characters.delete_one({"id": cid})
     if not r.deleted_count:
         raise HTTPException(404, "Character not found")
     return {"ok": True}
