@@ -271,7 +271,7 @@ MONSTERS = {
     "broodmother": dict(name="Broodmother", level=25, hp=1600, dmg=[48, 70], interval=1.9, speed=4.0, armor=28, aggro=12, range=3.0, xp=750,
                         gold=[0, 0], radius=2.0, leash=26, respawn=50, poison=[12, 18], resist={"phys": 1.0, "magic": 0.9},
                         loot=[("brood_silk", 0.6), ("hp_potion", 0.3), ("broodsilk_cloak", 0.04), ("bloodthorn_bow", 0.03), ("wraith_staff", 0.02)]),
-    "shadow_wraith": dict(name="Shadow Wraith", level=30, hp=1500, dmg=[55, 80], interval=2.2, speed=4.2, armor=15, aggro=16, range=12.0, xp=1000,
+    "shadow_wraith": dict(name="Shadow Wraith", level=30, hp=1300, dmg=[34, 50], interval=2.8, speed=3.6, armor=15, aggro=9, range=7.0, xp=1000,
                           gold=[0, 0], radius=0.7, leash=28, respawn=45, ranged=True, resist={"phys": 0.7, "magic": 1.1},
                           loot=[("wraith_essence", 0.55), ("mp_potion", 0.3), ("wraith_staff", 0.04), ("wraithweave_robe", 0.04), ("ring_vampire", 0.01)]),
     "stone_golem": dict(name="Stone Golem", level=38, hp=3200, dmg=[80, 115], interval=3.0, speed=2.8, armor=70, aggro=10, range=3.2, xp=1500,
