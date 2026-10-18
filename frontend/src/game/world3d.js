@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 export const windUniform = { value: 0 };
+export const swayUniform = { value: localStorage.getItem("sx_still_grass") ? 0 : 1 };
 export const cutUniform = { value: new THREE.Vector3(0, -99, 0) };
 const hash = (x, z) => { const n = Math.sin(x * 127.1 + z * 311.7) * 43758.5453; return n - Math.floor(n); };
 function vnoise(x, z) {
@@ -202,17 +203,18 @@ const M = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 
 function windify(mat, amt = 0.12, cut = false) {
   mat.onBeforeCompile = (sh) => {
     sh.uniforms.uWind = windUniform;
+    sh.uniforms.uSway = swayUniform;
     sh.uniforms.uCut = cutUniform;
     if (cut) sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vCut;\nuniform vec3 uCut;")
       .replace("#include <clipping_planes_fragment>", `#include <clipping_planes_fragment>
       { vec3 ca = uCut + vec3(0.0, 1.0, 0.0); vec3 cd = normalize(cameraPosition - ca); vec3 cp = vCut - ca; float ct = dot(cp, cd); float d = length(cp - cd * ct);
         if (ct > 1.2 && d < 3.6) { float n = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898,78.233))) * 43758.5453); if (n > smoothstep(1.6, 3.6, d) * 0.95) discard; } }`);
-    sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nuniform float uWind;\nvarying vec3 vCut;")
+    sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nuniform float uWind;\nuniform float uSway;\nvarying vec3 vCut;")
       .replace("#include <begin_vertex>", `#include <begin_vertex>
       #ifdef USE_INSTANCING
       float ph = instanceMatrix[3].x*0.21 + instanceMatrix[3].z*0.17;
-      ${amt ? `transformed.x += sin(uWind*1.3+ph) * ${amt.toFixed(3)} * max(0.0, position.y);
-      transformed.z += cos(uWind*1.1+ph) * ${(amt * 0.6).toFixed(3)} * max(0.0, position.y);` : "ph += 0.0;"}
+      ${amt ? `transformed.x += uSway * sin(uWind*1.3+ph) * ${amt.toFixed(3)} * max(0.0, position.y);
+      transformed.z += uSway * cos(uWind*1.1+ph) * ${(amt * 0.6).toFixed(3)} * max(0.0, position.y);` : "ph += 0.0;"}
       vCut = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;
       #endif`);
   };
