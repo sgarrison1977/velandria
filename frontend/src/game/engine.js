@@ -4,7 +4,7 @@ import { buildStructures, animateStructures } from "./structures";
 import { buildMonster, buildNpc, buildPlayer, buildLoot, proxy, animateGlow, animateRig, setInvis, SHIMMER, RARITY } from "./models";
 import { getState, setState } from "./store";
 import { lootWanted } from "../components/game/LootFilter";
-import { sfx } from "./audio";
+import { sfx, music } from "./audio";
 import { setEnv } from "./rig/tex";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
@@ -70,7 +70,8 @@ export class Engine {
     window.addEventListener("resize", this.resize);
     this.running = true; this.fpsAcc = []; this.loop();
   }
-  dispose() { this.running = false; window.removeEventListener("resize", this.resize); this.unbind?.(); this.renderer.dispose(); this.overlay.innerHTML = ""; }
+  dispose() {
+    music.stop(); this.running = false; window.removeEventListener("resize", this.resize); this.unbind?.(); this.renderer.dispose(); this.overlay.innerHTML = ""; }
   resize = () => { const w = this.canvas.clientWidth, h = this.canvas.clientHeight; this.renderer.setSize(w, h, false); if (this.composer) { this.composer.setPixelRatio(this.renderer.getPixelRatio()); this.composer.setSize(w, h); this.bloom.resolution.set(w / 2, h / 2); } this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); };
   groundY(x, z) {
     let h = this.terrain.height(x, z);
@@ -94,6 +95,7 @@ export class Engine {
     return e;
   }
   removeEntity(e) {
+    if (e.pillar) e.pillar.g.traverse((o) => { o.geometry?.dispose(); o.material?.dispose(); });
     this.scene.remove(e.grp); this.proxies = this.proxies.filter((p) => p !== e.px);
     if (e.plate) e.plate.remove();
     e.rig.dispose?.();
@@ -121,7 +123,7 @@ export class Engine {
     for (const [id, item, qty, x, z, mine, pname] of s.l) {
       seen.add(id);
       let e = this.entities.get(id);
-      if (!e) { e = this.addEntity(id, "loot", { item, qty, x, z, mine, name: pname || this.data.items[item].name, magic: !!pname }); this.applyLootFilter(e); }
+      if (!e) { e = this.addEntity(id, "loot", { item, qty, x, z, mine, name: pname || this.data.items[item].name, magic: !!pname }); this.applyLootFilter(e); if (this.data.items[item].rarity === "legendary" && e.filtered !== "hide") this.legendaryPillar(e); }
       e.mine = mine;
     }
     for (const [id, x, z, owner, rem] of s.g || []) {
@@ -422,6 +424,12 @@ export class Engine {
       else if (o.material !== o.userData.baseMat) { o.material.dispose(); o.material = o.userData.baseMat; }
     });
   }
+  legendaryPillar(e) {
+    if (this.me && Math.hypot(e.x - this.me.x, e.z - this.me.z) < 40) sfx("legendary");
+    const mk = (r, o) => new THREE.Mesh(new THREE.CylinderGeometry(r, r * 1.6, 26, 16, 1, true), new THREE.MeshBasicMaterial({ color: "#ffc24a", transparent: true, opacity: o, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+    const g = new THREE.Group(), core = mk(0.12, 0.85), glow = mk(0.5, 0.3);
+    g.add(core, glow); g.position.y = 13; e.grp.add(g); e.pillar = { g, core, glow };
+  }
   // ---------- main loop
   dungeonAt(x) { return (this.world.dungeons || []).find((d) => x >= d.x0 - 20 && x <= d.x0 + d.w + 20); }
   regionAt(x, z) {
@@ -448,6 +456,7 @@ export class Engine {
       let dr = e.trot - e.rot; dr = Math.atan2(Math.sin(dr), Math.cos(dr)); e.rot += dr * Math.min(1, dt * 12);
       e.grp.position.set(e.x, this.groundY(e.x, e.z), e.z);
       if (e.rig.gate) { const f = Math.max(0.02, Math.min(1, (e.endAt - performance.now() / 1000) / (e.total || 10))); e.rig.timer.scale.setScalar(f); e.rig.timer.material.color.set(f < 0.3 ? "#ff5a5a" : "#e0c8ff"); e.rig.gate.rotation.y = this.yaw || 0; e.rig.disc.rotation.z = t * 2; e.rig.disc.material.opacity = 0.4 + 0.2 * Math.sin(t * 4); continue; }
+      if (e.pillar) { const k = 0.7 + 0.3 * Math.sin(t * 3 + e.x); e.pillar.core.material.opacity = 0.85 * k; e.pillar.glow.material.opacity = 0.3 * k; e.pillar.glow.scale.set(1 + 0.15 * k, 1, 1 + 0.15 * k); }
       if (e.rig.body) { if (e.rig.invisOn) SHIMMER.uniforms.uTime.value = t; e.rig.root.rotation.y = e.rot; animateRig(e.rig, e.anim, dt, t); if (e.rig.shimmer) animateGlow(e.rig, t); }
       else if (e.kind === "npc") { if (e.rig.kind === "prop" && e.npcKind !== "trunk") e.rig.root.rotation.y = t * 0.3; }
       else { e.rig.root.rotation.y = t * 1.2; e.rig.root.position.y = 0.05 + Math.sin(t * 2.5 + e.x) * 0.05; }
@@ -462,6 +471,7 @@ export class Engine {
       for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) { const key = `${cx + i},${cz + j}`; if (!this.discovered.has(key)) { this.discovered.add(key); this.discDirty = true; } }
       const reg = this.regionAt(me.x, me.z);
       if (reg !== this.lastRegion) { this.lastRegion = reg; setState({ region: reg }); }
+      music.play(me.z > this.world.oh ? "dungeon" : this.world.safe_zones.some((s) => Math.hypot(s.x - me.x, s.z - me.z) < 70) ? "town" : "wild");
       const wp = this.waypoint;
       if (wp && Math.hypot(wp.x - me.x, wp.z - me.z) < 4) { this.setWaypoint(null); sfx("loot"); }
       this.wpBeam.visible = !!wp;

@@ -146,6 +146,10 @@ export function SettingsPanel({ data, net, engine }) {
         <label className="row"><input type="checkbox" data-testid="audio-mute-toggle" checked={aud.muted} onChange={(e) => { setAudio({ muted: e.target.checked }); setAud(audioCfg()); }} /> Mute all sound</label>
         <label>Master volume {Math.round(aud.vol * 100)}%<input type="range" min={0} max={1} step={0.05} value={aud.vol} data-testid="audio-volume-slider" onChange={(e) => { setAudio({ vol: +e.target.value }); setAud(audioCfg()); }} onMouseUp={() => sfx("click")} /></label>
       </div>}
+      {tab === "audio" && <div className="audio-set">
+        <label>Music volume {Math.round((aud.music ?? 0.35) * 100)}%<input type="range" min={0} max={1} step={0.05} value={aud.music ?? 0.35} data-testid="audio-music-slider" onChange={(e) => { setAudio({ music: +e.target.value }); setAud(audioCfg()); }} /></label>
+        <p className="hint">Calm music plays in towns, gentle themes in the wilds and darker music in dungeons.</p>
+      </div>}
       {tab === "loot" && <LootFilterSettings />}
       {tab === "gfx" && <div className="audio-set">
         {["high", "medium", "low"].map((k) => <label key={k} className="row"><input type="radio" name="q" data-testid={`gfx-${k}`} checked={q === k} onChange={() => { setQ(k); localStorage.setItem("sx_quality", k); engine?.setQuality(k); }} /> {k[0].toUpperCase() + k.slice(1)} quality</label>)}

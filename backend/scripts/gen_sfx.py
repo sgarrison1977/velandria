@@ -38,6 +38,7 @@ S = {
     "growl_undead": ("undead skeleton bones rattling with raspy ghostly hiss", 1.2),
     "roar": ("huge monster roar, deep menacing beast bellow", 1.7),
     "moonbeam": ("ethereal moonbeam spell, shimmering celestial hum with soft crystalline chimes and a gentle airy whoosh of pale light, magical, no electric crackle", 1.4),
+    "legendary": ("rare legendary treasure drop, radiant magical chime with shimmering bells and a soft heavenly choir swell", 2.2),
     "dash": ("fast heavy armored footsteps sprinting charge with cloth whoosh", 0.8),
 }
 

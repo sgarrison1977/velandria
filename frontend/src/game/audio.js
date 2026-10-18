@@ -1,7 +1,36 @@
 let ctx = null, master = null;
-const cfg = JSON.parse(localStorage.getItem("sx_audio") || '{"vol":0.6,"muted":false}');
+const cfg = { music: 0.35, ...JSON.parse(localStorage.getItem("sx_audio") || '{"vol":0.6,"muted":false}') };
 export const audioCfg = () => ({ ...cfg });
-export function setAudio(p) { Object.assign(cfg, p); localStorage.setItem("sx_audio", JSON.stringify(cfg)); if (master) master.gain.value = cfg.muted ? 0 : cfg.vol; }
+export function setAudio(p) { Object.assign(cfg, p); localStorage.setItem("sx_audio", JSON.stringify(cfg)); if (master) master.gain.value = cfg.muted ? 0 : cfg.vol; music.refresh(); }
+
+// background music: one looping <audio> per track, crossfaded
+const tracks = {};
+let current = null, fadeId = null;
+const musicVol = () => (cfg.muted ? 0 : cfg.music * cfg.vol);
+export const music = {
+  play(name) {
+    if (current === name) {
+      const a = tracks[name], n = performance.now();
+      if (a && a.paused && musicVol() > 0 && n - (this.retry || 0) > 1000) { this.retry = n; a.play().catch(() => {}); }
+      return;
+    }
+    current = name;
+    if (!tracks[name]) { const a = new Audio(`/music/${name}.mp3`); a.loop = true; a.volume = 0; a.preload = "auto"; tracks[name] = a; }
+    tracks[name].play().catch(() => {});
+    clearInterval(fadeId);
+    fadeId = setInterval(() => {
+      let done = true;
+      for (const [k, a] of Object.entries(tracks)) {
+        const target = k === current ? musicVol() : 0, v = a.volume + Math.sign(target - a.volume) * Math.min(0.02, Math.abs(target - a.volume));
+        a.volume = Math.max(0, Math.min(1, v));
+        if (Math.abs(a.volume - target) > 0.001) done = false; else if (target === 0 && !a.paused) a.pause();
+      }
+      if (done) clearInterval(fadeId);
+    }, 60);
+  },
+  refresh() { if (current && tracks[current]) tracks[current].volume = musicVol(); },
+  stop() { current = null; for (const a of Object.values(tracks)) { a.pause(); } },
+};
 function ac() {
   if (!ctx) { const C = window.AudioContext || window.webkitAudioContext; if (!C) return null; ctx = new C(); master = ctx.createGain(); master.gain.value = cfg.muted ? 0 : cfg.vol; master.connect(ctx.destination); }
   if (ctx.state === "suspended") ctx.resume();
@@ -34,9 +63,9 @@ const SOUNDS = {
 };
 // recorded-style clips in /public/sfx; variants picked at random, synth fallback while loading
 const CLIPS = { step: ["step1", "step2", "step3"], swing: ["swing1", "swing2"], hit: ["hit1", "hit2"] };
-const GAIN = { step: 0.35, click: 0.5, open: 0.6, loot: 0.7, swing: 0.8, levelup: 0.9, growl_beast: 0.7, growl_undead: 0.7, roar: 0.8, error: 0.6 };
+const GAIN = { legendary: 0.9, step: 0.35, click: 0.5, open: 0.6, loot: 0.7, swing: 0.8, levelup: 0.9, growl_beast: 0.7, growl_undead: 0.7, roar: 0.8, error: 0.6 };
 const FILES = ["step1", "step2", "step3", "swing1", "swing2", "hit1", "hit2", "crit", "heavy", "bow", "hurt", "mdeath", "death", "heal", "arcane", "fire", "frost",
-  "poison", "portal", "zap", "buff", "loot", "coin", "levelup", "click", "error", "open", "growl_beast", "growl_undead", "roar", "dash", "moonbeam"];
+  "poison", "portal", "zap", "buff", "loot", "coin", "levelup", "click", "error", "open", "growl_beast", "growl_undead", "roar", "dash", "moonbeam", "legendary"];
 const bufs = {};
 let loading = false;
 function loadClips(c) {
