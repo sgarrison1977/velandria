@@ -3,7 +3,7 @@ import asyncio, time, math, random, uuid, json, logging, re
 from datetime import datetime, timezone
 from game_data import (STORAGE_SLOTS, ITEMS, MONSTERS, ABILITIES, CLASSES, NPCS, MERCHANTS, QUESTS, XP_TABLE, MAX_LEVEL, INV_SLOTS, TICK, COMBAT,
                        PLAYER_SPEED, PICKUP_RANGE, NPC_RANGE, LOOT_OWNER_SECS, LOOT_EXPIRE_SECS, ACTIONS, RESTOCK_SECS, sell_price, default_binds, EXTRA_ROLLS, BONUS_LOOT, WAYSTONE_COST, roll_props, random_gear, RANDOM_GEAR_CHANCE)
-from world import PORTALS, World, in_safe, SAFE_ZONES, PIT_ROOMS
+from world import PORTALS, World, in_safe, SAFE_ZONES, PIT_ROOMS, to_global
 from game_data import PIT_CHAMPION_KILLS
 
 log = logging.getLogger("game")
@@ -1598,5 +1598,5 @@ def new_character_doc(account_id, name, cls):
     return dict(id=uuid.uuid4().hex, account_id=account_id, name=name, name_lower=name.lower(), cls=cls, level=1, xp=0, gold=25,
                 attrs=dict(c["attrs"]), attr_points=0, skill_points=0, abilities=list(c["start_abilities"]), marks={},
                 inventory=[dict(uid=uid(), item="hp_potion", qty=5), dict(uid=uid(), item="mp_potion", qty=3)], equipment=eq, quests={},
-                binds=default_binds(cls), x=90.0 + random.uniform(-3, 3), z=192.0, hp=9999, mp=9999, schema=1,
+                binds=default_binds(cls), x=to_global(90.0, 192.0)[0] + random.uniform(-3, 3), z=to_global(90.0, 192.0)[1], hp=9999, mp=9999, schema=1,
                 created_at=datetime.now(timezone.utc).isoformat())

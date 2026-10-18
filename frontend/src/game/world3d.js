@@ -67,11 +67,21 @@ export class Terrain {
     for (const [dx, dz] of [[1.6, 0], [-1.6, 0], [0, 1.6], [0, -1.6], [1.1, 1.1], [-1.1, -1.1], [1.1, -1.1], [-1.1, 1.1]]) n += this.blocked(x + dx, z + dz) ? 1 : 0;
     return 0.4 + (n / 8) * 3.2 + fbm(x * 0.7, z * 0.7) * 1.4;
   }
+  coast(x, z) {
+    const u = x - (this.w.ox || 0), v = z - (this.w.oz || 0), qx = Math.abs(u - 800) - 720, qy = Math.abs(v - 200) - 120;
+    const d = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - 150;
+    return d + 26 * Math.sin(u * 0.0105 + v * 0.006) + 16 * Math.sin(u * 0.023 - v * 0.017 + 1.7) + 8 * Math.sin(u * 0.057 + v * 0.049 + 0.6) + 4 * Math.sin(u * 0.13 - v * 0.11 + 2.1);
+  }
   height(x, z) {
     if (z > this.w.oh - 3) return this.caveHeight(x, z);
+    const cd = this.w.ox ? this.coast(x, z) : -99;
+    if (cd > -3) return -1.2 - Math.min(5, (cd + 3) * 0.12) + vnoise(x * 0.2, z * 0.2) * 0.3;
+    return mix(-0.9, this.landHeight(x, z), smooth(-3, -18, cd));
+  }
+  landHeight(x, z) {
     const rd = this.sample(this.RD, x, z), sd = this.sample(this.SD, x, z);
     let amp = 5.5;
-    if (x > 880 && z < 130) amp = 11;
+    if (x - (this.w.ox || 0) > 880 && z - (this.w.oz || 0) < 130) amp = 11;
     let h = (fbm(x, z) - 0.45) * amp;
     h *= smooth(1, 14, rd) * 0.85 + 0.15 * (rd < 0 ? 0 : 1);
     if (rd < 1) h *= 0.15;
@@ -88,11 +98,13 @@ export class Terrain {
       out[0] = (wall ? 0.27 : 0.13) * v; out[1] = (wall ? 0.25 : 0.13 + moss * 0.05) * v; out[2] = (wall ? 0.23 : 0.14) * v;
       return;
     }
-    const n = fbm(x * 3.1, z * 3.1), n2 = vnoise(x * 0.6, z * 0.6);
-    const east = smooth(780, 900, x), mid = smooth(330, 480, x) * (1 - east);
+    const n = fbm(x * 3.1, z * 3.1), n2 = vnoise(x * 0.6, z * 0.6), lx = x - (this.w.ox || 0);
+    const cd = this.w.ox ? this.coast(x, z) : -99;
+    if (cd > -3) { const deep = smooth(-3, 40, cd); out[0] = mix(0.12, 0.04, deep); out[1] = mix(0.32, 0.12, deep); out[2] = mix(0.38, 0.26, deep); return; }
+    const east = smooth(780, 900, lx), mid = smooth(330, 480, lx) * (1 - east);
     let r = mix(0.3, 0.22, mid), g = mix(0.4, 0.3, mid), b = mix(0.16, 0.14, mid);
     r = mix(r, 0.18, east); g = mix(g, 0.32, east); b = mix(b, 0.24, east);
-    const far = smooth(1110, 1250, x);
+    const far = smooth(1110, 1250, lx);
     r = mix(r, 0.42, far); g = mix(g, 0.38, far); b = mix(b, 0.18, far);
     const dirt = smooth(0.55, 0.8, n2) * 0.6;
     r = mix(r, 0.3, dirt); g = mix(g, 0.24, dirt); b = mix(b, 0.15, dirt);
@@ -108,6 +120,8 @@ export class Terrain {
     if (sd < 3) { const t = smooth(3, 0.5, sd); r = mix(r, 0.16, t); g = mix(g, 0.15, t); b = mix(b, 0.11, t); }
     const tf = 1 - this.townFactor(x, z);
     if (tf > 0) { r = mix(r, r * 1.08 + 0.02, tf); g = mix(g, g * 1.05, tf); }
+    const sand = smooth(-16, -5, cd);
+    if (sand > 0) { const sn = 0.92 + n * 0.16; r = mix(r, 0.62 * sn, sand); g = mix(g, 0.55 * sn, sand); b = mix(b, 0.38 * sn, sand); }
     out[0] = r; out[1] = g; out[2] = b;
   }
   buildMesh() {
@@ -335,7 +349,7 @@ export function buildVegetation(world, terrain, scene) {
   const grassMat = windify(new THREE.MeshStandardMaterial({ map: grassTexture(), alphaTest: 0.5, side: THREE.DoubleSide, roughness: 1 }), 0.25);
   for (const [x, z, sc] of world.grass) {
     const y = terrain.height(x, z);
-    add("g", x, z, "grass", mk(x, y, z, sc, x * 5.1), col.setHSL(x > 820 ? 0.38 : 0.22, 0.45, 0.28 + ((z * 1.7) % 1) * 0.14).clone());
+    add("g", x, z, "grass", mk(x, y, z, sc, x * 5.1), col.setHSL(x - (world.ox || 0) > 820 ? 0.38 : 0.22, 0.45, 0.28 + ((z * 1.7) % 1) * 0.14).clone());
   }
   const geos = {}, mats = {};
   species.forEach((sp, k) => sp.parts.forEach(([g, m], pi) => { geos[`t${k}_${pi}`] = g; mats[`t${k}_${pi}`] = m; }));
@@ -375,6 +389,10 @@ function grassTexture() {
 
 export function buildWater(world, terrain, scene) {
   const mat = new THREE.MeshStandardMaterial({ color: "#1d3a3f", roughness: 0.08, metalness: 0.3, transparent: true, opacity: 0.86, emissive: "#0a1c20" });
+  if (world.ox) {
+    const E = 2500, sea = new THREE.Mesh(new THREE.PlaneGeometry(world.w + E * 2, world.oh - 2 + E), new THREE.MeshStandardMaterial({ color: "#16465e", roughness: 0.12, metalness: 0.35, transparent: true, opacity: 0.9, emissive: "#06202c" }));
+    sea.rotation.x = -Math.PI / 2; sea.position.set(world.w / 2, -0.55, (world.oh - 2 - E) / 2); sea.receiveShadow = true; scene.add(sea);
+  }
   for (const s of world.streams) {
     const pos = [], idx = [];
     s.forEach(([x, z], i) => {

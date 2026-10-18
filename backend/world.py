@@ -4,6 +4,25 @@ import numpy as np
 
 W, H = 1600, 600
 OH = 400
+# the hand-authored layout above lives in "local" coords; at load it is placed on a larger island with ocean around it
+OX, OZ = 160, 160
+LW, LH, LOH = W, H, OH
+GW, GOH = LW + 2 * OX, LOH + 2 * OZ
+GH = GOH + (LH - LOH)
+
+
+_SHIFTED = False
+
+
+def to_global(x, z):
+    return (x + OX, z + OZ) if z <= LOH + 20 else (x + OX, z - LOH + GOH)
+
+
+def coast(u, v):
+    """signed distance-ish to the island shore in local coords (negative = land)"""
+    qx, qy = np.abs(u - 800) - 870 + 150, np.abs(v - 200) - 270 + 150
+    d = np.hypot(np.maximum(qx, 0), np.maximum(qy, 0)) + np.minimum(np.maximum(qx, qy), 0) - 150
+    return d + 26 * np.sin(u * 0.0105 + v * 0.006) + 16 * np.sin(u * 0.023 - v * 0.017 + 1.7) + 8 * np.sin(u * 0.057 + v * 0.049 + 0.6) + 4 * np.sin(u * 0.13 - v * 0.11 + 2.1)
 SEMEL = (90.0, 200.0)
 ELDER = (1000.0, 210.0)
 IRON = (1260.0, 200.0)
@@ -206,6 +225,8 @@ WILD_STRUCTS = [
 
 class World:
     def __init__(self):
+        global W, H, OH
+        W, H, OH = LW, LH, LOH
         rnd = random.Random(1337)
         self.blocked = np.zeros((H, W), dtype=np.uint8)
         b = self.blocked
@@ -253,7 +274,84 @@ class World:
         for (m, x, z, r, n) in SPAWNS:
             self.spawns.append(dict(monster=m, x=x, z=z, r=r, n=n))
         self._scatter_spawns()
+        self._globalize(rnd)
         self.npc_block()
+
+    def _globalize(self, rnd):
+        global W, H, OH
+        b, rd = self.blocked, self.road_dist
+        b[:3, :] = 0; b[LOH - 3:LOH, :] = 0; b[:LOH, :3] = 0; b[:LOH, -3:] = 0
+        nb = np.ones((GH, GW), dtype=np.uint8)
+        nr = np.full((GH, GW), 99.0, dtype=np.float32)
+        zz, xx = np.mgrid[0:GOH, 0:GW]
+        sea = coast(xx - OX + 0.5, zz - OZ + 0.5)
+        nb[:GOH] = (sea > -3).astype(np.uint8)
+        land = nb[OZ:OZ + LOH, OX:OX + LW]
+        nb[OZ:OZ + LOH, OX:OX + LW] = np.maximum(land, b[:LOH])
+        nb[GOH:, OX:OX + LW] = b[LOH:]
+        nr[OZ:OZ + LOH, OX:OX + LW] = rd[:LOH]
+        nr[GOH:, OX:OX + LW] = rd[LOH:]
+        nb[:3, :] = 1; nb[GOH - 3:GOH, :] = 1; nb[:, :3] = 1; nb[:, -3:] = 1
+        self.blocked, self.road_dist = nb, nr
+        W, H, OH = GW, GH, GOH
+        T = to_global
+        pt = lambda p: tuple(T(p[0], p[1]))
+        self.main_road = [pt(p) for p in self.main_road]
+        for p in self.paths:
+            p["pts"] = [pt(q) for q in p["pts"]]
+        self.streams = [[pt(q) for q in st] for st in self.streams]
+        def dxz(d, kx="x", kz="z"):
+            d[kx], d[kz] = T(d[kx], d[kz])
+        for d in self.bridges + self.props + self.buildings + self.spawns:
+            dxz(d)
+        for d in self.walls:
+            dxz(d); dxz(d, "x2", "z2")
+        for lst in (self.trees, self.rocks, self.bushes, self.grass, self.cave_rocks):
+            for v in lst:
+                v[0], v[1] = T(v[0], v[1])
+        global _SHIFTED
+        if not _SHIFTED:
+            _SHIFTED = True
+            for d in SAFE_ZONES + REGIONS + DUNGEON_ROOMS + PIT_ROOMS + BARROW_ROOMS + LAKES:
+                dxz(d)
+            for d in PORTALS:
+                dxz(d); d["to"] = T(*d["to"])
+            for d in DUNGEONS:
+                d["x0"], d["z0"] = T(d["x0"], d["z0"])
+            from game_data import NPCS
+            for n in NPCS.values():
+                n["pos"] = list(T(*n["pos"]))
+        dry = lambda x, z, m: coast(x - OX, z - OZ) < -m
+        self.trees = [t for t in self.trees if t[1] > GOH or dry(t[0], t[1], 6)]
+        self.rocks = [t for t in self.rocks if t[1] > GOH or dry(t[0], t[1], 4)]
+        self.bushes = [t for t in self.bushes if t[1] > GOH or dry(t[0], t[1], 5)]
+        self.grass = [t for t in self.grass if t[1] > GOH or dry(t[0], t[1], 8)]
+        # wild growth on the new outer lands
+        for _ in range(26000):
+            x, z = rnd.uniform(5, GW - 5), rnd.uniform(5, GOH - 5)
+            if OX - 4 < x < OX + LW + 4 and OZ - 4 < z < OZ + LOH + 4:
+                continue
+            c = coast(x - OX, z - OZ)
+            if c > -14 or nb[int(z), int(x)]:
+                continue
+            r = rnd.random()
+            if r < 0.22 and c < -22:
+                self.trees.append([round(x, 1), round(z, 1), rnd.randint(0, 2), round(rnd.uniform(0.8, 1.3), 2), round(rnd.uniform(0, 6.28), 2)])
+                self._disc(x, z, 0.6)
+            elif r < 0.3:
+                self.rocks.append([round(x, 1), round(z, 1), round(rnd.uniform(0.4, 1.4), 2), round(rnd.uniform(0, 6.28), 2)])
+            elif r < 0.6:
+                self.bushes.append([round(x, 1), round(z, 1), round(rnd.uniform(0.7, 1.3), 2), rnd.randint(0, 2)])
+            else:
+                self.grass.append([round(x, 1), round(z, 1), round(rnd.uniform(0.7, 1.1), 2)])
+        for gx in range(40, GW, 70):
+            for gz in range(40, GOH, 70):
+                x, z = gx + rnd.uniform(-20, 20), gz + rnd.uniform(-20, 20)
+                if (OX < x < OX + LW and OZ < z < OZ + LOH) or coast(x - OX, z - OZ) > -20 or not self.walkable(x, z):
+                    continue
+                lx = min(max(x - OX, 0), LW - 1)
+                opts = next(o for lim, o in SCATTER_BANDS if lx < lim)
+                self.spawns.append(dict(monster=rnd.choice(opts), x=x, z=z, r=12, n=3))
 
     # ---------- stamping helpers
     def _stamp_dist(self, pts, width, rad):
@@ -569,9 +667,9 @@ class World:
 
     def client_payload(self):
         bits = np.packbits(self.blocked.flatten())
-        return dict(w=W, h=H, grid=base64.b64encode(bits.tobytes()).decode(), main_road=[[round(a, 1), round(b, 1)] for a, b in self.main_road],
+        return dict(ox=OX, oz=OZ, lw=LW, loh=LOH, w=W, h=H, grid=base64.b64encode(bits.tobytes()).decode(), main_road=[[round(a, 1), round(b, 1)] for a, b in self.main_road],
                     paths=[dict(w=p["w"], hidden=p["hidden"], pts=[[round(a, 1), round(b, 1)] for a, b in p["pts"]]) for p in self.paths],
                     streams=[[[round(a, 1), round(b, 1)] for a, b in s] for s in self.streams], bridges=self.bridges, lakes=LAKES,
                     walls=self.walls, buildings=self.buildings, props=self.props, trees=self.trees, rocks=self.rocks, bushes=self.bushes,
                     grass=self.grass, regions=REGIONS + DUNGEON_ROOMS + PIT_ROOMS + BARROW_ROOMS, dungeons=DUNGEONS, safe_zones=SAFE_ZONES, oh=OH, cave_rocks=self.cave_rocks,
-                    portals=[dict(x=p['x'], z=p['z'], name=p['name']) for p in PORTALS], towns=dict(semel=SEMEL, elderglen=ELDER, ironhold=IRON, sunhollow=SUNH))
+                    portals=[dict(x=p['x'], z=p['z'], name=p['name']) for p in PORTALS], towns={k: to_global(*v) for k, v in dict(semel=SEMEL, elderglen=ELDER, ironhold=IRON, sunhollow=SUNH).items()})

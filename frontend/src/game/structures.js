@@ -114,7 +114,7 @@ function prop(p, terrain, lights) {
     case "stall": {
       for (const sx of [-1.2, 1.2]) for (const sz of [-0.8, 0.8]) cyl(0.07, 0.07, 2.4, 5, wood, sx, 1.2, sz, g);
       box(2.6, 0.12, 1.8, wood, 0, 0.9, 0, g);
-      const cloth = box(3.0, 0.08, 2.2, M(p.x < 1000 ? "#7a2a22" : "#2a5a6a"), 0, 2.45, 0, g); cloth.rotation.x = 0.15;
+      const cloth = box(3.0, 0.08, 2.2, M(p.x < 1160 ? "#7a2a22" : "#2a5a6a"), 0, 2.45, 0, g); cloth.rotation.x = 0.15;
       for (let i = 0; i < 4; i++) box(0.4, 0.3, 0.4, M(["#8a6a3a", "#5a3a2a", "#9a9a90", "#6a4a8a"][i]), -0.9 + i * 0.6, 1.12, 0, g);
       break; }
     case "sign": { cyl(0.08, 0.1, 2.4, 5, wood, 0, 1.2, 0, g); box(1.4, 0.5, 0.08, M("#6b4e30"), 0.4, 2.0, 0, g); break; }

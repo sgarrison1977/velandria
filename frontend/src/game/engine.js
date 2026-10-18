@@ -437,7 +437,13 @@ export class Engine {
     for (const r of this.world.regions) { const d = Math.hypot(r.x - x, r.z - z); if (d < r.r && (!best || d / r.r < best.k)) best = { r, k: d / r.r }; }
     if (best) return best.r.name;
     if (z > this.world.oh) return this.dungeonAt(x)?.name || "The Hollow Deep";
-    const rd = this.terrain.sample(this.terrain.RD, x, z);
+    const rd = this.terrain.sample(this.terrain.RD, x, z), ox = this.world.ox || 0, oz = this.world.oz || 0;
+    if (this.world.ox && this.terrain.coast(x, z) > -40) return "The Velanthran Coast";
+    x -= ox; z -= oz;
+    if (x < -10) return "The Western Shores";
+    if (x > 1610) return "The Eastern Shores";
+    if (z < -10) return "The Northern Reaches";
+    if (z > 410) return "The Southern Shores";
     if (x < 330) return rd < 6 ? "Titus Forest Road" : "Westwood";
     if (x < 700) return rd < 6 ? "The Long Road" : "Shadowpine Deep";
     if (x > 1110) return rd < 6 ? "Marches Road" : "The Sundered Marches";
