@@ -191,6 +191,13 @@ SCATTER_BANDS = [(200, ["giant_spider", "imp"]), (330, ["forest_wolf", "imp", "g
                  (600, ["forest_bandit", "venomous_spider", "skeleton"]), (760, ["orc_warrior", "venomous_spider", "forest_bandit"]),
                  (900, ["dark_cultist", "orc_warrior"]), (1120, ["forest_troll", "dark_cultist"]),
                  (1350, ["dire_wolf", "shadow_wraith", "forest_troll"]), (99999, ["broodmother", "stone_golem", "shadow_wraith"])]
+TARGET_MONSTERS = 1500
+CAMP_COUNT = 52
+CAMP_FAMILY = {"giant_spider": "spider", "venomous_spider": "spider", "broodmother": "spider", "imp": "imp", "abyssal_fiend": "imp", "forest_wolf": "beast",
+               "dire_wolf": "beast", "goblin_scout": "goblin", "skeleton": "undead", "shadow_wraith": "undead", "death_knight": "undead",
+               "forest_bandit": "bandit", "orc_warrior": "orc", "dark_cultist": "cultist", "forest_troll": "troll", "stone_golem": "golem"}
+CAMP_NOUN = {"spider": "Nest", "imp": "Pit", "beast": "Den", "goblin": "Warren", "undead": "Boneyard", "bandit": "Hideout", "orc": "Warcamp",
+             "cultist": "Coven", "troll": "Lair", "golem": "Circle"}
 SPAWNS = [
     ("cave_crawler", 470, 505, 11, 8), ("crypt_ghoul", 540, 555, 11, 8), ("bone_colossus", 605, 495, 10, 5),
     ("hollow_shade", 655, 560, 10, 6), ("crypt_ghoul", 507, 528, 4, 2), ("cave_crawler", 630, 530, 4, 2), ("hollow_king", 702, 500, 3, 1),
@@ -304,13 +311,11 @@ class World:
         self._camps(rnd)
         self.trees, self.rocks, self.bushes, self.grass = [], [], [], []
         self._vegetation(rnd)
-        self.spawns = []
-        for (m, x, z, r, n) in SPAWNS:
-            self.spawns.append(dict(monster=m, x=x, z=z, r=r, n=n))
-        self._scatter_spawns()
+        self.spawns = [dict(monster=m, x=x, z=z, r=r, n=n) for (m, x, z, r, n) in SPAWNS if z > LOH]
         self._globalize(rnd)
         self._harbor()
         self._cave_sites()
+        self._monster_camps()
         self.npc_block()
 
     def _globalize(self, rnd):
@@ -386,16 +391,116 @@ class World:
                 self.bushes.append([round(x, 1), round(z, 1), round(rnd.uniform(0.7, 1.3), 2), rnd.randint(0, 2)])
             else:
                 self.grass.append([round(x, 1), round(z, 1), round(rnd.uniform(0.7, 1.1), 2)])
-        for gx in range(40, GW, 70):
-            for gz in range(40, GOH, 70):
-                x, z = gx + rnd.uniform(-20, 20), gz + rnd.uniform(-20, 20)
-                if (OX < x < OX + LW and OZ < z < OZ + LOH) or coast(x - OX, z - OZ) > -20 or not self.walkable(x, z):
-                    continue
-                if math.hypot(x - HARBOR[0], z - HARBOR[1]) < 80:
-                    continue
-                lx = min(max(x - OX, 0), LW - 1)
-                opts = next(o for lim, o in SCATTER_BANDS if lx < lim)
-                self.spawns.append(dict(monster=rnd.choice(opts), x=x, z=z, r=12, n=3))
+
+    def _monster_camps(self):
+        """global: big themed monster camps across the continent + a sprinkling of lone wanderers (~TARGET_MONSTERS total)"""
+        from game_data import MONSTERS
+        rr = random.Random(5150)
+        REGIONS[:] = [r for r in REGIONS if not r.get("camp")]
+        towns = [to_global(*c) for c in (SEMEL, ELDER, IRON, SUNH)] + [HARBOR]
+        caves = [(pt["x"], pt["z"]) for pt in PORTALS if pt.get("face")]
+        band = lambda x: next(o for lim, o in SCATTER_BANDS if min(max(x - OX, 0), LW - 1) < lim)
+        def land(x, z, m=10):
+            return 4 < x < W - 4 and 4 < z < GOH - 4 and sea(x, z) < -m and isle_sd(x, z) > 12 and self.walkable(x, z) and not in_safe(x, z)
+        def open_area(x, z, r=9):
+            zi, xi = int(z), int(x)
+            return self.blocked[zi - r:zi + r, xi - r:xi + r].mean() < 0.1
+        camps = []
+        def free(x, z, gap):
+            return (all(math.hypot(x - a, z - b) > 100 for a, b in towns) and all(math.hypot(x - a, z - b) > 28 for a, b in caves)
+                    and all(math.hypot(x - c["x"], z - c["z"]) > gap for c in camps) and self.road_dist[int(z), int(x)] > 7)
+        anchors = [(m, *to_global(x, z)) for (m, x, z, r, n) in SPAWNS if z <= LOH and n >= 8]
+        for m, x, z in anchors:
+            if free(x, z, 45) and land(x, z, 6):
+                camps.append(dict(x=x, z=z, primary=m))
+        tries = 0
+        while len(camps) < CAMP_COUNT and tries < 40000:
+            tries += 1
+            x, z = rr.uniform(20, W - 20), rr.uniform(20, GOH - 20)
+            if land(x, z) and free(x, z, 70) and open_area(x, z):
+                camps.append(dict(x=x, z=z, primary=rr.choice(band(x))))
+        prefixes = ["Ashen", "Gloom", "Thorn", "Red", "Hollow", "Grim", "Black", "Rot", "Fang", "Iron", "Mire", "Bleak", "Wither", "Raven", "Cinder",
+                    "Storm", "Moss", "Stone", "Blood", "Dusk", "Bone", "Gorge", "Shade", "Skull", "Murk", "Briar", "Howl", "Ember", "Frost", "Vile",
+                    "Sorrow", "Gnarl", "Scorch", "Gallow", "Sludge", "Rust", "Bramble", "Crow", "Dread", "Fester", "Grave", "Hag", "Knell", "Marrow",
+                    "Nettle", "Pyre", "Rattle", "Scar", "Snarl", "Tallow", "Umber", "Venom", "Wolfsbane", "Yew", "Cairn", "Drown", "Feral", "Gore", "Hush", "Lich"]
+        rr.shuffle(prefixes)
+        total_camp = 0
+        for i, c in enumerate(camps):
+            x, z, prim = c["x"], c["z"], c["primary"]
+            fam = CAMP_FAMILY.get(prim, "beast")
+            pl = MONSTERS[prim]["level"]
+            opts = [o for o in band(x) if o != prim and abs(MONSTERS[o]["level"] - pl) <= 8]
+            lead = max([o for o in band(x) if 0 <= MONSTERS[o]["level"] - pl <= 6] + [prim], key=lambda k: MONSTERS[k]["level"])
+            n = rr.randint(20, 30)
+            parts = [(prim, round(n * 0.6))]
+            if opts:
+                parts.append((rr.choice(opts), round(n * 0.28)))
+            if lead != prim and all(lead != p for p, _ in parts):
+                parts.append((lead, 2))
+            for k, (m, cnt) in enumerate(parts):
+                if cnt > 0:
+                    a = k * 2.1
+                    sx, sz = x + math.cos(a) * 2.5, z + math.sin(a) * 2.5
+                    if not self.walkable(sx, sz):
+                        sx, sz = x, z
+                    self.spawns.append(dict(monster=m, x=round(sx, 1), z=round(sz, 1), r=11 if k == 0 else 8, n=cnt))
+                    total_camp += cnt
+            lv = [MONSTERS[m]["level"] for m, _ in parts]
+            name = f"{prefixes[i % len(prefixes)]} {CAMP_NOUN[fam]}" + ("" if i < len(prefixes) else f" {'II' if i < 2 * len(prefixes) else 'III'}")
+            REGIONS.append(dict(name=name, x=round(x), z=round(z), r=15, lvl=(f"{min(lv)}-{max(lv)}" if min(lv) != max(lv) else f"{lv[0]}") + " Camp", camp=True))
+            self._camp_props(x, z, fam, rr)
+        cur = sum(sp["n"] for sp in self.spawns)
+        want, tries = max(0, TARGET_MONSTERS - cur), 0
+        while want > 0 and tries < 60000:
+            tries += 1
+            x, z = rr.uniform(20, W - 20), rr.uniform(20, GOH - 20)
+            if land(x, z, 8) and all(math.hypot(x - a, z - b) > 80 for a, b in towns) and all(math.hypot(x - cc["x"], z - cc["z"]) > 24 for cc in camps):
+                k = 2 if rr.random() < 0.35 else 1
+                self.spawns.append(dict(monster=rr.choice(band(x)), x=round(x, 1), z=round(z, 1), r=18, n=k))
+                want -= k
+        self.camp_count = len(camps)
+
+    def _camp_props(self, cx, cz, fam, rr):
+        P = self.props
+        def put(kind, x, z, r, **kw):
+            if self.walkable(x, z) and (r == 0 or all(self.walkable(x + dx, z + dz) for dx, dz in ((r, 0), (-r, 0), (0, r), (0, -r)))):
+                P.append(dict(kind=kind, x=round(x, 1), z=round(z, 1), **kw))
+                if r:
+                    self._disc(x, z, r)
+                self.grass = [g for g in self.grass if abs(g[0] - x) > 2 or abs(g[1] - z) > 2]
+                self.bushes = [g for g in self.bushes if abs(g[0] - x) > 2.5 or abs(g[1] - z) > 2.5]
+        ring = lambda n, rad, off=0.0: [(cx + math.cos(i / n * 6.283 + off) * rad, cz + math.sin(i / n * 6.283 + off) * rad, i / n * 6.283 + off) for i in range(n)]
+        style = {"goblin": "goblin", "bandit": "bandit", "orc": "orc", "cultist": "cultist", "troll": "troll"}.get(fam)
+        if style:
+            put("campfire", cx, cz, 1.0, style=style)
+            for x, z, a in ring(3 if fam != "troll" else 0, 8, rr.uniform(0, 6)):
+                put("tent", x, z, 1.8, rot=-a, style=style)
+        if fam == "goblin":
+            for x, z, a in ring(2, 5, 0.8): put("totem", x, z, 0.5)
+        elif fam == "bandit":
+            put("crates", cx + 3.5, cz - 2, 0.9); put("barrels", cx - 3, cz + 3, 0.8)
+        elif fam == "orc":
+            for x, z, a in ring(3, 5.5, 0.4): put("banner", x, z, 0.4)
+        elif fam == "cultist":
+            for x, z, a in ring(5, 11): put("obelisk", x, z, 0.9)
+        elif fam == "undead":
+            put("brazier", cx, cz, 0.6)
+            for x, z, a in ring(7, 6.5, rr.uniform(0, 6)): put("grave", x, z, 0.5, rot=-a)
+            for x, z, a in ring(4, 3.2, 0.5): put("bones", x, z, 0, s=1.2)
+        elif fam == "spider":
+            for x, z, a in ring(3, 6, rr.uniform(0, 6)): put("web", x, z, 0, rot=a)
+            for x, z, a in ring(4, 3, 0.3): put("bones", x, z, 0, s=1.0)
+        elif fam in ("beast", "troll"):
+            for x, z, a in ring(5, 3.5 if fam == "beast" else 4.5, 0.2): put("bones", x, z, 0, s=1.3)
+            if fam == "beast":
+                for x, z, a in ring(4, 9, rr.uniform(0, 6)):
+                    if self.walkable(x, z):
+                        sc = round(rr.uniform(1.6, 2.4), 2); self.rocks.append([round(x, 1), round(z, 1), sc, round(rr.uniform(0, 6.28), 2)]); self._disc(x, z, sc * 0.75)
+        elif fam == "imp":
+            for x, z, a in ring(3, 4.5, 0.5): put("brazier", x, z, 0.6)
+            for x, z, a in ring(3, 2.5, 1.5): put("bones", x, z, 0)
+        elif fam == "golem":
+            for x, z, a in ring(6, 8, rr.uniform(0, 6)): put("pillar", x, z, 0.7, h=round(rr.uniform(2.0, 4.5), 1))
 
     def _cave_sites(self):
         """global: clear the ground around dungeon cave mouths, block the rock mass, lay the Barrows shore trail"""

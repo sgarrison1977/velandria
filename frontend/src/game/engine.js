@@ -613,6 +613,11 @@ export class Engine {
         const key = `${Math.floor(r.x / 20)},${Math.floor(r.z / 20)}`;
         if (!this.discovered.has(key)) continue;
         const [px, pz] = P(r.x, r.z);
+        if (r.camp) {
+          ctx.fillStyle = "#ff6a3a"; ctx.beginPath(); ctx.moveTo(px, pz - 6); ctx.lineTo(px + 5, pz + 3); ctx.lineTo(px - 5, pz + 3); ctx.closePath(); ctx.fill();
+          ctx.font = "10px 'Alegreya Sans', sans-serif"; ctx.fillStyle = "rgba(0,0,0,0.7)"; ctx.fillText(`${r.name} · ${r.lvl.replace(" Camp", "")}`, px + 1, pz + 15);
+          ctx.fillStyle = "#ffb89a"; ctx.fillText(`${r.name} · ${r.lvl.replace(" Camp", "")}`, px, pz + 14); ctx.font = "600 13px 'IM Fell English SC', serif"; continue;
+        }
         ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillText(r.name, px + 1, pz + 1); ctx.fillStyle = r.lvl === "Safe town" ? "#ffe08a" : "#e8dcc0"; ctx.fillText(r.name, px, pz);
         ctx.font = "11px 'Alegreya Sans', sans-serif"; ctx.fillStyle = "#b8a888"; ctx.fillText(r.lvl === "-" ? "" : `Lv ${r.lvl}`, px, pz + 13); ctx.font = "600 13px 'IM Fell English SC', serif";
       }

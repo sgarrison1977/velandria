@@ -252,6 +252,35 @@ function prop(p, terrain, lights) {
       cyl(0.14, 0.18, 4.5, 6, wood, 0.8, 2.2, 0, g).rotation.z = 0.5;
       for (let i = 0; i < 5; i++) box(0.2, 1.4, 0.2, wood, -3 + i * 1.3, 1.2, 1.4, g).rotation.x = 0.3;
       g.rotation.set(0.25, -(p.rot || 0), 0.18); g.position.set(p.x, terrain.height(p.x, p.z) - 0.2, p.z); return g; }
+    case "totem": {
+      const pole = M("#5a4026"), paint = M("#9a3a1a"), sk = M("#d8d0b8");
+      cyl(0.18, 0.24, 3.4, 6, pole, 0, 1.7, 0, g);
+      for (let i = 0; i < 3; i++) { const b = box(0.5, 0.45, 0.5, i % 2 ? paint : pole, 0, 1.2 + i * 0.75, 0, g); b.rotation.y = i * 0.6; }
+      const s = new THREE.Mesh(new THREE.SphereGeometry(0.26, 8, 6), sk); s.position.y = 3.55; s.scale.set(1, 0.9, 1.1); g.add(s);
+      for (const sx of [-1, 1]) { const h = cone(0.07, 0.5, 5, sk, sx * 0.25, 3.8, 0, g); h.rotation.z = -sx * 0.6; }
+      for (let i = 0; i < 4; i++) { const f = box(0.06, 0.5, 0.02, M(["#c84a2a", "#e8c040", "#2a6a3a"][i % 3]), Math.cos(i * 1.6) * 0.3, 2.7, Math.sin(i * 1.6) * 0.3, g); f.rotation.z = 0.3; }
+      break; }
+    case "banner": {
+      cyl(0.06, 0.07, 4.6, 5, M("#2a1f16"), 0, 2.3, 0, g);
+      box(1.6, 0.08, 0.08, M("#2a1f16"), 0.7, 4.4, 0, g);
+      const cloth = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 2.2, 3, 5), M("#7a1a12", { side: THREE.DoubleSide })); cloth.position.set(0.75, 3.25, 0); cloth.name = "sail"; g.add(cloth);
+      const mark = new THREE.Mesh(new THREE.CircleGeometry(0.32, 10), M("#1a1a1a", { side: THREE.DoubleSide })); mark.position.set(0.75, 3.4, 0.02); g.add(mark);
+      const s = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 6), M("#d8d0b8")); s.position.y = 4.75; g.add(s);
+      g.rotation.y = Math.random() * 6.28; break; }
+    case "grave": {
+      const st = M(["#6a665e", "#5a5650", "#77736a"][Math.floor(Math.abs(p.x * 7)) % 3]);
+      const sh = new THREE.Shape(); sh.moveTo(-0.45, 0); sh.lineTo(-0.45, 0.9); sh.quadraticCurveTo(0, 1.35, 0.45, 0.9); sh.lineTo(0.45, 0); sh.lineTo(-0.45, 0);
+      const t = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: 0.16, bevelEnabled: false }), st); t.rotation.set(-0.15 + Math.random() * 0.1, 0, (Math.random() - 0.5) * 0.3); g.add(t);
+      box(0.9, 0.08, 1.6, M("#4a3a28"), 0, 0.04, 0.95, g);
+      g.rotation.y = -(p.rot || 0) + Math.PI / 2; break; }
+    case "web": {
+      const wm = new THREE.LineBasicMaterial({ color: "#e8e8e0", transparent: true, opacity: 0.5 }), pts = [];
+      for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; pts.push(new THREE.Vector3(0, 0.05, 0), new THREE.Vector3(Math.cos(a) * 2.6, 0.05 + Math.random() * 0.4, Math.sin(a) * 2.6)); }
+      for (let r = 0.5; r < 2.6; r += 0.45) for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2, b = ((i + 1) / 10) * Math.PI * 2; pts.push(new THREE.Vector3(Math.cos(a) * r, 0.08, Math.sin(a) * r), new THREE.Vector3(Math.cos(b) * r, 0.08, Math.sin(b) * r)); }
+      g.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), wm));
+      const egg = M("#d8d4c0", { roughness: 0.6 });
+      for (let i = 0; i < 4; i++) { const e = new THREE.Mesh(new THREE.SphereGeometry(0.28 + (i % 2) * 0.1, 8, 6), egg); e.scale.y = 1.3; e.position.set(Math.cos(i * 1.7) * 0.9, 0.3, Math.sin(i * 1.7) * 0.9); g.add(e); }
+      g.rotation.y = p.rot || 0; break; }
     case "fish_rack": {
       for (const sx of [-1.2, 1.2]) cyl(0.07, 0.08, 2.2, 5, wood, sx, 1.1, 0, g);
       box(2.6, 0.08, 0.08, wood, 0, 2.1, 0, g);

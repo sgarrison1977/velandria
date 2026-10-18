@@ -78,3 +78,4 @@ Later requests: hold-to-walk toward pointer; ranged/spell abilities fire at the 
 - Keeper's Gift popup: category tabs (Weapons, Off-hand, Helms, Chest, Limbs, Rings & Amulets, Potions & Food, Materials) + search + icon grid. Preview: /gallery?set=give
 - New spells (lvl 8, learn with skill points): Wizard Glacies Nova (8m frost AoE, 30% slow 3s), Warlock Fulmen Catena (lightning bolt chaining to 4 more enemies, -20% per jump).
 - Titus Barrows entrance moved to the northern shore NE of Titus (local 190,-22 / global 350,138) with a dirt trail from Silkfield; cave-site clearing + rock collision now done post-globalize in World._cave_sites().
+- Monster camps (World._monster_camps): scattered 3-packs removed; 52 themed camps (20-30 mobs, mixed band types + leader, family props: tents/campfire/totem/banner/obelisk/grave/web/bones/brazier/pillars), ~155 lone wanderers; TARGET_MONSTERS=1500 total. Camps shown on world map as red markers with name + level.
