@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { Terrain, buildVegetation, buildWater, windUniform, cutUniform } from "./world3d";
+import { Terrain, buildVegetation, buildWater, windUniform, cutUniform, waterLight } from "./world3d";
 import { buildStructures, animateStructures } from "./structures";
 import { LightPool } from "./lightpool";
 import { buildMonster, buildNpc, buildPlayer, buildLoot, proxy, animateGlow, animateRig, setInvis, SHIMMER, RARITY } from "./models";
@@ -516,7 +516,7 @@ export class Engine {
       if (wp) this.wpBeam.position.set(wp.x, this.groundY(wp.x, wp.z) + 20, wp.z);
       this.cave += ((me.z > this.world.oh ? 1 : 0) - this.cave) * Math.min(1, dt * 3);
       const k = this.cave;
-      this.hemi.intensity = 1.35 - k * 1.0; this.sun.intensity = 3.0 - k * 2.6; this.rim.intensity = 0.6 - k * 0.45;
+      this.hemi.intensity = 1.35 - k * 1.0; this.sun.intensity = 3.0 - k * 2.6; this.rim.intensity = 0.6 - k * 0.45; waterLight.value = 1 - k * 0.87;
       this.scene.fog.density = 0.011 + k * 0.022; this.scene.fog.color.setRGB(0.165 * (1 - k) + 0.035 * k, 0.212 * (1 - k) + 0.035 * k, 0.192 * (1 - k) + 0.05 * k); this.scene.background.copy(this.scene.fog.color);
       this.lantern.intensity = k * 45; this.lantern.position.set(me.x, me.grp.position.y + 4, me.z + 1);
     }

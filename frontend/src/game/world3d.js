@@ -403,6 +403,61 @@ function grassTexture() {
 }
 
 // shore-distance field baked once; the sea shader rolls foam bands toward the beaches with it
+export const waterLight = { value: 1 };
+const WATER_VS = `
+varying vec2 vSea; varying vec3 vView;
+#include <fog_pars_vertex>
+void main() {
+  vec4 wp = modelMatrix * vec4(position, 1.0);
+  vSea = wp.xz; vView = cameraPosition - wp.xyz;
+  vec4 mvPosition = viewMatrix * wp;
+  gl_Position = projectionMatrix * mvPosition;
+  #include <fog_vertex>
+}`;
+const WATER_FS = `
+uniform vec3 uColor; uniform vec3 uEmissive; uniform vec3 uSun; uniform float uOpacity; uniform float uTime; uniform float uLight;
+#ifdef SEA
+uniform sampler2D uShore; uniform vec2 uSize;
+#endif
+varying vec2 vSea; varying vec3 vView;
+#include <common>
+#include <fog_pars_fragment>
+void main() {
+  vec3 base = uColor; float a = uOpacity, foam = 0.0;
+#ifdef SEA
+  vec2 suv = vSea / uSize;
+  float cd = (suv.x < 0.0 || suv.y < 0.0 || suv.x > 1.0 || suv.y > 1.0) ? 60.0 : texture2D(uShore, suv).r * 63.75 - 8.0;
+  float near = 1.0 - smoothstep(0.0, 16.0, cd);
+  if (near > 0.0 || cd < 0.0) {
+    float wob = sin(vSea.x * 0.11 + vSea.y * 0.07) * 1.2 + sin(vSea.x * 0.031 - vSea.y * 0.047 + uTime * 0.3) * 1.8;
+    float brk = 0.6 + 0.4 * sin(vSea.x * 0.37 + vSea.y * 0.29 + uTime * 0.5);
+    float crest = smoothstep(0.955, 0.995, sin(cd * 0.55 + uTime * 1.25 + wob)) * near * brk;
+    float run = sin(uTime * 1.25 + wob);
+    float swash = smoothstep(-3.2, -2.2, cd) * (1.0 - smoothstep(-1.6 + run * 1.2, -0.6 + run * 1.2, cd)) * (0.35 + 0.3 * run);
+    foam = clamp(crest * 0.55 + swash, 0.0, 0.8);
+    base = mix(base, vec3(0.0152, 0.107, 0.133), near * 0.45);
+  }
+#endif
+  vec3 n = normalize(vec3(sin(vSea.x * 0.21 + uTime * 0.9) * 0.06 + sin(vSea.y * 0.47 - uTime * 1.3) * 0.03, 1.0, sin(vSea.y * 0.19 + uTime * 0.7) * 0.06 + sin(vSea.x * 0.43 + uTime * 1.1) * 0.03));
+  vec3 v = normalize(vView), l = normalize(vec3(-0.43, 0.86, 0.29));
+  float spec = pow(max(dot(n, normalize(l + v)), 0.0), 90.0);
+  float fres = pow(1.0 - max(v.y, 0.0), 3.0);
+  vec3 col = base * vec3(0.68, 0.59, 0.49) * uLight + uEmissive + uSun * spec * 0.9 * uLight + vec3(0.04, 0.06, 0.08) * fres * uLight;
+  col = mix(col, vec3(0.79, 0.89, 0.91) * (0.25 + 0.75 * uLight), foam) + vec3(0.013, 0.017, 0.02) * foam;
+  gl_FragColor = vec4(col, mix(a, 0.97, foam));
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
+  #include <fog_fragment>
+}`;
+function waterMaterial(color, emissive, opacity, sea) {
+  return new THREE.ShaderMaterial({
+    vertexShader: WATER_VS, fragmentShader: WATER_FS, transparent: true, fog: true, depthWrite: false, defines: sea ? { SEA: "" } : {},
+    uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, {
+      uColor: { value: new THREE.Color(color) }, uEmissive: { value: new THREE.Color(emissive) }, uSun: { value: new THREE.Color("#ffe2b8") },
+      uOpacity: { value: opacity }, uShore: { value: sea?.tex || null }, uSize: { value: sea?.size || new THREE.Vector2() },
+    }]),
+  });
+}
 function seaMaterial(world, terrain) {
   const S = 4, tw = Math.ceil(world.w / S), th = Math.ceil(world.oh / S), data = new Uint8Array(tw * th * 4);
   for (let j = 0; j < th; j++) for (let i = 0; i < tw; i++) {
@@ -410,36 +465,15 @@ function seaMaterial(world, terrain) {
     data[k] = Math.max(0, Math.min(255, (cd + 8) * 4)); data[k + 3] = 255;
   }
   const tex = new THREE.DataTexture(data, tw, th, THREE.RGBAFormat); tex.magFilter = tex.minFilter = THREE.LinearFilter; tex.needsUpdate = true;
-  const mat = new THREE.MeshStandardMaterial({ color: "#16465e", roughness: 0.12, metalness: 0.35, transparent: true, opacity: 0.9, emissive: "#06202c" });
-  mat.onBeforeCompile = (sh) => {
-    sh.uniforms.uShore = { value: tex }; sh.uniforms.uSize = { value: new THREE.Vector2(tw * S, th * S) }; sh.uniforms.uTime = windUniform;
-    sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec2 vSea;")
-      .replace("#include <begin_vertex>", "#include <begin_vertex>\nvSea = (modelMatrix * vec4(position, 1.0)).xz;");
-    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec2 vSea;\nuniform sampler2D uShore;\nuniform vec2 uSize;\nuniform float uTime;")
-      .replace("#include <color_fragment>", `#include <color_fragment>
-        vec2 suv = vSea / uSize;
-        float cd = (suv.x < 0.0 || suv.y < 0.0 || suv.x > 1.0 || suv.y > 1.0) ? 60.0 : texture2D(uShore, suv).r * 63.75 - 8.0;
-        float near = 1.0 - smoothstep(0.0, 16.0, cd);
-        float wob = sin(vSea.x * 0.11 + vSea.y * 0.07) * 1.2 + sin(vSea.x * 0.031 - vSea.y * 0.047 + uTime * 0.3) * 1.8;
-        float ph = cd * 0.55 + uTime * 1.25 + wob;
-        float brk = 0.6 + 0.4 * sin(vSea.x * 0.37 + vSea.y * 0.29 + uTime * 0.5);
-        float crest = smoothstep(0.955, 0.995, sin(ph)) * near * brk;
-        float run = sin(uTime * 1.25 + wob);
-        float swash = smoothstep(-3.2, -2.2, cd) * (1.0 - smoothstep(-1.6 + run * 1.2, -0.6 + run * 1.2, cd)) * (0.35 + 0.3 * run);
-        float foam = clamp(crest * 0.55 + swash, 0.0, 0.8);
-        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.13, 0.36, 0.4), near * 0.45);
-        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.95, 0.96), foam);
-        diffuseColor.a = mix(diffuseColor.a, 0.97, foam);`)
-      .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\ntotalEmissiveRadiance += vec3(0.12, 0.14, 0.15) * foam;");
-  };
-  return mat;
+  return waterMaterial("#16465e", "#06202c", 0.9, { tex, size: new THREE.Vector2(tw * S, th * S) });
 }
+const shareWater = (m) => { m.uniforms.uTime = windUniform; m.uniforms.uLight = waterLight; return m; };
 
 export function buildWater(world, terrain, scene) {
-  const mat = new THREE.MeshStandardMaterial({ color: "#1d3a3f", roughness: 0.08, metalness: 0.3, transparent: true, opacity: 0.86, emissive: "#0a1c20" });
+  const mat = shareWater(waterMaterial("#1d3a3f", "#0a1c20", 0.86));
   if (world.ox) {
-    const E = 2500, sea = new THREE.Mesh(new THREE.PlaneGeometry(world.w + E * 2, world.oh - 2 + E), seaMaterial(world, terrain));
-    sea.rotation.x = -Math.PI / 2; sea.position.set(world.w / 2, -0.55, (world.oh - 2 - E) / 2); sea.receiveShadow = true; scene.add(sea);
+    const E = 2500, sea = new THREE.Mesh(new THREE.PlaneGeometry(world.w + E * 2, world.oh - 2 + E), shareWater(seaMaterial(world, terrain)));
+    sea.rotation.x = -Math.PI / 2; sea.position.set(world.w / 2, -0.55, (world.oh - 2 - E) / 2); scene.add(sea);
   }
   for (const s of world.streams) {
     const pos = [], idx = [];
@@ -451,7 +485,7 @@ export function buildWater(world, terrain, scene) {
     });
     const g = new THREE.BufferGeometry();
     g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
-    const m = new THREE.Mesh(g, mat); m.receiveShadow = true;
+    const m = new THREE.Mesh(g, mat);
     scene.add(m);
   }
   for (const l of world.lakes) {
