@@ -10,7 +10,7 @@ export const AdminLogin = ({ onDone, onBack }) => {
   const submit = async (e) => {
     e.preventDefault(); setErr(""); setBusy(true);
     try {
-      const { data } = await adminHttp.post("/admin/login", { username, password });
+      const { data } = await adminHttp.post("/admin/login", { username: username.trim(), password: password.trim() });
       sessionStorage.setItem("sx_admin", data.token);
       onDone();
     } catch (x) { setErr(errMsg(x)); } finally { setBusy(false); }
@@ -19,7 +19,7 @@ export const AdminLogin = ({ onDone, onBack }) => {
     <div className="admin-page admin-login-wrap" data-testid="admin-login-page">
       <form className="auth-card" onSubmit={submit} data-testid="admin-login-form">
         <h2 className="admin-title">Admin Login</h2>
-        <label>Username<input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" data-testid="admin-username-input" /></label>
+        <label>Username<input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" autoCapitalize="off" autoCorrect="off" spellCheck={false} data-testid="admin-username-input" /></label>
         <label>Password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" data-testid="admin-password-input" /></label>
         {err && <div className="form-err" data-testid="admin-login-error">{err}</div>}
         <button className="btn big" disabled={busy} data-testid="admin-login-submit-btn">{busy ? "…" : "Enter"}</button>

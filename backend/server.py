@@ -265,8 +265,8 @@ async def admin_login(body: AdminLoginIn, request: Request):
     att = await db.login_attempts.find_one({"identifier": ident})
     if att and att.get("count", 0) >= 5 and datetime.fromisoformat(att["until"]) > datetime.now(timezone.utc):
         raise HTTPException(429, "Too many failed attempts. Try again in 15 minutes.")
-    ok_u = hmac.compare_digest(body.username.encode(), os.environ["ADMIN_USERNAME"].encode())
-    if not (hmac.compare_digest(body.password.encode(), os.environ["ADMIN_PASSWORD"].encode()) and ok_u):
+    ok_u = hmac.compare_digest(body.username.strip().lower().encode(), os.environ["ADMIN_USERNAME"].strip().lower().encode())
+    if not (hmac.compare_digest(body.password.strip().encode(), os.environ["ADMIN_PASSWORD"].strip().encode()) and ok_u):
         cnt = (att or {}).get("count", 0) + 1
         await db.login_attempts.update_one({"identifier": ident}, {"$set": {"count": cnt, "until": (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat()}}, upsert=True)
         raise HTTPException(401, "Invalid admin username or password")
