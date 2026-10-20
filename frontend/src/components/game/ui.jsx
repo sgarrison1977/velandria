@@ -1,4 +1,4 @@
-import React, { useState, useRef, useLayoutEffect } from "react";
+import React, { useState, useRef, useLayoutEffect, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Sword, Wand2, Crosshair, Shield, BookOpen, HardHat, Shirt, Footprints, Hand, Gem, FlaskConical, Coins, Bone, ScrollText, Package, Layers, Circle, X, Swords, Flame, Skull, EyeOff, Wind, Zap, DoorOpen, HeartPulse, Droplet, Move, Bug, Dumbbell, Radiation, Orbit, MoonStar, Snowflake, Cable } from "lucide-react";
 import { RARITY } from "../../game/models";
@@ -86,10 +86,39 @@ export function ItemTip({ id, item, me, extra, equipped }) {
   );
 }
 
+const WIN_KEY = "sx_win_pos";
+const winPos = () => { try { return JSON.parse(localStorage.getItem(WIN_KEY) || "{}"); } catch { return {}; } };
+export const resetWindowPositions = () => { localStorage.removeItem(WIN_KEY); window.dispatchEvent(new Event("sx-winreset")); };
+const zoomOf = () => Number(getComputedStyle(document.documentElement).getPropertyValue("--pz")) || 1;
+const posStyle = (p) => p && { left: p.x / zoomOf(), top: p.y / zoomOf(), right: "auto", bottom: "auto", transform: "none", animation: "none" };
+
+function useWindowPos(key) {
+  const [pos, setPos] = useState(() => winPos()[key]);
+  useEffect(() => { const r = () => setPos(undefined); window.addEventListener("sx-winreset", r); return () => window.removeEventListener("sx-winreset", r); }, []);
+  const startDrag = (e) => {
+    if (e.button !== 0 || e.target.closest("button")) return;
+    const el = e.currentTarget.parentElement, rc = el.getBoundingClientRect(), ox = e.clientX - rc.left, oy = e.clientY - rc.top;
+    let last = { x: rc.left, y: rc.top };
+    const move = (ev) => {
+      last = { x: Math.max(0, Math.min(window.innerWidth - 80, ev.clientX - ox)), y: Math.max(0, Math.min(window.innerHeight - 40, ev.clientY - oy)) };
+      Object.assign(el.style, { left: `${last.x / zoomOf()}px`, top: `${last.y / zoomOf()}px`, right: "auto", bottom: "auto", transform: "none", animation: "none" });
+    };
+    const up = () => {
+      window.removeEventListener("mousemove", move); window.removeEventListener("mouseup", up); document.body.classList.remove("win-dragging");
+      setPos(last); localStorage.setItem(WIN_KEY, JSON.stringify({ ...winPos(), [key]: last }));
+    };
+    document.body.classList.add("win-dragging");
+    window.addEventListener("mousemove", move); window.addEventListener("mouseup", up);
+    e.preventDefault();
+  };
+  return [posStyle(pos), startDrag];
+}
+
 export function Panel({ title, onClose, children, className = "", testid, style }) {
+  const [pos, startDrag] = useWindowPos(testid || className);
   return (
-    <div className={`panel ${className}`} data-testid={testid} style={style} onMouseDown={(e) => e.stopPropagation()}>
-      <div className="panel-head">
+    <div className={`panel ${className}`} data-testid={testid} style={{ ...style, ...pos }} onMouseDown={(e) => e.stopPropagation()}>
+      <div className="panel-head drag-handle" onMouseDown={startDrag} data-testid={testid ? `${testid}-drag-handle` : undefined}>
         <span>{title}</span>
         <button type="button" className="panel-x" data-testid={`${testid}-close`} onClick={onClose}><X size={16} /></button>
       </div>

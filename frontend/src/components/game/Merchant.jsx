@@ -1,9 +1,9 @@
 import { LootFilterSettings } from "./LootFilter";
 import React, { useState, useEffect, useRef } from "react";
 import { Coins } from "lucide-react";
-import { useStore, setState, togglePanel } from "../../game/store";
+import { useStore, setState, togglePanel, toast } from "../../game/store";
 import { swayUniform } from "../../game/world3d";
-import { Panel, ItemIcon, ItemTip, Hover, RARITY_COLOR, AbIcon, inst, cantUse } from "./ui";
+import { Panel, ItemIcon, ItemTip, Hover, RARITY_COLOR, AbIcon, inst, cantUse, resetWindowPositions } from "./ui";
 import { keyLabel } from "./HUD";
 import { audioCfg, setAudio, sfx } from "../../game/audio";
 
@@ -158,6 +158,7 @@ export function SettingsPanel({ data, net, engine }) {
         {["high", "medium", "low"].map((k) => <label key={k} className="row"><input type="radio" name="q" data-testid={`gfx-${k}`} checked={q === k} onChange={() => { setQ(k); localStorage.setItem("sx_quality", k); engine?.setQuality(k); }} /> {k[0].toUpperCase() + k.slice(1)} quality</label>)}
         <label className="row ui-scale">Window size <input type="range" min="0.8" max="1.8" step="0.05" value={pz} data-testid="settings-ui-scale" onChange={(e) => { const v = Number(e.target.value); setPz(v); applyUiScale(v); }} /> <b data-testid="settings-ui-scale-value">{Math.round(pz * 100)}%</b></label>
         <label className="row"><input type="checkbox" data-testid="settings-still-grass-toggle" checked={still} onChange={(e) => { const v = e.target.checked; setStill(v); localStorage.setItem("sx_still_grass", v ? "1" : ""); swayUniform.value = v ? 0 : 1; }} /> Still grass and bushes (no wind sway)</label>
+        <div className="row"><button type="button" className="btn ghost" data-testid="settings-reset-windows-btn" onClick={() => { resetWindowPositions(); toast("Window positions reset", "good"); }}>Reset window positions</button></div>
         <label className="row"><input type="checkbox" data-testid="settings-fps-toggle" checked={!!showFps} onChange={(e) => { localStorage.setItem("sx_show_fps", e.target.checked ? "1" : ""); setState({ showFps: e.target.checked }); }} /> Show FPS &amp; ping counter</label>
         <p className="hint">Middle-mouse drag rotates the camera · mouse wheel zooms.</p>
       </div>}
