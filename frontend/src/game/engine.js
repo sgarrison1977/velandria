@@ -25,7 +25,9 @@ const AB_SFX = { glacies_nova: "frost", fulmen_catena: "zap", lunae_lumen_nex: "
   attack_run: "dash", multi_shot: "bow", arrow_barrage: "bow", double_stab: "swing", spin_attack: "swing", power_strike: "heavy", cleave: "swing" };
 const ICE_GEO = new THREE.CylinderGeometry(1, 1, 1, 12, 1, true), ICE_MAT = new THREE.MeshBasicMaterial({ color: "#9ae8ff", transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
 const EL_COLOR = { fire: "#ff7a2a", frost: "#9ae8ff", lightning: "#fff27a" }, EL_SFX = { fire: "fire", frost: "frost", lightning: "zap" };
-const growlFor = (type) => /skeleton|wraith|ghoul|knight|colossus|shade|cultist|king/.test(type) ? "growl_undead" : /golem|fiend|champion|brood/.test(type) ? "roar" : /wolf|spider|crawler|imp/.test(type) ? "growl_beast" : null;
+const CHATTER = ["Fresh bread! Still warm!", "Have you seen the price of iron lately?", "They say Lord Vexmoor never sleeps.", "Mind the cart!", "Lovely day for it.", "Two copper for a turnip? Robbery!",
+  "My cousin went to the Barrows. Never came back.", "Did you hear the bells last night?", "These apples are the best in Velandria.", "Watch your purse near the gates.",
+  "I'll take three of those, thank you.", "Another hero, eh? Good luck to you.", "The fishing's been poor this week.", "Smells like rain.", "Bounty hunters everywhere these days!"];
 const AB_COLOR = { glacies_nova: "#9ae8ff", fulmen_catena: "#fff27a", lunae_lumen_nex: "#cfe6ff", arcane_bolt: "#7fb8ff", flame_burst: "#ff7a2a", aimed_shot: "#ffd36b", venom_arrow: "#7aff5a", power_strike: "#ffe0a0", cleave: "#ffc080", minor_heal: "#7aff9a", iron_guard: "#9ac8ff", quickstep: "#c8f0ff", whirlwind: "#ffc080", earthshatter: "#d8a060", frost_nova: "#a8e8ff", meteor_storm: "#ff5a1a", volley: "#ffd36b", multishot: "#ffe08a",
   agredi: "#7fb8ff", minor_mederi: "#7aff9a", minor_sanatio: "#c8ff7a", double_stab: "#ffe0a0", attack_run: "#ffb070", spin_attack: "#ffc080", multi_shot: "#ffe08a",
   arrow_barrage: "#ffd36b", ignis: "#ff6a1a", multi_vis_nex: "#a0d0ff", radius: "#e8f4ff", venenum: "#7aff5a", flamma_ventus: "#ff7a2a", tabes_viscera: "#a8ff5a",
@@ -65,7 +67,7 @@ export class Engine {
     this.marker = new THREE.Mesh(new THREE.RingGeometry(0.2, 0.4, 20), new THREE.MeshBasicMaterial({ color: "#ffe08a", transparent: true, depthWrite: false }));
     this.marker.rotation.x = -Math.PI / 2; this.marker.visible = false; scene.add(this.marker);
     this.proxies = [];
-    for (const [id, n] of Object.entries(data.npcs)) this.addEntity(id, "npc", { name: n.name, role: n.role, x: n.pos[0], z: n.pos[1], npcKind: n.kind, ambient: n.ambient });
+    for (const [id, n] of Object.entries(data.npcs)) this.addEntity(id, "npc", { name: n.name, role: n.role, x: n.pos[0], z: n.pos[1], npcKind: n.kind, ambient: n.ambient, stroll: n.stroll });
     this.composer = new EffectComposer(this.renderer);
     this.composer.addPass(new RenderPass(scene, this.camera));
     this.bloom = new UnrealBloomPass(new THREE.Vector2(512, 512), 0.55, 0.5, 0.82);
@@ -95,7 +97,7 @@ export class Engine {
     const px = proxy(r, hgt, { kind, id }); grp.add(px); this.proxies.push(px);
     const e = { id, kind, rig, grp, px, x: o.x, z: o.z, tx: o.x, tz: o.z, rot: o.rot || 0, trot: o.rot || 0, anim: {}, ...o, height: hgt };
     grp.position.set(o.x, this.groundY(o.x, o.z), o.z);
-    if (kind === "npc") { e.home = [o.x, o.z]; e.wanderT = 0; }
+    if (kind === "npc") { e.home = [o.x, o.z]; e.wanderT = Math.random() * 4; e.stroll = o.stroll; }
     this.scene.add(grp); this.entities.set(id, e);
     return e;
   }
@@ -121,7 +123,6 @@ export class Engine {
       let e = this.entities.get(id);
       if (e && e.anim.dead && st !== 2) { this.removeEntity(e); e = null; }
       if (!e) e = this.addEntity(id, "monster", { type, name: this.data.monsters[type].name, level: this.data.monsters[type].level, x, z, rot });
-      if (aggro && !e.aggro && st !== 2 && this.me && Math.hypot(x - this.me.x, z - this.me.z) < 18) { const gr = growlFor(type); if (gr) sfx(gr); }
       Object.assign(e, { tx: x, tz: z, trot: rot, hp, max: mhp, aggro });
       if (chill && !e.ice) { e.ice = new THREE.Mesh(ICE_GEO, ICE_MAT); e.ice.scale.set(Math.max(0.8, e.px.geometry.parameters.radiusTop) * 1.3, e.height, Math.max(0.8, e.px.geometry.parameters.radiusTop) * 1.3); e.ice.position.y = e.height / 2; e.grp.add(e.ice); }
       if (e.ice) e.ice.visible = !!chill && st !== 2;
@@ -163,7 +164,7 @@ export class Engine {
       case "attack": case "mattack":
         if (src) { src.anim.atk = 1; if (f.style !== "melee") src.anim.cast = 0; }
         if (src && tgt && f.style !== "melee") this.projectile(src, tgt, f.el ? EL_COLOR[f.el] : f.style === "arrow" ? "#e8d8b0" : f.style === "spell" ? "#b05cff" : "#7fb8ff", f.style === "arrow", 0.6, null, f.el);
-        if (near(src)) { sfx(f.style === "melee" ? "swing" : f.style === "arrow" ? "bow" : "zap"); if (src.kind === "monster" && Math.random() < 0.22) { const gr = growlFor(src.type || ""); if (gr) sfx(gr); } }
+        if (near(src)) { sfx(f.style === "melee" ? "swing" : f.style === "arrow" ? "bow" : "zap"); }
         if (f.miss && tgt) this.number(tgt, "miss", "#bbb");
         break;
       case "dmg": if (tgt) {
@@ -425,7 +426,7 @@ export class Engine {
       let show = false, name = e.name, sub = "", hp = null;
       if (e.kind === "player") { show = d < 45; name = `${e.name}${e.linkdead ? " (linkdead)" : ""}`; sub = `Lv ${e.level} ${e.cls}`; if (e.id !== this.meId && e.hp < e.max) hp = e.hp / e.max; }
       else if (e.kind === "monster") { show = !e.anim.dead && (hovered || targeted || e.aggro || (e.lastHit && now - e.lastHit < 5000)); name = `${e.name} · Lv ${e.level}`; hp = e.hp / e.max; }
-      else if (e.kind === "npc") { show = hovered || (!e.ambient && d < 18); sub = hovered ? e.role : ""; }
+      else if (e.kind === "npc") { show = hovered || (!e.ambient && d < 18) || (e.say && d < 30); sub = e.say && d < 30 ? `“${e.say.text}”` : hovered ? e.role : ""; }
       else if (e.kind === "gate") { show = d < 25; }
       else { const rar = this.data.items[e.item].rarity; show = e.filtered === "hide" ? false : hovered || (e.filtered !== "dim" && rar !== "common" && d < 14); name = e.qty > 1 ? `${e.name} ×${e.qty}` : e.name; }
       if (!show) { if (e.plate) e.plate.style.display = "none"; continue; }
@@ -569,7 +570,34 @@ export class Engine {
     const x = me.x + (dx / d) * 7, z = me.z + (dz / d) * 7;
     this.net.send({ t: "move", x: +x.toFixed(2), z: +z.toFixed(2), hold: 1 });
   }
+  stroll(e, dt) {
+    const T = this._stalls || (this._stalls = (this.world.props || []).filter((p) => p.kind === "stall"));
+    if (e.say && performance.now() > e.say.until) e.say = null;
+    if (!e.goal) {
+      e.wanderT -= dt;
+      if (e.wanderT > 0) { e.anim.moving = false; return; }
+      const near = T.filter((p) => Math.hypot(p.x - e.home[0], p.z - e.home[1]) < 70);
+      const st = near.length && Math.random() < 0.8 ? near[Math.floor(Math.random() * near.length)] : null;
+      e.goal = st ? [st.x + Math.sin(st.rot || 0) * 2.8 + (Math.random() - 0.5) * 1.5, st.z + Math.cos(st.rot || 0) * 2.8 + (Math.random() - 0.5) * 1.5] : [e.home[0] + (Math.random() - 0.5) * 16, e.home[1] + (Math.random() - 0.5) * 16];
+      e.goalStall = st; e.fails = 0;
+    }
+    const dx = e.goal[0] - e.tx, dz = e.goal[1] - e.tz, d = Math.hypot(dx, dz);
+    if (d < 0.3) {
+      if (e.goalStall) e.trot = Math.atan2(e.goalStall.x - e.tx, e.goalStall.z - e.tz);
+      e.goal = null; e.anim.moving = false; e.wanderT = 4 + Math.random() * 7;
+      if (Math.random() < 0.45) e.say = { text: CHATTER[Math.floor(Math.random() * CHATTER.length)], until: performance.now() + 4500 };
+      return;
+    }
+    let s = Math.min(d, 1.5 * dt), ang = Math.atan2(dx, dz);
+    for (const off of [0, 0.6, -0.6, 1.2, -1.2]) {
+      const a = ang + off, nx = e.tx + Math.sin(a) * s, nz = e.tz + Math.cos(a) * s;
+      if (!this.terrain.blocked(nx, nz)) { e.tx = nx; e.tz = nz; e.trot = a; e.anim.moving = true; return; }
+    }
+    if (++e.fails > 20) { e.goal = null; e.wanderT = 1; }
+  }
+
   wander(e, dt) {
+    if (e.stroll) return this.stroll(e, dt);
     e.wanderT -= dt;
     if (e.wanderT <= 0) {
       e.wanderT = 4 + Math.random() * 6;

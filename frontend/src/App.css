@@ -565,3 +565,4 @@ input[type="text"], input[type="email"], input[type="password"], input:not([type
 @media (max-width: 640px) { .trade-offers { grid-template-columns: 1fr; } }
 .panel-head.drag-handle { cursor: grab; user-select: none; }
 body.win-dragging, body.win-dragging * { cursor: grabbing !important; user-select: none !important; }
+.plate.is-say .plate-sub, .nameplate.is-say small { color: #fff4d6; font-style: italic; }

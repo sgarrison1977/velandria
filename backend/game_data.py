@@ -672,6 +672,12 @@ BOUNTY_ITEMS = {
 ITEMS.update(BOUNTY_ITEMS)
 BOUNTY_SHOP = [("hunters_signet", 3), ("wardens_girdle", 6), ("trackers_boots", 8), ("huntsman_cleaver", 10), ("huntsman_longbow", 10), ("huntsman_rod", 10),
                ("slayers_visage", 18), ("tyrantbane_amulet", 22), ("tyrantbane_blade", 30), ("tyrantbane_bow", 30), ("tyrantbane_staff", 30)]
+_FOLK = ["Marta", "Odo", "Linnea", "Bram", "Pell", "Gisla", "Corwin", "Fenna", "Hal", "Ysolde", "Dunstan", "Mira", "Edric", "Tilda", "Rook", "Anwen", "Jory", "Sabeth", "Wat", "Ilse"]
+_ROLES = ["Shopper", "Townsfolk", "Merchant's Apprentice", "Traveler", "Washerwoman", "Farmhand", "Gossip", "Errand Runner"]
+for _i, (_t, (_cx, _cz)) in enumerate([(t, c) for t, c in {"semel": (90, 200), "elderglen": (1000, 210), "ironhold": (1260, 200), "sunhollow": (1470, 300)}.items() for _ in range(5)]):
+    _a = _i * 1.9
+    NPCS[f"stroll{_i}"] = dict(name=_FOLK[_i], role=_ROLES[_i % len(_ROLES)], town=_t, pos=[round(_cx + math.cos(_a) * 11, 1), round(_cz + math.sin(_a) * 9, 1)],
+                               kind="child" if _i % 7 == 3 else "villager", ambient=True, stroll=True)
 for _t, (_x, _z) in {"semel": (81, 200), "elderglen": (991, 210), "ironhold": (1251, 200), "sunhollow": (1461, 300)}.items():
     NPCS[f"board_{_t}"] = dict(name="Bounty Board", role="Boss Bounties · Token Shop", town=_t, pos=[_x, _z], kind="board", board=True)
 NPCS["board_harbor"] = dict(name="Bounty Board", role="Boss Bounties · Token Shop", town="harbor", pos=[1071, 582], kind="board", board=True, glob=True)
