@@ -446,7 +446,7 @@ export class Engine {
       if (e._s !== sub) { e.plateSub.textContent = sub; e._s = sub; }
       if (e.kind === "loot") e.plateName.style.color = RARITY[this.data.items[e.item].rarity];
       else if (e.kind === "monster") { const dl = e.level - (this.entities.get(this.meId)?.level || 1), c = dl >= 5 ? "#ff4a3a" : dl >= 2 ? "#ff9a3a" : dl >= -2 ? "#ffe14a" : dl >= -8 ? "#7fd38a" : "#9a9a9a"; if (e._c !== c) { e.plateName.style.color = c; e._c = c; } }
-      el.classList.toggle("is-target", targeted); el.classList.toggle("is-hover", hovered);
+      el.classList.toggle("is-target", targeted); el.classList.toggle("is-hover", hovered); el.classList.toggle("is-say", !!(e.say && d < 30));
       e.plateHp.style.display = hp === null ? "none" : "block";
       if (hp !== null) e.plateBar.style.width = `${Math.max(0, hp * 100)}%`;
     }
