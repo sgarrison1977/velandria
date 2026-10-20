@@ -570,6 +570,21 @@ export class Engine {
     const x = me.x + (dx / d) * 7, z = me.z + (dz / d) * 7;
     this.net.send({ t: "move", x: +x.toFixed(2), z: +z.toFixed(2), hold: 1 });
   }
+  gossip() {
+    if (this._gossip) return this._gossip;
+    const B = Object.values(this.data.bounties || {}), tpl = [
+      (b) => `I heard ${b.name} haunts ${b.where}.`, (b) => `Hunters say ${b.name} lurks near ${b.where}. Level ${b.level}, they reckon.`,
+      (b) => `The Bounty Board pays ${b.gold.toLocaleString()} gold for ${b.name}!`, (b) => `Don't wander into ${b.where} — ${b.name} lives there.`];
+    this._gossip = [...B.map((b, i) => tpl[i % tpl.length](b)),
+      "Castle Vexmoor sits in the far northeast. Sixteen halls, they say, and the Usurper waits on his throne.",
+      "Clear every foe in a castle hall at once and a Vexmoor Coffer appears. Gold, potions, maybe more!",
+      "Lord Vexmoor calls his Royal Guards when he's bloodied. Kill them fast, or bring friends.",
+      "The Regalia of Vexmoor only drops inside the castle. Wear all six and you'll shine like a king.",
+      "Fastest castle runs are posted on the Bounty Board each week. Glory for the quick!",
+      "Bounty Tokens buy gear you can't find anywhere else. Ask at any Bounty Board."];
+    return this._gossip;
+  }
+
   stroll(e, dt) {
     const T = this._stalls || (this._stalls = (this.world.props || []).filter((p) => p.kind === "stall"));
     if (e.say && performance.now() > e.say.until) e.say = null;
@@ -585,7 +600,7 @@ export class Engine {
     if (d < 0.3) {
       if (e.goalStall) e.trot = Math.atan2(e.goalStall.x - e.tx, e.goalStall.z - e.tz);
       e.goal = null; e.anim.moving = false; e.wanderT = 4 + Math.random() * 7;
-      if (Math.random() < 0.45) e.say = { text: CHATTER[Math.floor(Math.random() * CHATTER.length)], until: performance.now() + 4500 };
+      if (Math.random() < 0.45) { const H = this.gossip(), hint = H.length && Math.random() < 0.4; e.say = { text: hint ? H[Math.floor(Math.random() * H.length)] : CHATTER[Math.floor(Math.random() * CHATTER.length)], until: performance.now() + (hint ? 6500 : 4500) }; }
       return;
     }
     let s = Math.min(d, 1.5 * dt), ang = Math.atan2(dx, dz);
