@@ -345,15 +345,23 @@ async def admin_kick(cid: str, body: AdminTextIn | None = None, _=Depends(curren
 @api.get("/admin/bots")
 async def admin_bots(_=Depends(current_admin)):
     import bots
-    chars = await db.characters.find({"account_id": bots.BOT_ACCOUNT}, {"_id": 0, "id": 1, "name": 1, "cls": 1, "level": 1}).to_list(10)
-    return {"enabled": getattr(game, "bots_enabled", True), "bots": [admin_char(c) for c in chars]}
+    chars = await db.characters.find({"account_id": bots.BOT_ACCOUNT}, {"_id": 0, "id": 1, "name": 1, "cls": 1, "level": 1, "bot_slot": 1}).to_list(20)
+    chars.sort(key=lambda c: c.get("bot_slot", 99))
+    return {"enabled": getattr(game, "bots_enabled", True), "count": getattr(game, "bot_count", 4), "chat": getattr(game, "bot_chat", False),
+            "bots": [admin_char(c) for c in chars]}
+
+
+class AdminBotsIn(BaseModel):
+    enabled: bool | None = None
+    count: int | None = Field(None, ge=0, le=12)
+    chat: bool | None = None
 
 
 @api.put("/admin/bots")
-async def admin_set_bots(body: dict, _=Depends(current_admin)):
+async def admin_set_bots(body: AdminBotsIn, _=Depends(current_admin)):
     import bots
-    await bots.set_enabled(game, db, bool(body.get("enabled")))
-    return {"enabled": game.bots_enabled}
+    await bots.save_cfg(game, db, **{k: v for k, v in body.model_dump().items() if v is not None})
+    return {"enabled": game.bots_enabled, "count": game.bot_count, "chat": game.bot_chat}
 
 
 @api.post("/admin/broadcast")

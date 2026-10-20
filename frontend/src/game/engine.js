@@ -180,7 +180,7 @@ export class Engine {
       case "arc": if (src && tgt) this.arc(src, tgt); break;
       case "legendary_burst": this.shock(f.x, f.z, "#ffd36b", 4); this.dirtBurst(f.x, f.z, "#ffd36b"); sfx("legendary"); break;
       case "pdmg": if (tgt) { tgt.anim.hurt = 1; this.number(tgt, f.v, "#ff5040"); if (f.tgt === this.meId) { sfx("hurt"); this.shake = 0.25; } } break;
-      case "death": if (tgt) { tgt.anim.dead = true; if (near(tgt)) sfx("mdeath"); } break;
+      case "death": if (tgt) tgt.anim.dead = true; break;
       case "pdeath": if (tgt) tgt.anim.dead = true; if (f.tgt === this.meId) sfx("death"); break;
       case "heal": if (tgt) { this.burst(tgt, "#7aff9a", 14, 1.4); if (f.v) this.number(tgt, `+${f.v}`, "#7aff9a"); if (near(tgt)) sfx("heal"); } break;
       case "levelup": if (src) { this.pillar(src); sfx("levelup"); } break;

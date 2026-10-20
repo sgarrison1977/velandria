@@ -10,7 +10,12 @@ from world import SAFE_ZONES, GOH, in_safe
 
 log = logging.getLogger("bots")
 BOT_ACCOUNT = "__bots__"
-BOTS = [("Thorgar", "warrior", "str"), ("Sylvara", "ranger", "dex"), ("Myrrdin", "wizard", "int"), ("Vexa", "warlock", "int")]
+PRIMARY = {"warrior": "str", "ranger": "dex", "wizard": "int", "warlock": "int"}
+BOTS = [(n, c, PRIMARY[c]) for n, c in [("Thorgar", "warrior"), ("Sylvara", "ranger"), ("Myrrdin", "wizard"), ("Vexa", "warlock"), ("Haldrek", "warrior"), ("Elowen", "ranger"),
+                                        ("Caelum", "wizard"), ("Morwenna", "warlock"), ("Gunnar", "warrior"), ("Kestrel", "ranger"), ("Isolde", "wizard"), ("Draven", "warlock")]]
+LINES = ["Anyone up for the castle later?", "These wolves never end, huh.", "Good hunting, everyone!", "Just hit a new level, feels good.", "Has anyone seen Old Greymaw lately?",
+         "Selling junk, then back out there.", "Watch out near the Barrows, it's rough.", "Bounty Board has some juicy rewards today.", "Need more potions...",
+         "Lovely weather for monster slaying.", "Got a nice drop just now!", "Heading north, wish me luck.", "Stay safe out there, friends.", "Who else is grinding tonight?"]
 LOOKS = {"warrior": dict(skin="#d8a880", hair="#5a3a1a", hairStyle="short", beardStyle="full"), "ranger": dict(skin="#f0c8a8", hair="#c8a050", hairStyle="long"),
          "wizard": dict(skin="#e0b090", hair="#d8d8d8", hairStyle="long", beardStyle="long"), "warlock": dict(skin="#c8946e", hair="#1a1a1a", hairStyle="long")}
 GOODS = {"semel": "mira", "elderglen": "fenn", "ironhold": "brikka", "sunhollow": "soren"}
@@ -23,6 +28,8 @@ class Bot:
         self.g, self.p, self.primary = game, p, primary
         self.state, self.goal, self.ground, self.blacklist = "hunt", None, None, {}
         self.next_gear = self.stuck_t = 0
+        self.next_chat = now() + rnd.uniform(120, 480)
+        self.party_until = 0
         self.stuck_pos = (p.x, p.z)
 
     async def act(self, msg):
@@ -44,9 +51,13 @@ class Bot:
             x, z = p.x + (x - p.x) / d * 120, p.z + (z - p.z) / d * 120
         return self.g.path_to(p, float(x), float(z))
 
+    def mate(self):
+        pt = self.g.parties.get(getattr(self.p, "party", None))
+        return next((self.g.players[i] for i in pt["members"] if i != self.p.id and i in self.g.players), None) if pt else None
+
     def pick_monster(self, radius):
         p, t = self.p, now()
-        lo, hi = max(1, p.level - 4), p.level + 1
+        lo, hi = (max(1, p.level - 1), p.level + 3) if self.mate() else (max(1, p.level - 4), p.level + 1)
         best = None
         for m in self.g.monsters.values():
             d = m.d
@@ -113,6 +124,9 @@ class Bot:
         if p.dead_until:
             self.state, self.goal = "rest", None
             return
+        if getattr(self.g, "bot_chat", False) and t > self.next_chat:
+            self.next_chat = t + rnd.uniform(240, 720)
+            await self.g.chat(p, rnd.choice(LINES))
         if p.attr_points > 0:
             for _ in range(p.attr_points):
                 await self.act({"t": "alloc", "attr": self.primary if rnd.random() < 0.7 else "sta"})
@@ -143,6 +157,14 @@ class Bot:
         m = self.g.monsters.get(p.target) if p.target else None
         if m and not m.dead_until:
             return await self.fight(m)
+        mate = self.mate()
+        if mate and self.g.parties[p.party]["leader"] != p.id:
+            lm = self.g.monsters.get(mate.target) if mate.target else None
+            if lm and not lm.dead_until and dist(p, lm) < 60:
+                return await self.fight(lm)
+            if dist(p, mate) > 12 and not mate.dead_until:
+                self.go(mate.x + rnd.uniform(-2, 2), mate.z + rnd.uniform(-2, 2))
+                return
         loot = min((l for l in self.g.loot.values() if math.hypot(l["x"] - p.x, l["z"] - p.z) < 14 and (not l["owner"] or l["owner"] == p.id or l["owner_until"] < t)),
                    key=lambda l: math.hypot(l["x"] - p.x, l["z"] - p.z), default=None)
         if loot and not p.pending:
@@ -166,51 +188,78 @@ class Bot:
                 self.go(p.x + math.cos(a) * 40, p.z + math.sin(a) * 40)
 
 
-async def spawn_bots(game, db):
-    bots = []
-    for name, cls, primary in BOTS:
-        doc = await db.characters.find_one({"account_id": BOT_ACCOUNT, "cls": cls}, {"_id": 0})
-        if not doc:
-            nm = name
-            for suffix in ("", "rin", "dor", "ys", "an"):
-                nm = name + suffix
-                if not await db.characters.find_one({"name_lower": nm.lower()}):
-                    break
-            doc = new_character_doc(BOT_ACCOUNT, nm, cls)
-            doc["look"] = LOOKS[cls]
-            await db.characters.insert_one(dict(doc))
-            doc.pop("_id", None)
-        p = await game.attach(doc, None)
-        p.bot = True
-        bots.append(Bot(game, p, primary))
-        log.info("bot %s (%s, lv %d) is online", p.name, cls, p.level)
-    return bots
+async def spawn_bot(game, db, i):
+    name, cls, primary = BOTS[i]
+    doc = await db.characters.find_one({"account_id": BOT_ACCOUNT, "bot_slot": i}, {"_id": 0})
+    if not doc and i < 4:
+        doc = await db.characters.find_one({"account_id": BOT_ACCOUNT, "cls": cls, "bot_slot": {"$exists": False}}, {"_id": 0})
+        if doc:
+            await db.characters.update_one({"id": doc["id"]}, {"$set": {"bot_slot": i}})
+    if not doc:
+        nm = name
+        for suffix in ("", "rin", "dor", "ys", "an"):
+            nm = name + suffix
+            if not await db.characters.find_one({"name_lower": nm.lower()}):
+                break
+        doc = new_character_doc(BOT_ACCOUNT, nm, cls)
+        doc["look"], doc["bot_slot"] = LOOKS[cls], i
+        await db.characters.insert_one(dict(doc))
+        doc.pop("_id", None)
+    p = await game.attach(doc, None)
+    p.bot = True
+    log.info("bot %s (%s, lv %d) is online", p.name, cls, p.level)
+    return Bot(game, p, primary)
 
 
-async def set_enabled(game, db, on):
-    await db.meta.update_one({"_id": "bots"}, {"$set": {"enabled": bool(on)}}, upsert=True)
-    game.bots_enabled = bool(on)
+async def save_cfg(game, db, **kw):
+    await db.meta.update_one({"_id": "bots"}, {"$set": kw}, upsert=True)
+    for k, v in kw.items():
+        setattr(game, {"enabled": "bots_enabled", "count": "bot_count", "chat": "bot_chat"}[k], v)
+
+
+def maybe_pair(game, bots):
+    t = now()
+    for b in bots:
+        if b.party_until and t > b.party_until and getattr(b.p, "party", None):
+            game.party_leave(b.p)
+            b.party_until = 0
+    free = [b for b in bots if not getattr(b.p, "party", None) and not b.p.dead_until]
+    rnd.shuffle(free)
+    while len(free) >= 2:
+        a = free.pop()
+        o = next((x for x in free if abs(x.p.level - a.p.level) <= 3), None)
+        if not o or rnd.random() > 0.3:
+            continue
+        free.remove(o)
+        pid = "bp" + a.p.id[:8]
+        game.parties[pid] = dict(leader=a.p.id, members={a.p.id, o.p.id})
+        a.p.party = o.p.party = pid
+        a.party_until = o.party_until = t + rnd.uniform(600, 1500)
+        game.party_send(pid)
 
 
 async def run_bots(game, db):
-    game.bots_enabled = (await db.meta.find_one({"_id": "bots"}) or {}).get("enabled", True)
-    bots = []
+    cfg = await db.meta.find_one({"_id": "bots"}) or {}
+    game.bots_enabled, game.bot_count, game.bot_chat = cfg.get("enabled", True), cfg.get("count", 4), cfg.get("chat", False)
+    bots, next_pair = [], now() + 60
     while True:
-        if not game.bots_enabled:
-            for b in bots:
-                if game.players.get(b.p.id) is b.p:
-                    await game.remove_player(b.p)
-            bots = []
+        want = game.bot_count if game.bots_enabled else 0
+        while len(bots) > want:
+            b = bots.pop()
+            if game.players.get(b.p.id) is b.p:
+                await game.remove_player(b.p)
+        while len(bots) < want:
+            bots.append(await spawn_bot(game, db, len(bots)))
+        if not bots:
             await asyncio.sleep(2)
             continue
-        if not bots:
-            bots = await spawn_bots(game, db)
+        if now() > next_pair:
+            next_pair = now() + 60
+            maybe_pair(game, bots)
         for b in bots:
             if game.players.get(b.p.id) is not b.p:
                 b.p = game.players.get(b.p.id) or await game.attach(await db.characters.find_one({"id": b.p.id}, {"_id": 0}), None)
                 b.p.bot = True
-            if not game.bots_enabled:
-                break
             try:
                 await b.tick()
             except Exception:
