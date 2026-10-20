@@ -342,6 +342,20 @@ async def admin_kick(cid: str, body: AdminTextIn | None = None, _=Depends(curren
     return {"ok": True}
 
 
+@api.get("/admin/bots")
+async def admin_bots(_=Depends(current_admin)):
+    import bots
+    chars = await db.characters.find({"account_id": bots.BOT_ACCOUNT}, {"_id": 0, "id": 1, "name": 1, "cls": 1, "level": 1}).to_list(10)
+    return {"enabled": getattr(game, "bots_enabled", True), "bots": [admin_char(c) for c in chars]}
+
+
+@api.put("/admin/bots")
+async def admin_set_bots(body: dict, _=Depends(current_admin)):
+    import bots
+    await bots.set_enabled(game, db, bool(body.get("enabled")))
+    return {"enabled": game.bots_enabled}
+
+
 @api.post("/admin/broadcast")
 async def admin_broadcast(body: AdminTextIn, _=Depends(current_admin)):
     game.announce(body.text.strip())
@@ -477,6 +491,8 @@ async def startup():
     game = Game(db)
     _world_json = json.dumps(game.world.client_payload(), separators=(",", ":"))
     game.start()
+    import bots
+    asyncio.ensure_future(bots.run_bots(game, db))
     log.info("Velandria world ready: %d monsters, %d trees", len(game.monsters), len(game.world.trees))
 
 

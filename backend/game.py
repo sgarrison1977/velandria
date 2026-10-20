@@ -1472,6 +1472,8 @@ class Game:
             o = self.players.get(msg.get("id"))
             if not o or o is p:
                 return "That player is not available."
+            if getattr(o, "bot", False):
+                return f"{o.name} is busy adventuring right now."
             if getattr(o, "party", None):
                 return f"{o.name} is already in a party."
             if pid and self.parties[pid]["leader"] != p.id:
@@ -1675,6 +1677,8 @@ class Game:
     def trade_cmd(self, p, t, msg):
         if t == "trade_req":
             o = self.players.get(msg.get("id"))
+            if getattr(o, "bot", False):
+                return f"{o.name} is busy adventuring right now."
             if getattr(p, "trade", None) or getattr(o, "trade", None):
                 return "One of you is already trading."
             err = self.trade_block(p, o)
