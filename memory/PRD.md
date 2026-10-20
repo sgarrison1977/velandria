@@ -107,3 +107,4 @@ Later requests: hold-to-walk toward pointer; ranged/spell abilities fire at the 
 - 2026-06: Villager gossip: strollers' chatter ~40% are hints built from data.bounties (boss name/where/level/gold) + castle secrets (engine.gossip). NOT TESTED (user rule).
 - 2026-06: Portals restyled: structures.js standingPortal() oval stone frame + glowing rune rim + animated swirl (canvas texture) + light; dungeon exits use it, cave entrances get a smaller amber portal inside the mouth; mage gate spell uses oval swirl. Talkative villagers: left-click an ambient villager within 14m → they stop, face you and say a rumor (gossip) or gameplay tip for 7s (engine.villagerTalk). NOT TESTED (user rule).
 - 2026-06: Nameplates enlarged (name 17px, sub 13px, hp bar 72x7); speech lines no longer Title-Cased (is-say class).
+- 2026-06: Nameplates bumped again: name 20px, sub-line 15px bold white with heavy outline, hp bar 80x8.
