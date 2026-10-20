@@ -382,10 +382,10 @@ export function buildStructures(world, terrain, scene) {
   const lights = { count: 0 };
   for (const b of world.buildings) {
     const town = world.towns[b.town || (b.style === "semel" ? "semel" : "elderglen")] || world.towns.elderglen;
-    const dx = town[0] - b.x, dz = town[1] - b.z, side = Math.abs(dx) > Math.abs(dz);
+    const dx = town[0] - b.x, dz = town[1] - b.z, face = b.face || (Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? "E" : "W") : (dz > 0 ? "S" : "N")), side = face === "E" || face === "W";
     const bb = b.style !== "ruin" && side ? { ...b, w: b.d, d: b.w } : b;
     const g = b.style === "semel" || b.style === "iron" || b.style === "harbor" ? semelHouse(bb) : b.style === "elder" || b.style === "sun" ? elderHut(bb) : ruinBuilding(bb);
-    if (b.style !== "ruin") g.rotation.y = side ? (dx > 0 ? Math.PI / 2 : -Math.PI / 2) : (dz > 0 ? 0 : Math.PI);
+    if (b.style !== "ruin") g.rotation.y = { E: Math.PI / 2, W: -Math.PI / 2, S: 0, N: Math.PI }[face];
     g.position.set(b.x, terrain.height(b.x, b.z) - 0.1, b.z);
     root.add(g);
   }

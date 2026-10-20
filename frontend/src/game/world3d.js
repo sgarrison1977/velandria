@@ -499,7 +499,7 @@ export function buildWater(world, terrain, scene) {
       for (let i = -5; i <= 5; i += 2.5) { const post = new THREE.Mesh(new THREE.BoxGeometry(0.22, 1.2, 0.22), rail); post.position.set(sx, 0.6, i); g.add(post); }
     }
     g.position.set(b.x, terrain.height(b.x, b.z) * 0 + 0, b.z);
-    g.rotation.y = -b.rot;
+    g.rotation.y = -b.rot; g.scale.z = (b.len || 10) / 10;
     g.traverse((o) => { o.castShadow = true; o.receiveShadow = true; });
     scene.add(g);
   }

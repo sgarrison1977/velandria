@@ -1,6 +1,7 @@
 """Deterministic world layout + collision grid + pathfinding for Velandria."""
-import math, random, base64, heapq
+import math, random, base64, heapq, logging
 import numpy as np
+log = logging.getLogger("world")
 
 W, H = 1600, 600
 OH = 400
@@ -294,14 +295,16 @@ class World:
         self.streams = [catmull(s, 2.0) for s in STREAMS]
         self.bridges = []
         for s in self.streams:
-            prev_on = False
-            for (x, z) in s:
+            run = []
+            for (x, z) in s + [(-1, -1)]:
                 xi, zi = int(x), int(z)
-                if 0 <= xi < W and 0 <= zi < H:
-                    on = self.road_dist[zi, xi] < 3.6
-                    if on and not prev_on:
-                        self.bridges.append(self._bridge_at(s, x, z))
-                    prev_on = on
+                on = 0 <= xi < W and 0 <= zi < H and self.road_dist[zi, xi] < 3.6
+                if on:
+                    run.append((float(self.road_dist[zi, xi]), x, z))
+                elif run:
+                    self.bridges.append(self._bridge_at(s, *min(run)[1:]))
+                    run = []
+            for (x, z) in s:
                 if z < OH - 3:
                     self._disc(x, z, 2.6, skip_road=True)
         for lk in LAKES:
@@ -312,11 +315,21 @@ class World:
         # town walls
         self.walls = []
         self.props = []
-        self._ring(SEMEL, 56, 56, [0, -math.pi / 2, math.pi / 2], "stone")
-        self._ring(ELDER, 62, 48, [math.pi, -math.pi / 2, 0], "palisade")
-        self._ring(IRON, 46, 40, [math.pi, 0, math.pi / 2, -math.pi / 2], "stone")
-        self._ring(SUNH, 50, 40, [math.pi, -math.pi / 2], "palisade")
-        self.buildings = SEMEL_BUILDINGS + ELDER_BUILDINGS + IRON_BUILDINGS + SUN_BUILDINGS + WILD_STRUCTS
+        self.gate_pts = []
+        rings = {"semel": (SEMEL, 56, 56, [0, -math.pi / 2, math.pi / 2], "stone"), "elder": (ELDER, 62, 48, [math.pi, -math.pi / 2, 0], "palisade"),
+                 "iron": (IRON, 46, 40, [math.pi, 0, math.pi / 2, -math.pi / 2], "stone"), "sun": (SUNH, 50, 40, [math.pi, -math.pi / 2], "palisade")}
+        for c, rx, rz, dg, ws in rings.values():
+            self._ring(c, rx, rz, self._road_gates(c, rx, rz) or [(g, 3.0) for g in dg], ws)
+        self.buildings = []
+        for bd in SEMEL_BUILDINGS + ELDER_BUILDINGS + IRON_BUILDINGS + SUN_BUILDINGS + WILD_STRUCTS:
+            nb = self._place_building(dict(bd), rings.get(bd["style"]))
+            if nb:
+                self.buildings.append(nb)
+        for c, rx, rz, _, _ in rings.values():
+            for zi in range(int(c[1] - rz - 4), int(c[1] + rz + 5)):
+                for xi in range(int(c[0] - rx - 4), int(c[0] + rx + 5)):
+                    if 0 <= zi < H and 0 <= xi < W and self.road_dist[zi, xi] < 0 and ((xi - c[0]) / (rx + 4)) ** 2 + ((zi - c[1]) / (rz + 4)) ** 2 <= 1:
+                        b[zi, xi] = 0
         for bd in self.buildings:
             self._block_rect(bd["x"], bd["z"], bd["w"], bd["d"])
         self._town_props()
@@ -784,24 +797,93 @@ class World:
     def _block_rect(self, x, z, w, d):
         self.blocked[max(0, int(z - d / 2)):int(z + d / 2) + 1, max(0, int(x - w / 2)):int(x + w / 2) + 1] = 1
 
+    def _roads(self):
+        return [(self.main_road, 3.2)] + [(p["pts"], p["w"]) for p in self.paths]
+
     def _bridge_at(self, s, x, z):
         i = min(range(len(s)), key=lambda k: (s[k][0] - x) ** 2 + (s[k][1] - z) ** 2)
         a, c = s[max(0, i - 1)], s[min(len(s) - 1, i + 1)]
-        ang = math.atan2(c[1] - a[1], c[0] - a[0])
-        return dict(x=x, z=z, rot=ang)
+        sang = math.atan2(c[1] - a[1], c[0] - a[0])
+        best = None
+        for pts, _ in self._roads():
+            for k in range(len(pts)):
+                d2 = (pts[k][0] - x) ** 2 + (pts[k][1] - z) ** 2
+                if best is None or d2 < best[0]:
+                    best = (d2, pts, k)
+        _, pts, k = best
+        p0, p1 = pts[max(0, k - 1)], pts[min(len(pts) - 1, k + 1)]
+        rang = math.atan2(p1[1] - p0[1], p1[0] - p0[0])
+        ln = max(10.0, min(18.0, 9.0 / max(0.45, abs(math.sin(rang - sang)))))
+        return dict(x=x, z=z, rot=rang - math.pi / 2, len=round(ln, 2))
+
+    def _road_gates(self, c, rx, rz):
+        out = []
+        E = lambda x, z: ((x - c[0]) / rx) ** 2 + ((z - c[1]) / rz) ** 2 - 1
+        for pts, w in self._roads():
+            for (x1, z1), (x2, z2) in zip(pts, pts[1:]):
+                e1, e2 = E(x1, z1), E(x2, z2)
+                if e1 * e2 < 0:
+                    t = e1 / (e1 - e2)
+                    x, z = x1 + (x2 - x1) * t, z1 + (z2 - z1) * t
+                    a = math.atan2((z - c[1]) / rz, (x - c[0]) / rx)
+                    near = next((g for g in out if abs(math.atan2(math.sin(a - g[0]), math.cos(a - g[0]))) < 0.25), None)
+                    if near:
+                        near[1] = max(near[1], w)
+                    else:
+                        out.append([a, w])
+        return [tuple(g) for g in out]
 
     def _ring(self, c, rx, rz, gates, style):
         n = int(2 * math.pi * max(rx, rz) / 2.5)
+        R = max(rx, rz)
+        gates = [g if isinstance(g, (tuple, list)) else (g, 3.0) for g in gates]
         for i in range(n):
             a = 2 * math.pi * i / n
-            if any(abs(math.atan2(math.sin(a - g), math.cos(a - g))) < 5.5 / max(rx, rz) for g in gates):
+            if any(abs(math.atan2(math.sin(a - g), math.cos(a - g))) < max(5.5, gw + 3.5) / R for g, gw in gates):
                 continue
             x, z = c[0] + math.cos(a) * rx, c[1] + math.sin(a) * rz
             a2 = 2 * math.pi * (i + 1) / n
-            self.walls.append(dict(x=x, z=z, x2=c[0] + math.cos(a2) * rx, z2=c[1] + math.sin(a2) * rz, style=style))
+            x2, z2 = c[0] + math.cos(a2) * rx, c[1] + math.sin(a2) * rz
+            if self.road_dist[int((z + z2) / 2), int((x + x2) / 2)] < 1.0:
+                continue
+            self.walls.append(dict(x=x, z=z, x2=x2, z2=z2, style=style))
             self._disc(x, z, 1.3)
-        for g in gates:
-            self.props.append(dict(kind="gate_" + style, x=c[0] + math.cos(g) * rx, z=c[1] + math.sin(g) * rz, rot=g))
+        for g, _ in gates:
+            gx, gz = c[0] + math.cos(g) * rx, c[1] + math.sin(g) * rz
+            self.gate_pts.append((gx, gz))
+            self.props.append(dict(kind="gate_" + style, x=gx, z=gz, rot=g))
+
+    def _bfit(self, x, z, w, d, ring):
+        x0, x1, z0, z1 = int(x - w / 2 - 1.5), int(x + w / 2 + 2.5), int(z - d / 2 - 1.5), int(z + d / 2 + 2.5)
+        if x0 < 3 or z0 < 3 or x1 > W - 3 or z1 > OH - 3 or self.road_dist[z0:z1, x0:x1].min() < 0.8:
+            return False
+        for gx, gz in self.gate_pts:
+            if math.hypot(max(abs(gx - x) - w / 2, 0), max(abs(gz - z) - d / 2, 0)) < 7:
+                return False
+        if ring:
+            c, rx, rz = ring[0], ring[1] - 3, ring[2] - 3
+            if any(((px - c[0]) / rx) ** 2 + ((pz - c[1]) / rz) ** 2 > 1 for px in (x - w / 2, x + w / 2) for pz in (z - d / 2, z + d / 2)):
+                return False
+        return all(abs(o["x"] - x) > (o["w"] + w) / 2 + 1 or abs(o["z"] - z) > (o["d"] + d) / 2 + 1 for o in self.buildings)
+
+    def _place_building(self, bd, ring):
+        x0, z0, w, d = bd["x"], bd["z"], bd["w"], bd["d"]
+        spot = next(((x0 + math.cos(k * 0.3927) * r, z0 + math.sin(k * 0.3927) * r) for r in range(0, 13) for k in range(16 if r else 1)
+                     if self._bfit(x0 + math.cos(k * 0.3927) * r, z0 + math.sin(k * 0.3927) * r, w, d, ring)), None)
+        if not spot:
+            log.info("dropped building %s at (%s,%s): no clear spot", bd.get("name") or bd["kind"], x0, z0)
+            return None
+        bd["x"], bd["z"] = round(spot[0], 1), round(spot[1], 1)
+        if bd["style"] != "ruin":
+            zs, xs = np.nonzero(self.road_dist[max(0, int(bd["z"] - 22)):int(bd["z"] + 22), max(0, int(bd["x"] - 22)):int(bd["x"] + 22)] < 0)
+            if len(xs):
+                k = int(np.argmin((xs + max(0, int(bd["x"] - 22)) - bd["x"]) ** 2 + (zs + max(0, int(bd["z"] - 22)) - bd["z"]) ** 2))
+                dx, dz = xs[k] + max(0, int(bd["x"] - 22)) - bd["x"], zs[k] + max(0, int(bd["z"] - 22)) - bd["z"]
+            else:
+                c = ring[0] if ring else (bd["x"], bd["z"] + 1)
+                dx, dz = c[0] - bd["x"], c[1] - bd["z"]
+            bd["face"] = ("E" if dx > 0 else "W") if abs(dx) > abs(dz) else ("S" if dz > 0 else "N")
+        return bd
 
     def _town_props(self):
         P = self.props

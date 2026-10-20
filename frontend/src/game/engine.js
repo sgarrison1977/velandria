@@ -507,7 +507,7 @@ export class Engine {
       if (e.rig.gate) { const f = Math.max(0.02, Math.min(1, (e.endAt - performance.now() / 1000) / (e.total || 10))); e.rig.timer.scale.setScalar(f); e.rig.timer.material.color.set(f < 0.3 ? "#ff5a5a" : "#e0c8ff"); e.rig.gate.rotation.y = this.yaw || 0; e.rig.disc.rotation.z = t * 2; e.rig.disc.material.opacity = 0.4 + 0.2 * Math.sin(t * 4); continue; }
       if (e.pillar) { const k = 0.7 + 0.3 * Math.sin(t * 3 + e.x); e.pillar.core.material.opacity = 0.85 * k; e.pillar.glow.material.opacity = 0.3 * k; e.pillar.glow.scale.set(1 + 0.15 * k, 1, 1 + 0.15 * k); }
       if (e.rig.body) { if (e.rig.invisOn) SHIMMER.uniforms.uTime.value = t; e.rig.root.rotation.y = e.rot; animateRig(e.rig, e.anim, dt, t); if (e.rig.shimmer) animateGlow(e.rig, t); }
-      else if (e.kind === "npc") { if (e.rig.kind === "prop" && e.npcKind !== "trunk" && e.npcKind !== "chest" && e.npcKind !== "crypt_door") e.rig.root.rotation.y = t * 0.3; }
+      else if (e.kind === "npc") { if (e.rig.kind === "prop" && !["trunk", "chest", "crypt_door", "board"].includes(e.npcKind)) e.rig.root.rotation.y = t * 0.3; }
       else { e.rig.root.rotation.y = t * 1.2; e.rig.root.position.y = 0.05 + Math.sin(t * 2.5 + e.x) * 0.05; }
     }
     const me = this.entities.get(this.meId);
