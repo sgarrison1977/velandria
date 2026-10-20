@@ -152,8 +152,15 @@ function prop(p, terrain, lights) {
     case "stall": {
       for (const sx of [-1.2, 1.2]) for (const sz of [-0.8, 0.8]) cyl(0.07, 0.07, 2.4, 5, wood, sx, 1.2, sz, g);
       box(2.6, 0.12, 1.8, wood, 0, 0.9, 0, g);
-      const cloth = box(3.0, 0.08, 2.2, M(p.x < 1160 ? "#7a2a22" : "#2a5a6a"), 0, 2.45, 0, g); cloth.rotation.x = 0.15;
-      for (let i = 0; i < 4; i++) box(0.4, 0.3, 0.4, M(["#8a6a3a", "#5a3a2a", "#9a9a90", "#6a4a8a"][i]), -0.9 + i * 0.6, 1.12, 0, g);
+      const awn = new THREE.Group(); awn.position.set(0, 2.45, 0); awn.rotation.x = 0.18; g.add(awn);
+      const c1 = M(p.color || (p.x < 1160 ? "#7a2a22" : "#2a5a6a")), c2 = M("#e8dcc0");
+      for (let i = 0; i < 6; i++) box(0.5, 0.08, 2.2, i % 2 ? c2 : c1, -1.25 + i * 0.5, 0, 0, awn);
+      for (let i = 0; i < 6; i++) { const v = box(0.5, 0.32, 0.05, i % 2 ? c2 : c1, -1.25 + i * 0.5, -0.16, 1.1, awn); v.rotation.x = -0.18; }
+      box(2.6, 0.5, 0.06, wood, 0, 0.62, 0.86, g);
+      const goods = ["#8a6a3a", "#5a3a2a", "#9a9a90", "#6a4a8a", "#b8862e", "#4a7a3a"];
+      for (let i = 0; i < 4; i++) box(0.4, 0.3, 0.4, M(goods[(i + Math.round(p.x)) % 6]), -0.9 + i * 0.6, 1.12, 0.25, g);
+      for (let i = 0; i < 3; i++) { const f = new THREE.Mesh(new THREE.SphereGeometry(0.13, 6, 5), M(["#c83a2a", "#d8a83a", "#7aa83a"][i])); f.position.set(-0.6 + i * 0.6, 1.1, -0.35); g.add(f); }
+      cyl(0.32, 0.36, 0.5, 8, wood, -1.6, 0.25, 0.3, g);
       break; }
     case "sign": { cyl(0.08, 0.1, 2.4, 5, wood, 0, 1.2, 0, g); box(1.4, 0.5, 0.08, M("#6b4e30"), 0.4, 2.0, 0, g); break; }
     case "anvil": { box(0.5, 0.5, 0.5, wood, 0, 0.25, 0, g); box(0.9, 0.3, 0.35, iron, 0, 0.65, 0, g); break; }
@@ -345,7 +352,7 @@ function prop(p, terrain, lights) {
       break; }
     default: return null;
   }
-  if (p.rot && ["table", "weapon_rack", "armor_stand", "bookshelf"].includes(p.kind)) g.rotation.y = p.rot;
+  if (p.rot && ["table", "weapon_rack", "armor_stand", "bookshelf", "stall", "crates", "barrels"].includes(p.kind)) g.rotation.y = p.rot;
   g.position.set(p.x, p.dock ? 0.55 : terrain.height(p.x, p.z), p.z);
   return g;
 }

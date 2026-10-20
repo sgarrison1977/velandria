@@ -333,6 +333,7 @@ class World:
         for bd in self.buildings:
             self._block_rect(bd["x"], bd["z"], bd["w"], bd["d"])
         self._town_props()
+        self._market(rings)
         self._dungeon(random.Random(909))
         self._camps(rnd)
         self.trees, self.rocks, self.bushes, self.grass = [], [], [], []
@@ -884,6 +885,49 @@ class World:
                 dx, dz = c[0] - bd["x"], c[1] - bd["z"]
             bd["face"] = ("E" if dx > 0 else "W") if abs(dx) > abs(dz) else ("S" if dz > 0 else "N")
         return bd
+
+    def _market(self, rings):
+        from game_data import NPCS
+        npcs = [n["pos"] for n in NPCS.values() if not n.get("glob")]
+        cols = ["#7a2a22", "#2a5a6a", "#6a5a1a", "#3a5a2a", "#5a2a5a"]
+        rr = random.Random(77)
+        for c, rx, rz, _, _ in rings.values():
+            placed = []
+            def free(x, z, r):
+                if not (((x - c[0]) / (rx - 6)) ** 2 + ((z - c[1]) / (rz - 6)) ** 2 < 1 and math.hypot(x - c[0], z - c[1]) > 9):
+                    return False
+                if self.blocked[int(z - r):int(z + r) + 1, int(x - r):int(x + r) + 1].any() or self.road_dist[int(z - r):int(z + r) + 1, int(x - r):int(x + r) + 1].min() < 0.6:
+                    return False
+                return (all(math.hypot(x - gx, z - gz) > 9 for gx, gz in self.gate_pts) and all(math.hypot(x - a, z - b) > 4.5 for a, b in npcs)
+                        and all(math.hypot(x - a, z - b) > 5 for a, b in placed))
+            cands = []
+            for pts, w in self._roads():
+                for k in range(1, len(pts) - 1, 3):
+                    x, z = pts[k]
+                    if ((x - c[0]) / rx) ** 2 + ((z - c[1]) / rz) ** 2 < 1:
+                        tx, tz = pts[k + 1][0] - pts[k - 1][0], pts[k + 1][1] - pts[k - 1][1]
+                        L = math.hypot(tx, tz) or 1
+                        cands.append((x, z, tx / L, tz / L, w))
+            rr.shuffle(cands)
+            stalls = 0
+            for x, z, tx, tz, w in cands:
+                if stalls >= 4:
+                    break
+                for side in (1, -1):
+                    nx, nz = -tz * side, tx * side
+                    sx, sz = x + nx * (w + 3.4), z + nz * (w + 3.4)
+                    if free(sx, sz, 2.0) and all(math.hypot(sx - a, sz - b) > 10 for a, b in placed):
+                        self.props.append(dict(kind="stall", x=round(sx, 2), z=round(sz, 2), rot=round(math.atan2(-nx, -nz), 3), color=cols[stalls % len(cols)]))
+                        self._disc(sx, sz, 1.6)
+                        placed.append((sx, sz))
+                        stalls += 1
+                        for j, kind in enumerate(rr.sample(["crates", "barrels"], 2)):
+                            ox, oz = sx + tx * (3.6 if j == 0 else -3.6), sz + tz * (3.6 if j == 0 else -3.6)
+                            if rr.random() < 0.75 and free(ox, oz, 1.4):
+                                self.props.append(dict(kind=kind, x=round(ox, 2), z=round(oz, 2), rot=round(math.atan2(-nx, -nz), 3)))
+                                self._disc(ox, oz, 1.1)
+                                placed.append((ox, oz))
+                        break
 
     def _town_props(self):
         P = self.props
