@@ -23,6 +23,11 @@ GIVE_STATS = {"dmg", "str", "sta", "wis", "int", "dex", "hp_regen", "mp_regen", 
 TOWN_NAMES = {"semel": "Titus", "elderglen": "Elderglen", "ironhold": "Ironhold", "sunhollow": "Sunhollow", "harbor": "Saltmere Harbor", "isles": "the Isle of Thorns"}
 
 
+def fmt_secs(s):
+    s = int(s)
+    return f"{s // 3600}:{s % 3600 // 60:02d}:{s % 60:02d}" if s >= 3600 else f"{s // 60}:{s % 60:02d}"
+
+
 def now():
     return time.monotonic()
 
@@ -51,6 +56,7 @@ class Monster:
         self.last_attack, self.next_wander, self.repath = 0, now() + rnd.uniform(1, 8), 0
         self.dead_until, self.dmg_by, self.rot, self.moving = 0, {}, rnd.uniform(0, 6.28), False
         self.rise_until = now() + 1.3 if s.get("rise") else 0
+        self.phase2 = False
 
 
 class Player:
@@ -164,7 +170,7 @@ class Game:
         self.players = {}
         self.monsters = {}
         self.loot = {}
-        self.room_hits, self.room_cd = {}, {}
+        self.room_hits, self.room_cd, self.castle_runs = {}, {}, {}
         self.parties, self.invites, self.party_acc = {}, {}, 0.0
         self.storages, self.storage_lock = {}, asyncio.Lock()
         self.sched, self.gates = [], {}
@@ -282,12 +288,13 @@ class Game:
             self.tick_player(p, dt, t)
         for m in self.monsters.values():
             self.tick_monster(m, dt, t)
-        for mid in [k for k, m in self.monsters.items() if m.d.get("champion") and m.dead_until and t > m.dead_until]:
+        for mid in [k for k, m in self.monsters.items() if (m.d.get("champion") or m.spawn.get("add_of")) and m.dead_until and t > m.dead_until]:
             del self.monsters[mid]
         while self.spawn_q:
             c = self.spawn_q.pop()
             self.monsters[c.id] = c
         self.tick_sched(t)
+        self.tick_castle_runs(t)
         for gid in [g for g, v in self.gates.items() if t > v["expires"]]:
             del self.gates[gid]
         self.party_acc += dt
@@ -311,6 +318,8 @@ class Game:
                 eq = "|".join(o.equipment[s]["item"] if s in o.equipment else "" for s in ("main", "off", "head", "chest"))
                 rar = [ITEMS[e["item"]]["rarity"] for e in o.equipment.values()]
                 eq += f"|{rar.count('legendary')},{rar.count('epic')}|" + "|".join(o.equipment[s]["item"] if s in o.equipment else "" for s in ("feet", "legs", "hands", "belt")) + "|" + ",".join(o.look.get(k, "") for k in ("skin", "hair", "hairStyle", "beardStyle", "face", "eyes"))
+                if sum(1 for e in o.equipment.values() if ITEMS[e["item"]].get("set") == "vexmoor") >= 6:
+                    eq += "|vx"
                 ps.append([o.id, o.name, o.level, o.cls, round(o.x, 2), round(o.z, 2), round(o.rot, 2), 1 if o.moving else 0,
                            round(o.hp), o.max_hp, eq, 1 if o.dead_until else 0, 1 if o.linkdead_at else 0, 1 if "invis" in o.buffs else 0])
         for m in self.monsters.values():
@@ -477,12 +486,14 @@ class Game:
             if not m.path:
                 if math.hypot(m.x - m.hx, m.z - m.hz) < 2 or t > m.repath:
                     m.state, m.hp, m.mp, m.dmg_by = "idle", m.max_hp, m.max_mp, {}
+                    self.end_phase(m)
                     m.next_wander = t + rnd.uniform(3, 8)
             self.step_along(m, d["speed"] * 1.4, dt, monster=True)
             return
         if tgt and (tgt.dead_until or in_safe(tgt.x, tgt.z) or "invis" in tgt.buffs or math.hypot(m.x - m.hx, m.z - m.hz) > d["leash"] or dist(m, tgt) > d["leash"] * 1.5):
             tgt = None
         if not tgt and m.target:
+            self.end_phase(m)
             m.target, m.state = None, "return"
             m.repath = t + 12
             self.path_to(m, m.hx, m.hz, limit=6000, monster=True)
@@ -526,7 +537,10 @@ class Game:
                             if dist(m, pp) < 40:
                                 pp.send({"t": "sys", "msg": f"{d['name']} flies into a rage!", "kind": "bad"})
                     m.enraged = rage
-                sl = d.get("slam")
+                ph = d.get("phase2")
+                if ph and not m.phase2 and m.hp < m.max_hp * ph["at"]:
+                    self.start_phase(m, ph, t)
+                sl = ph["slam"] if m.phase2 else d.get("slam")
                 if sl and t > getattr(m, "next_slam", 0):
                     m.next_slam = t + sl["every"]
                     self.fx(m.x, m.z, {"t": "fx", "k": "slam", "src": m.id, "r": sl["radius"], "c1": sl.get("c1"), "c2": sl.get("c2"), "name": sl.get("name")})
@@ -539,7 +553,7 @@ class Game:
                                 pp.dots.append(dict(dmg=sl["poison"][0], n=sl["poison"][1], next=now() + 1, src=m.id))
                             if sl.get("drain"):
                                 m.hp = min(m.max_hp, m.hp + dmg * sl["drain"])
-                elif t - m.last_attack >= d["interval"] * (1 / 0.7 if getattr(m, "chill_until", 0) > t else 1):
+                elif t - m.last_attack >= d["interval"] * (1 / 0.7 if getattr(m, "chill_until", 0) > t else 1) * (d["phase2"]["interval_mult"] if m.phase2 else 1):
                     m.last_attack = t
                     self.monster_attack(m, tgt)
             return
@@ -621,6 +635,70 @@ class Game:
         if m.hp <= 0:
             self.kill_monster(m)
 
+    def start_phase(self, m, ph, t):
+        m.phase2 = True
+        m.hp = min(m.max_hp, m.hp + m.max_hp * ph["heal"])
+        m.next_slam = t + 2
+        self.fx(m.x, m.z, {"t": "fx", "k": "slam", "src": m.id, "r": 9, "c1": "#a040ff", "c2": "#ffd36b"})
+        for i in range(ph["n"]):
+            self.champ_n += 1
+            a = i * 6.283 / ph["n"]
+            g = Monster(f"add{self.champ_n}", ph["summon"], dict(monster=ph["summon"], x=m.x + math.cos(a) * 4, z=m.z + math.sin(a) * 4, r=1, n=1, add_of=m.id), self.world)
+            g.target, g.state, g.rise_until = m.target, "chase", t + 1.3
+            self.spawn_q.append(g)
+        for pp in self.players.values():
+            if dist(m, pp) < 60:
+                pp.send({"t": "sys", "msg": f"{m.d['name']} roars: \"Guards! To your king!\" — the Usurper's Wrath awakens!", "kind": "bad"})
+
+    def end_phase(self, m):
+        if not m.phase2:
+            return
+        m.phase2 = False
+        for k in [k for k, o in self.monsters.items() if o.spawn.get("add_of") == m.id]:
+            del self.monsters[k]
+
+    def in_castle(self, x, z):
+        c = self.world.castle
+        return c["x0"] - 2 <= x <= c["x0"] + c["w"] + 2 and c["z0"] - 2 <= z <= c["z0"] + c["d"] + 2
+
+    def run_key(self, p):
+        return getattr(p, "party", None) or p.id
+
+    def tick_castle_runs(self, t):
+        for p in self.players.values():
+            if p.dead_until or not self.in_castle(p.x, p.z):
+                continue
+            k = self.run_key(p)
+            r = self.castle_runs.get(k)
+            if not r:
+                r = self.castle_runs[k] = dict(start=t, members={}, rooms=set(), boss=False)
+                for o in self.party_members(p):
+                    o.send({"t": "sys", "msg": "[Castle Run] The clock is ticking — clear all 16 halls and slay Lord Vexmoor!", "kind": "quest"})
+            r["members"][p.id] = (p.name, p.cls)
+            r["last_in"] = t
+        for k in [k for k, r in self.castle_runs.items() if t - r["last_in"] > 120]:
+            for pid in self.castle_runs.pop(k)["members"]:
+                if pid in self.players:
+                    self.players[pid].send({"t": "sys", "msg": "[Castle Run] Cancelled — you were outside the castle too long.", "kind": "bad"})
+
+    def run_progress(self, pids, room=None, boss=False):
+        for k in {self.run_key(self.players[i]) for i in pids if i in self.players}:
+            r = self.castle_runs.get(k)
+            if not r:
+                continue
+            if room is not None and room not in r["rooms"]:
+                r["rooms"].add(room)
+                for pid in r["members"]:
+                    if pid in self.players:
+                        self.players[pid].send({"t": "sys", "msg": f"[Castle Run] Hall cleared ({len(r['rooms'])}/16) — {fmt_secs(now() - r['start'])}", "kind": "quest"})
+            r["boss"] = r["boss"] or boss
+            if len(r["rooms"]) >= 16 and r["boss"]:
+                secs = round(now() - r["start"], 1)
+                del self.castle_runs[k]
+                names = [v[0] for v in r["members"].values()]
+                asyncio.ensure_future(self.db.castle_runs.insert_one({"members": [dict(id=i, name=v[0], cls=v[1]) for i, v in r["members"].items()], "secs": secs, "ts": datetime.now(timezone.utc)}))
+                self.announce(f"{' and '.join(names) if len(names) < 3 else ', '.join(names[:-1]) + ' and ' + names[-1]} conquered Castle Vexmoor in {fmt_secs(secs)}!", title="Castle Conquered")
+
     def grant_spells(self, p):
         new = [k for k, ab in ABILITIES.items() if p.cls in ab["cls"] and ab["level"] <= p.level and k not in p.abilities]
         if new:
@@ -634,10 +712,13 @@ class Game:
         hits = self.room_hits.setdefault(room, {})
         for pid in m.dmg_by:
             hits[pid] = t
-        if t < self.room_cd.get(room, 0) or any(o.spawn.get("room") == room and not o.dead_until for o in self.monsters.values()):
+        if any(o.spawn.get("room") == room and not o.dead_until for o in self.monsters.values()):
+            return
+        winners = [self.players[pid] for pid, ht in hits.items() if t - ht < 240 and pid in self.players]
+        self.run_progress([w.id for w in winners], room=room)
+        if t < self.room_cd.get(room, 0):
             return
         self.room_cd[room] = t + 120
-        winners = [self.players[pid] for pid, ht in hits.items() if t - ht < 240 and pid in self.players]
         self.room_hits[room] = {}
         rx, rz = m.spawn["x"], m.spawn["z"]
         for i, p in enumerate(winners):
@@ -668,6 +749,9 @@ class Game:
     def kill_monster(self, m):
         t = now()
         m.hp, m.dead_until, m.died_at, m.path, m.target, m.dots = 0, t + m.d["respawn"], t, [], None, []
+        self.end_phase(m)
+        if m.type == "vexmoor":
+            self.run_progress(list(m.dmg_by), boss=True)
         if m.spawn.get("room") is not None:
             self.room_clear(m, t)
         killer = self.players.get(max(m.dmg_by, key=m.dmg_by.get)) if m.dmg_by else None

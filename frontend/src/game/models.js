@@ -144,7 +144,7 @@ function applyLook(look, l) {
   look.beard = l.beardStyle === "none" ? null : l.hair; look.beardStyle = l.beardStyle; look.head = l.face === "classic" ? "human" : l.face; look.iris = l.eyes;
 }
 export function buildPlayer(cls, eqStr, items) {
-  const [main, off, head, chest, counts, feet, legs, hands, belt, lk] = (eqStr || "").split("|");
+  const [main, off, head, chest, counts, feet, legs, hands, belt, lk, setFx] = (eqStr || "").split("|");
   const look = { ...(CLASS_LOOK[cls] || CLASS_LOOK.warrior) };
   applyLook(look, parseLook(lk));
   const col = (id, d) => items[id]?.color || d;
@@ -167,12 +167,12 @@ export function buildPlayer(cls, eqStr, items) {
   look.shieldColor = items[off]?.color || (look.shieldKind === "iron" ? "#8a8f96" : "#6a4a2a");
   const rig = humanoid(look);
   rig.eqStr = eqStr;
-  addGearGlow(rig, items[main]?.rarity, counts);
+  addGearGlow(rig, items[main]?.rarity, counts, setFx === "vx");
   return rig;
 }
 
 const GLOW = { legendary: "#ffa83a", epic: "#c070ff" };
-function addGearGlow(rig, mainRarity, counts) {
+function addGearGlow(rig, mainRarity, counts, fullSet) {
   const [nl, ne] = (counts || "0,0").split(",").map(Number);
   rig.shimmer = [];
   if (GLOW[mainRarity] && rig.mainMesh) rig.mainMesh.traverse((o) => {
@@ -180,6 +180,13 @@ function addGearGlow(rig, mainRarity, counts) {
     o.material = o.material.clone(); o.material.emissive = new THREE.Color(GLOW[mainRarity]); o.material.emissiveIntensity = 0.9; rig.shimmer.push(o.material);
   });
   if (!nl && !ne) return;
+  if (fullSet) {
+    const n2 = 70, p2 = new Float32Array(n2 * 3);
+    for (let i = 0; i < n2; i++) { const a = i * 2.39996, y = 0.1 + (i / n2) * 2.1, r = 0.42 + Math.sin(i * 3.1) * 0.08; p2[i * 3] = Math.cos(a) * r; p2[i * 3 + 1] = y; p2[i * 3 + 2] = Math.sin(a) * r; }
+    const g2 = new THREE.BufferGeometry(); g2.setAttribute("position", new THREE.BufferAttribute(p2, 3));
+    rig.aura = new THREE.Group(); rig.aura.add(new THREE.Points(g2, new THREE.PointsMaterial({ color: "#ffd36b", size: 0.09, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending })));
+    rig.root.add(rig.aura); rig.auraStrength = 0.6; return;
+  }
   const col = nl ? GLOW.legendary : GLOW.epic, n = 10 + nl * 8 + ne * 4, pos = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) { const a = i * 2.4, y = 0.15 + (i / n) * 2.0, r = 0.55 + Math.sin(i * 1.7) * 0.12; pos[i * 3] = Math.cos(a) * r; pos[i * 3 + 1] = y; pos[i * 3 + 2] = Math.sin(a) * r; }
   const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));

@@ -609,6 +609,8 @@ ITEMS["usurper_crown"] = M("Usurper's Crown", "legendary", 5000, "Lord Vexmoor's
 _boss("vexmoor", "death_knight", 80, "Lord Vexmoor, the Usurper King", 1.0, "usurper_crown",
       dict(every=7, radius=10, mult=1.5, name="Royal Decree", c1="#ffd36b", c2="#b02a1a"), scale=1.0, enrage=dict(at=0.3, mult=1.5), leash=16)
 MONSTERS["vexmoor"]["hp"] = 42000
+MONSTERS["vexmoor"]["phase2"] = dict(at=0.5, summon="castle_royal_guard", n=6, heal=0.1, interval_mult=0.8,
+                                     slam=dict(every=5, radius=13, mult=1.5, name="Usurper's Wrath", dtype="shadow", c1="#a040ff", c2="#2a0a3a"))
 
 # ---------- Regalia of Vexmoor (castle-only set) + room-clear coffer
 _SD = "Regalia of Vexmoor (set piece). Drops only inside Castle Vexmoor."

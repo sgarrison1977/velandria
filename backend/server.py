@@ -187,6 +187,20 @@ async def bounty_leaderboard(u=Depends(current_user)):
             "resets_at": (start + timedelta(days=7)).isoformat()}
 
 
+@api.get("/leaderboard/castle")
+async def castle_leaderboard(u=Depends(current_user)):
+    today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    start = today - timedelta(days=today.weekday())
+    q = {"ts": {"$gte": start}}
+    top = await db.castle_runs.find(q, {"_id": 0}).sort("secs", 1).to_list(10)
+    mine_ids = [c["id"] async for c in db.characters.find({"account_id": u["id"]}, {"id": 1})]
+    best = await db.castle_runs.find(q | {"members.id": {"$in": mine_ids}}, {"_id": 0}).sort("secs", 1).to_list(1)
+    rank = (await db.castle_runs.count_documents(q | {"secs": {"$lt": best[0]["secs"]}}) + 1) if best else None
+    fix = lambda r: dict(secs=r["secs"], members=r["members"], ts=r["ts"].isoformat())
+    return {"top": [fix(r) | {"rank": i + 1} for i, r in enumerate(top)], "mine": fix(best[0]) | {"rank": rank} if best else None,
+            "resets_at": (start + timedelta(days=7)).isoformat()}
+
+
 @api.put("/characters/{cid}/look")
 async def set_look(cid: str, body: LookIn, u=Depends(current_user)):
     look = clean_look(body.look)
@@ -453,6 +467,7 @@ async def startup():
     await db.login_attempts.create_index("identifier")
     await db.chat.create_index("ts")
     await db.bounty_claims.create_index("ts")
+    await db.castle_runs.create_index([("ts", 1), ("secs", 1)])
     await db.meta.update_one({"_id": "schema"}, {"$set": {"version": 1}}, upsert=True)
     from world import GOH, OLD_GOH
     if not await db.meta.find_one({"_id": "map_south_sea"}):

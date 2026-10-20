@@ -534,6 +534,7 @@ class World:
             for k in range(4):
                 bx, bz = cx + (-1 if k % 2 else 1) * (rw / 2 - 2), cz + (-1 if k < 2 else 1) * (rd / 2 - 2)
                 self.props.append(dict(kind="brazier", x=bx, z=bz)); self._disc(bx, bz, 0.6)
+            self._castle_furniture(i, cx, cz, rw, rd)
             if mob == "castle_knight":
                 for k in range(4):
                     px, pz = cx + (k % 2 * 2 - 1) * 6, cz + (k // 2 * 2 - 1) * 6
@@ -543,6 +544,30 @@ class World:
                 self.spawns.append(dict(monster="vexmoor", x=cx - rw / 2 + 8, z=cz, r=1.5, n=1, room=i))
                 self.throne = (cx, cz)
         self.castle = dict(name=C["name"], x0=x0, z0=z0, w=W2, d=H2, cx=x0 + W2 / 2, cz=z0 + H2 / 2, segs=segs, towers=towers, gate=list(gate), rooms=rooms)
+
+    def _castle_furniture(self, i, cx, cz, rw, rd):
+        hw, hd = rw / 2 - 1.6, rd / 2 - 1.6
+        slot = {"N1": (cx - 5.5, cz - hd, 0), "N2": (cx + 5.5, cz - hd, 0), "S1": (cx - 5.5, cz + hd, math.pi), "S2": (cx + 5.5, cz + hd, math.pi),
+                "W1": (cx - hw, cz - 5, math.pi / 2), "W2": (cx - hw, cz + 5, math.pi / 2), "E1": (cx + hw, cz - 5, -math.pi / 2), "E2": (cx + hw, cz + 5, -math.pi / 2)}
+        solid = {"table": 1.3, "weapon_rack": 0.9, "armor_stand": 0.7, "bookshelf": 1.1, "candelabra": 0.4, "barrels": 1.2, "crates": 1.0, "anvil": 0.8}
+        plan = {0: ("rug:#5a4630", "N1:table", "N2:weapon_rack", "W1:barrels"), 1: ("N1:weapon_rack", "S2:barrels", "C:bones"),
+                2: ("N1:crates", "W2:barrels", "C:bones"), 3: ("rug:#3a2a1a", "N1:weapon_rack", "N2:armor_stand"),
+                4: ("rug:#1a2a5a", "N1:bookshelf", "N2:bookshelf", "E1:candelabra"), 5: ("rug:#6a1a10", "N1:candelabra", "N2:candelabra", "S1:bookshelf"),
+                6: ("rug:#2a4a6a", "N1:bookshelf", "W1:candelabra"), 7: ("N1:bookshelf", "S2:candelabra", "C:bones"), 8: ("W1:crates",),
+                9: ("N1:anvil", "N2:crates", "S1:barrels"), 10: ("C:bones", "S1:barrels", "W1:crates"), 11: ("rug:#3a1a4a:12:3", "N1:candelabra", "N2:candelabra"),
+                12: ("rug:#2a1a1a", "N1:table", "S2:weapon_rack"), 13: ("N1:weapon_rack", "C:bones"), 14: ("rug:#4a1a1a", "N1:armor_stand", "N2:armor_stand"),
+                15: ("rug:#7a1a1a:17:4:2", "N1:candelabra", "S1:candelabra", "N2:table")}
+        for item in plan.get(i, ()):
+            parts = item.split(":")
+            if parts[0] == "rug":
+                w, d, ox = (float(parts[2]), float(parts[3]), float(parts[4]) if len(parts) > 4 else 0) if len(parts) > 2 else (8, 5, 0)
+                self.props.append(dict(kind="rug", x=cx + ox, z=cz, w=w, d=d, color=parts[1]))
+                continue
+            k, kind = parts
+            x, z, rot = (cx + 3, cz + 4, 0) if k == "C" else slot[k]
+            self.props.append(dict(kind=kind, x=x, z=z, rot=rot))
+            if kind in solid:
+                self._disc(x, z, solid[kind])
 
     def _camp_props(self, cx, cz, fam, rr):
         P = self.props

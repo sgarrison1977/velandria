@@ -311,8 +311,41 @@ function prop(p, terrain, lights) {
       for (let i = 0; i < 5; i++) { const f = fish(M(["#9ab0b8", "#b0a080", "#8a9aa0"][i % 3], { metalness: 0.3, roughness: 0.5 })); f.position.set(-1 + i * 0.5, 1.75, 0); f.rotation.z = Math.PI / 2; g.add(f); }
       break; }
     case "crates": { for (let i = 0; i < 3; i++) { const c = box(0.9, 0.9, 0.9, M(i % 2 ? "#7a5a36" : "#6a4a2a"), (i - 1) * 0.6, 0.45 + (i === 1 ? 0.9 : 0), (i % 2) * 0.3, g); c.rotation.y = i * 0.4; } break; }
+    case "rug": {
+      box(p.w, 0.04, p.d, M(p.color), 0, 0.1, 0, g); const tr = M("#c9a24e");
+      for (const sz of [-1, 1]) box(p.w - 0.3, 0.05, 0.12, tr, 0, 0.11, sz * (p.d / 2 - 0.3), g);
+      for (const sx of [-1, 1]) box(0.12, 0.05, p.d - 0.3, tr, sx * (p.w / 2 - 0.3), 0.11, 0, g);
+      box(Math.min(1.6, p.w * 0.25), 0.05, Math.min(1.6, p.d * 0.3), tr, 0, 0.115, 0, g); break; }
+    case "table": {
+      const tw = M("#5a3a22"), dk = M("#3a2616"), gold = M("#c9a24e", { metalness: 0.7, roughness: 0.35 });
+      box(4, 0.16, 1.4, tw, 0, 0.95, 0, g); for (const [sx, sz] of [[-1.8, -0.55], [1.8, -0.55], [-1.8, 0.55], [1.8, 0.55]]) box(0.14, 0.9, 0.14, dk, sx, 0.45, sz, g);
+      for (const sz of [-1, 1]) box(3.6, 0.1, 0.4, dk, 0, 0.5, sz * 1.05, g);
+      for (const x of [-1.2, 0, 1.2]) { cyl(0.07, 0.05, 0.22, 6, gold, x, 1.14, 0.2, g); }
+      box(0.7, 0.08, 0.45, M("#8a6a3a"), 0.6, 1.07, -0.25, g); cyl(0.05, 0.05, 0.3, 6, M("#e8dcb8"), -0.6, 1.18, -0.3, g); break; }
+    case "weapon_rack": {
+      const dk = M("#3a2616"), steel = M("#9aa0a6", { metalness: 0.8, roughness: 0.3 });
+      for (const sx of [-1.1, 1.1]) box(0.12, 1.6, 0.3, dk, sx, 0.8, 0, g);
+      box(2.4, 0.1, 0.3, dk, 0, 1.4, 0, g); box(2.4, 0.1, 0.3, dk, 0, 0.3, 0, g);
+      for (let i = 0; i < 4; i++) { const w = box(0.07, 1.6, 0.03, steel, -0.75 + i * 0.5, 0.95, 0.1, g); w.rotation.z = (i % 2 ? 0.08 : -0.08); box(0.3, 0.06, 0.06, dk, -0.75 + i * 0.5, 0.45, 0.1, g); }
+      break; }
+    case "armor_stand": {
+      const dk = M("#3a2616"), plate = M("#7a7e86", { metalness: 0.75, roughness: 0.35 });
+      cyl(0.4, 0.45, 0.12, 8, dk, 0, 0.06, 0, g); cyl(0.05, 0.05, 1.5, 6, dk, 0, 0.8, 0, g);
+      box(0.75, 0.75, 0.42, plate, 0, 1.45, 0, g); for (const sx of [-1, 1]) { const pd = new THREE.Mesh(new THREE.SphereGeometry(0.25, 8, 6, 0, 6.28, 0, 1.6), plate); pd.position.set(sx * 0.45, 1.75, 0); g.add(pd); }
+      cyl(0.2, 0.22, 0.38, 8, plate, 0, 2.05, 0, g); box(0.36, 0.05, 0.05, M("#1a1a1a"), 0, 2.08, 0.2, g); break; }
+    case "bookshelf": {
+      const dk = M("#3e2818"), cols = ["#6a1a1a", "#1a3a5a", "#2a4a2a", "#5a4a1a", "#3a1a4a"];
+      box(2.4, 2.6, 0.6, dk, 0, 1.3, 0, g);
+      for (let r = 0; r < 4; r++) { box(2.2, 0.05, 0.5, M("#5a3a22"), 0, 0.35 + r * 0.6, 0.06, g); for (let i = 0; i < 9; i++) if ((i * 7 + r * 3) % 5) box(0.18, 0.42 + ((i + r) % 3) * 0.05, 0.38, M(cols[(i + r) % 5]), -0.95 + i * 0.24, 0.6 + r * 0.6, 0.08, g); }
+      break; }
+    case "candelabra": {
+      const gold = M("#c9a24e", { metalness: 0.75, roughness: 0.35 }), wax = M("#e8dcb8"), fl = M("#ffb347", { emissive: "#ff8a1a", emissiveIntensity: 3 });
+      cyl(0.3, 0.38, 0.12, 8, gold, 0, 0.06, 0, g); cyl(0.05, 0.06, 1.7, 6, gold, 0, 0.9, 0, g); box(1.0, 0.05, 0.05, gold, 0, 1.6, 0, g);
+      for (const x of [-0.5, 0, 0.5]) { cyl(0.05, 0.05, 0.26, 6, wax, x, 1.76 + (x ? 0 : 0.12), 0, g); cone(0.04, 0.12, 5, fl, x, 1.95 + (x ? 0 : 0.12), 0, g); }
+      break; }
     default: return null;
   }
+  if (p.rot && ["table", "weapon_rack", "armor_stand", "bookshelf"].includes(p.kind)) g.rotation.y = p.rot;
   g.position.set(p.x, p.dock ? 0.55 : terrain.height(p.x, p.z), p.z);
   return g;
 }

@@ -471,3 +471,4 @@ input[type="text"], input[type="email"], input[type="password"], input:not([type
 .bounty-rank-row .rk { font-family: var(--serif); color: var(--gold); font-size: 17px; text-align: center; }
 .bounty-rank-row .ct { text-align: right; color: var(--gold); font-family: var(--serif); }
 .bounty-rank-row .cl { color: var(--muted); font-size: 12px; text-transform: capitalize; }
+.bounty-rank-row.castle-row { grid-template-columns: 36px 1fr 90px 80px; }

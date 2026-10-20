@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { BountyRankings } from "./BountyRankings";
+import { BountyRankings, CastleRankings } from "./BountyRankings";
 import { Crosshair, Coins, Skull } from "lucide-react";
 import { useStore, setState, toast } from "../../game/store";
 import { Panel, ItemIcon, ItemTip, Hover, inst } from "./ui";
@@ -59,9 +59,10 @@ export function BountyBoard({ net, data, engine }) {
         <button type="button" className={tab === "bounties" ? "on" : ""} onClick={() => setTab("bounties")} data-testid="bounty-tab-bounties">Bounties</button>
         <button type="button" className={tab === "shop" ? "on" : ""} onClick={() => setTab("shop")} data-testid="bounty-tab-shop">Token Shop</button>
         <button type="button" className={tab === "rank" ? "on" : ""} onClick={() => setTab("rank")} data-testid="bounty-tab-rankings">Rankings</button>
+        <button type="button" className={tab === "castle" ? "on" : ""} onClick={() => setTab("castle")} data-testid="bounty-tab-castle">Castle</button>
         <span className="bounty-tokens" data-testid="bounty-token-count"><Coins size={14} /> {b.tokens}</span>
       </div>
-      {tab === "rank" ? <BountyRankings meId={me.id} /> : tab === "bounties"
+      {tab === "castle" ? <CastleRankings meId={me.id} /> : tab === "rank" ? <BountyRankings meId={me.id} /> : tab === "bounties"
         ? <div className="bounty-list">{b.list.map((x) => <BountyRow key={x.id} b={x} send={send} engine={engine} at={b.at} />)}<p className="bounty-note">Party kills count. Bounties reset daily at midnight UTC.</p></div>
         : <TokenShop shop={b.shop} tokens={b.tokens} data={data} me={me} send={send} />}
     </Panel>
