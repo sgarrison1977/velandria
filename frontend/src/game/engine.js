@@ -396,6 +396,34 @@ export class Engine {
     
   }
 
+  drawCastle(ctx, P, w, h, c, inset) {
+    const [cx, cz] = P(c.cx, c.cz);
+    ctx.fillStyle = "#1a1410"; ctx.strokeStyle = "#ffd36b"; ctx.lineWidth = 1.5;
+    ctx.fillRect(cx - 9, cz - 6, 18, 11); ctx.strokeRect(cx - 9, cz - 6, 18, 11);
+    for (const dx of [-9, -3, 3]) { ctx.fillRect(cx + dx, cz - 10, 6, 4); ctx.strokeRect(cx + dx, cz - 10, 6, 4); }
+    ctx.fillStyle = "#ffd36b"; ctx.fillRect(cx - 2, cz - 1, 4, 6);
+    ctx.textAlign = "center"; ctx.font = "600 13px 'IM Fell English SC', serif";
+    ctx.fillStyle = "#000"; ctx.fillText("Castle Vexmoor", cx + 1, cz - 14); ctx.fillStyle = "#ffd36b"; ctx.fillText("Castle Vexmoor", cx, cz - 15);
+    ctx.font = "11px 'Alegreya Sans', sans-serif"; ctx.fillStyle = "#ff9a6a"; ctx.fillText("Lv 65–80", cx, cz + 17);
+    if (!inset) return;
+    const iw = Math.round(w * 0.2), isc = iw / c.w, ih = Math.round(c.d * isc), ix = w - iw - 16, iy = Math.round(h * 0.46);
+    ctx.fillStyle = "rgba(14,10,6,0.93)"; ctx.fillRect(ix - 4, iy - 20, iw + 8, ih + 24);
+    ctx.strokeStyle = "#c9a24e"; ctx.lineWidth = 1.5; ctx.strokeRect(ix - 4, iy - 20, iw + 8, ih + 24);
+    const IP = (x, z) => [ix + (x - c.x0) * isc, iy + (z - c.z0) * isc];
+    ctx.fillStyle = "#3a332a"; ctx.fillRect(ix, iy, iw, ih);
+    ctx.fillStyle = "#8a8070"; for (const [x, z, sw2, sd2] of c.segs) { const [px, pz] = IP(x - sw2 / 2, z - sd2 / 2); ctx.fillRect(px, pz, Math.max(1, sw2 * isc), Math.max(1, sd2 * isc)); }
+    ctx.font = "600 12px 'IM Fell English SC', serif"; ctx.textAlign = "left"; ctx.fillStyle = "#ffd36b"; ctx.fillText("Castle Vexmoor — 16 halls", ix, iy - 6);
+    ctx.textAlign = "center"; ctx.font = "9px 'Alegreya Sans', sans-serif";
+    for (const r of c.rooms) {
+      const [px, pz] = IP(r.x, r.z), boss = r.lvl.includes("Boss");
+      ctx.fillStyle = boss ? "#ff7a5a" : "#e8dcc0"; ctx.fillText(r.name.replace(/^(Hall of |The )/, ""), px, pz - 1);
+      ctx.fillStyle = boss ? "#ff7a5a" : "#c9a24e"; ctx.fillText(`Lv ${r.lvl.replace(" (Boss)", " Boss")}`, px, pz + 9);
+    }
+    const [gx, gz] = IP(c.gate[0], c.gate[1]);
+    ctx.fillStyle = "#7fd38a"; ctx.fillText("▲ gate", gx, gz + 9);
+    ctx.setLineDash([4, 4]); ctx.strokeStyle = "rgba(255,211,107,0.55)"; ctx.beginPath(); ctx.moveTo(cx, cz + 22); ctx.lineTo(ix + iw / 2, iy - 20); ctx.stroke(); ctx.setLineDash([]);
+  }
+
   // ---------- nameplates
   plate(e) {
     if (!e.plate) {
@@ -609,11 +637,8 @@ export class Engine {
     ctx.fillStyle = "#8a7a62";
     for (const b of this.world.buildings) { const [px, pz] = P(b.x - b.w / 2, b.z - b.d / 2); ctx.fillRect(px, pz, b.w * scale, b.d * scale); }
     for (const s of this.world.safe_zones) { const [px, pz] = P(s.x - s.half, s.z - s.half); ctx.strokeStyle = "#e6c46a"; ctx.lineWidth = 1.5; ctx.strokeRect(px, pz, s.half * 2 * scale, s.half * 2 * scale); }
-    if (!opts.radius || opts.fog) {
-      ctx.fillStyle = "rgba(6,7,6,0.88)";
-      const cs = 20 * scale;
-      for (let i = Math.floor(sx / 20); i <= Math.ceil((sx + sw) / 20); i++) for (let j = Math.floor(sz / 20); j <= Math.ceil((sz + shh) / 20); j++) if (!this.discovered.has(`${i},${j}`)) { const [px, pz] = P(i * 20, j * 20); ctx.fillRect(px - 0.5, pz - 0.5, cs + 1, cs + 1); }
-    }
+    const cas = this.world.castle;
+    if (cas) { ctx.fillStyle = "#6a655c"; for (const [x, z, sw2, sd2] of cas.segs) { const [px, pz] = P(x - sw2 / 2, z - sd2 / 2); ctx.fillRect(px, pz, Math.max(1, sw2 * scale), Math.max(1, sd2 * scale)); } }
     const dot = (x, z, c, r) => { const [px, pz] = P(x, z); if (px < -5 || pz < -5 || px > w + 5 || pz > h + 5) return; ctx.fillStyle = c; ctx.beginPath(); ctx.arc(px, pz, r, 0, 6.28); ctx.fill(); };
     for (const e of this.entities.values()) {
       if (e.kind === "npc" && !e.ambient) dot(e.x, e.z, this.data.npcs[e.id].merchant ? "#ffd23a" : this.data.npcs[e.id].healer ? "#7aff9a" : "#e0e0ff", opts.radius ? 3 : 2);
@@ -625,8 +650,7 @@ export class Engine {
     if (!opts.radius) {
       ctx.font = "600 13px 'IM Fell English SC', serif"; ctx.textAlign = "center";
       for (const r of this.world.regions) {
-        const key = `${Math.floor(r.x / 20)},${Math.floor(r.z / 20)}`;
-        if (!this.discovered.has(key)) continue;
+        if (r.castle) continue;
         const [px, pz] = P(r.x, r.z);
         if (r.camp) {
           ctx.fillStyle = "#ff6a3a"; ctx.beginPath(); ctx.moveTo(px, pz - 6); ctx.lineTo(px + 5, pz + 3); ctx.lineTo(px - 5, pz + 3); ctx.closePath(); ctx.fill();
@@ -637,6 +661,7 @@ export class Engine {
         ctx.font = "11px 'Alegreya Sans', sans-serif"; ctx.fillStyle = "#b8a888"; ctx.fillText(r.lvl === "-" ? "" : `Lv ${r.lvl}`, px, pz + 13); ctx.font = "600 13px 'IM Fell English SC', serif";
       }
     }
+    if (cas && !opts.radius) this.drawCastle(ctx, P, w, h, cas, me.z <= this.world.oh);
     for (const pt of this.world.portals || []) {
       const [px, pz] = P(pt.x, pt.z); if (px < -10 || pz < -10 || px > w + 10 || pz > h + 10) continue;
       const r = opts.radius ? 5 : 6;

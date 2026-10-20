@@ -197,12 +197,14 @@ SCATTER_BANDS = [(200, ["giant_spider", "imp"]), (330, ["forest_wolf", "imp", "g
 TARGET_MONSTERS = 2000
 CAMP_COUNT = 36
 # open-air castle (global coords): 4x2 rooms, entered from the south gate, snaking to the throne room
-CASTLE = dict(name="Castle Vexmoor", x0=1680, z0=170, rw=23, rd=25, t=2, cols=4, rows=2, door=5)
-CASTLE_ROOMS = [  # (col, row, name, monster, count, level label)
-    (0, 1, "Barbarian Warhall", "castle_barbarian", 8, "65"), (1, 1, "Arcane Gallery", "castle_battlemage", 7, "67"),
-    (2, 1, "Bonechant Crypt", "castle_necromancer", 7, "69"), (3, 1, "Gargoyle Roost", "castle_gargoyle", 7, "71"),
-    (3, 0, "Hellhound Kennels", "castle_hellhound", 8, "73"), (2, 0, "Hall of Knives", "castle_assassin", 7, "75"),
-    (1, 0, "Sentinel Hall", "castle_knight", 7, "77"), (0, 0, "Usurper's Throne", "castle_royal_guard", 4, "78-80 (Boss)")]
+CASTLE = dict(name="Castle Vexmoor", x0=1680, z0=160, rw=23, rd=22, t=2, cols=4, rows=4, door=5)
+_CR = [("Barbarian Warhall", "castle_barbarian"), ("Berserker Pit", "castle_berserker"), ("Plague Ward", "castle_plague_ghoul"), ("Crossbow Gallery", "castle_crossbowman"),
+       ("Arcane Gallery", "castle_battlemage"), ("Ember Sanctum", "castle_pyromancer"), ("Rimeveil Chamber", "castle_frost_witch"), ("Bonechant Crypt", "castle_necromancer"),
+       ("Gargoyle Roost", "castle_gargoyle"), ("Golem Foundry", "castle_golem_warden"), ("Hellhound Kennels", "castle_hellhound"), ("Wraith Chapel", "castle_wraith_knight"),
+       ("Hall of Knives", "castle_assassin"), ("Executioner's Block", "castle_executioner"), ("Sentinel Hall", "castle_knight"), ("Usurper's Throne", "castle_royal_guard")]
+# snake from the south gate (row 3) to the throne (row 0, col 0)
+_SN = [(c, 3) for c in range(4)] + [(c, 2) for c in (3, 2, 1, 0)] + [(c, 1) for c in range(4)] + [(c, 0) for c in (3, 2, 1, 0)]
+CASTLE_ROOMS = [(c, r, n, m, 4 if i == 15 else 6, f"{65 + i}" if i < 15 else "80 (Boss)") for i, ((c, r), (n, m)) in enumerate(zip(_SN, _CR))]
 OUTSKIRT_MOBS = ["giant_spider", "forest_wolf", "imp", "restless_bones", "goblin_scout"]
 CAMP_FAMILY = {"giant_spider": "spider", "venomous_spider": "spider", "broodmother": "spider", "imp": "imp", "abyssal_fiend": "imp", "forest_wolf": "beast",
                "dire_wolf": "beast", "goblin_scout": "goblin", "skeleton": "undead", "shadow_wraith": "undead", "death_knight": "undead",
@@ -503,30 +505,32 @@ class World:
                     cur = g + D / 2
         gate = (rx(0) + rw / 2, z0 + H2)
         hwall(z0, x0, x0 + W2, [])
-        hwall(rz(1) - t, x0, x0 + W2, [rx(3) + rw / 2])
+        for r, c in ((1, 3), (2, 0), (3, 3)):
+            hwall(rz(r) - t, x0, x0 + W2, [rx(c) + rw / 2])
         hwall(z0 + H2 - t, x0, x0 + W2, [gate[0]])
         for c in range(C["cols"] + 1):
             x = x0 + c * (rw + t)
-            vwall(x, z0, z0 + H2, [] if c in (0, C["cols"]) else [rz(0) + rd / 2, rz(1) + rd / 2])
+            vwall(x, z0, z0 + H2, [] if c in (0, C["cols"]) else [rz(r) + rd / 2 for r in range(C["rows"])])
         b = self.blocked
         b[z0 - 3:z0 + H2 + 4, x0 - 3:x0 + W2 + 4] = 0
         for sx, sz, w, d in segs:
             b[int(sz - d / 2):int(sz + d / 2 + 0.999), int(sx - w / 2):int(sx + w / 2 + 0.999)] = 1
         towers = [[x0 + 1, z0 + 1], [x0 + W2 - 1, z0 + 1], [x0 + 1, z0 + H2 - 1], [x0 + W2 - 1, z0 + H2 - 1],
-                  [gate[0] - D / 2 - 2, gate[1] - 1], [gate[0] + D / 2 + 2, gate[1] - 1], [x0 + W2 / 2, z0 + 1]]
+                  [gate[0] - D / 2 - 2, gate[1] - 1], [gate[0] + D / 2 + 2, gate[1] - 1], [x0 + W2 / 2, z0 + 1],
+                  [x0 + 1, z0 + H2 / 2], [x0 + W2 - 1, z0 + H2 / 2]]
         for tx, tz in towers:
             self._disc(tx, tz, 3.2)
         inside = lambda v: x0 - 4 < v[0] < x0 + W2 + 4 and z0 - 4 < v[1] < z0 + H2 + 4
         self.trees, self.rocks, self.bushes, self.grass = [[v for v in L if not inside(v)] for L in (self.trees, self.rocks, self.bushes, self.grass)]
         self.props = [p for p in self.props if not inside((p["x"], p["z"]))]
         REGIONS[:] = [r for r in REGIONS if not r.get("castle")]
-        REGIONS.append(dict(name="Castle Vexmoor", x=x0 + W2 / 2, z=z0 + H2 / 2, r=58, lvl="65-80 (Castle)", castle=True))
+        REGIONS.append(dict(name="Castle Vexmoor", x=x0 + W2 / 2, z=z0 + H2 / 2, r=62, lvl="65-80 (Castle)", castle=True))
         rooms = []
-        for c, r, name, mob, n, lvl in CASTLE_ROOMS:
+        for i, (c, r, name, mob, n, lvl) in enumerate(CASTLE_ROOMS):
             cx, cz = rx(c) + rw / 2, rz(r) + rd / 2
-            rooms.append(dict(name=name, x=cx, z=cz, w=rw, d=rd))
-            REGIONS.append(dict(name=name, x=cx, z=cz, r=11.5, lvl=lvl, castle=True))
-            self.spawns.append(dict(monster=mob, x=cx, z=cz, r=7, n=n))
+            rooms.append(dict(name=name, x=cx, z=cz, w=rw, d=rd, lvl=lvl))
+            REGIONS.append(dict(name=name, x=cx, z=cz, r=11, lvl=lvl, castle=True, room=True))
+            self.spawns.append(dict(monster=mob, x=cx, z=cz, r=6, n=n, room=i))
             for k in range(4):
                 bx, bz = cx + (-1 if k % 2 else 1) * (rw / 2 - 2), cz + (-1 if k < 2 else 1) * (rd / 2 - 2)
                 self.props.append(dict(kind="brazier", x=bx, z=bz)); self._disc(bx, bz, 0.6)
@@ -536,7 +540,7 @@ class World:
                     self.props.append(dict(kind="pillar", x=px, z=pz, h=4.5)); self._disc(px, pz, 0.7)
             if mob == "castle_royal_guard":
                 self.props.append(dict(kind="throne", x=cx - rw / 2 + 4, z=cz, rot=1)); self._disc(cx - rw / 2 + 4, cz, 2.2)
-                self.spawns.append(dict(monster="vexmoor", x=cx - rw / 2 + 8, z=cz, r=1.5, n=1))
+                self.spawns.append(dict(monster="vexmoor", x=cx - rw / 2 + 8, z=cz, r=1.5, n=1, room=i))
                 self.throne = (cx, cz)
         self.castle = dict(name=C["name"], x0=x0, z0=z0, w=W2, d=H2, cx=x0 + W2 / 2, cz=z0 + H2 / 2, segs=segs, towers=towers, gate=list(gate), rooms=rooms)
 

@@ -67,7 +67,7 @@ export function Hotbar({ data, net, engine }) {
         const cd = Math.max(0, (me.cds?.[id] || 0) - el);
         const noMana = mp < a.cost;
         return (
-          <Hover key={id} tip={<div className="tip"><div className="tip-name">{a.name}</div><div className="tip-meta">{a.cost} mana · {a.cd}s cooldown{a.range ? ` · ${a.range}m` : ""}</div><div className="tip-desc">{a.desc}</div>{!unlocked && <div className="down">Locked — requires level {a.level} and a skill point (open Skills)</div>}</div>}>
+          <Hover key={id} tip={<div className="tip"><div className="tip-name">{a.name}</div><div className="tip-meta">{a.cost} mana · {a.cd}s cooldown{a.range ? ` · ${a.range}m` : ""}</div><div className="tip-desc">{a.desc}</div>{!unlocked && <div className="down">Unlocks automatically at level {a.level}</div>}</div>}>
             <button type="button" data-testid={`hotbar-${id}`} className={`slot ${unlocked ? "" : "locked"} ${noMana && unlocked ? "nomana" : ""}`}
               onClick={() => { if (unlocked) net.send({ t: "cast", ab: id, id: engine?.targetId }); else togglePanel("skills", true); }}>
               <AbIcon id={id} />
@@ -92,7 +92,7 @@ export function MenuBar({ onLogout }) {
       <div className="gold" data-testid="currency-display"><Coins size={15} /> {me.gold.toLocaleString()}</div>
       {MENU.map(([k, I, label]) => (
         <button key={k} type="button" data-testid={`menu-${k}-btn`} className={`mbtn ${panels[k] ? "on" : ""}`} title={me.binds[ab[k]] ? `${label} (${keyLabel(me.binds[ab[k]])})` : label} onClick={() => { sfx("open"); togglePanel(k); }}>
-          <I size={18} />{(k === "character" && me.attr_points > 0) || (k === "skills" && me.skill_points > 0) ? <span className="pip" /> : null}
+          <I size={18} />{k === "character" && me.attr_points > 0 ? <span className="pip" /> : null}
         </button>
       ))}
       {me.admin && <button type="button" className={`mbtn ${panels.give ? "on" : ""}`} data-testid="menu-give-btn" title="Keeper's Gift (admin)" onClick={() => { sfx("open"); togglePanel("give"); }}><Gift size={18} /></button>}

@@ -152,16 +152,16 @@ export function SkillsPanel({ data, net }) {
   const list = Object.entries(data.abilities).filter(([, a]) => a.cls.includes(me.cls));
   return (
     <Panel title="Skills & Spells" testid="skills-panel" className="skills-panel" onClose={() => togglePanel("skills", false)}>
-      <div className="char-points" data-testid="skill-points">Skill points: <b>{me.skill_points}</b> <small>· earned three per level</small></div>
+      <div className="char-points" data-testid="skill-info">New spells are learned automatically as you level up.</div>
       <div className="skill-row base"><AbIcon id="basic" /><div><b>Basic Attack</b><p>Left-click an enemy to auto-attack ({me.range}m, every {me.attack_interval}s).</p></div></div>
       {list.map(([id, a]) => {
-        const un = me.abilities.includes(id), can = !un && me.level >= a.level && me.skill_points > 0;
+        const un = me.abilities.includes(id);
         return (
           <div key={id} className={`skill-row ${un ? "" : "locked"}`} data-testid={`skill-${id}`}>
             <AbIcon id={id} />
             <div><b>{a.name}</b> <small>unlocks at lv {a.level} · {a.cost} mana{a.charge ? " · 5 min charge" : ""}</small><p>{a.desc}</p></div>
-            {un ? <span className="learned"><Check size={14} /> Learned</span>
-              : <button type="button" className="btn" data-testid={`skill-unlock-${id}`} disabled={!can} onClick={() => { sfx("levelup"); net.send({ t: "unlock", ab: id }); }}>{me.level < a.level ? <><Lock size={12} /> Lv {a.level}</> : "Learn"}</button>}
+            {un ? <span className="learned"><Check size={14} /> Known</span>
+              : <span className="learned locked-lv" data-testid={`skill-locked-${id}`}><Lock size={12} /> Unlocks at Lv {a.level}</span>}
           </div>
         );
       })}

@@ -11,7 +11,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field
-from game import Game, new_character_doc, ATTR_POINTS_PER_LEVEL, SKILL_POINTS_PER_LEVEL
+from game import Game, new_character_doc, ATTR_POINTS_PER_LEVEL
 from game_data import public_data, CLASSES, clean_look, gear_score, MAX_LEVEL, XP_TABLE
 
 logging.basicConfig(level=logging.INFO)
@@ -337,10 +337,10 @@ async def admin_broadcast(body: AdminTextIn, _=Depends(current_admin)):
 def live_edit(p, level, gold):
     if level is not None and level != p.level:
         p.attr_points = max(0, p.attr_points + ATTR_POINTS_PER_LEVEL * (level - p.level))
-        p.skill_points = max(0, p.skill_points + SKILL_POINTS_PER_LEVEL * (level - p.level))
         p.level, p.xp = level, XP_TABLE[level]
         p.recalc()
         p.hp, p.mp = p.max_hp, p.max_mp
+        game.grant_spells(p)
     if gold is not None:
         p.gold = gold
     p.dirty = True
@@ -363,7 +363,7 @@ async def admin_edit_char(cid: str, body: AdminCharIn, _=Depends(current_admin))
     if body.level is not None and body.level != old["level"]:
         upd |= {"level": body.level, "xp": XP_TABLE[body.level]}
         d = body.level - old["level"]
-        upd |= {"attr_points": max(0, old.get("attr_points", 0) + ATTR_POINTS_PER_LEVEL * d), "skill_points": max(0, old.get("skill_points", 0) + SKILL_POINTS_PER_LEVEL * d)}
+        upd |= {"attr_points": max(0, old.get("attr_points", 0) + ATTR_POINTS_PER_LEVEL * d)}
     if body.level is not None:
         upd |= {"level": body.level, "xp": XP_TABLE[body.level]}
     if body.gold is not None:

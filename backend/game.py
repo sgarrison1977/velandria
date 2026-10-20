@@ -2,7 +2,7 @@
 import asyncio, time, math, random, uuid, json, logging, re
 from datetime import datetime, timezone
 from game_data import (STORAGE_SLOTS, ITEMS, MONSTERS, ABILITIES, CLASSES, NPCS, MERCHANTS, QUESTS, XP_TABLE, MAX_LEVEL, INV_SLOTS, TICK, COMBAT,
-                       PLAYER_SPEED, PICKUP_RANGE, NPC_RANGE, LOOT_OWNER_SECS, LOOT_EXPIRE_SECS, ACTIONS, RESTOCK_SECS, sell_price, default_binds, EXTRA_ROLLS, BONUS_LOOT, WAYSTONE_COST, roll_props, random_gear, RANDOM_GEAR_CHANCE, rare_gear, BOUNTIES, BOUNTY_SHOP)
+                       PLAYER_SPEED, PICKUP_RANGE, NPC_RANGE, LOOT_OWNER_SECS, LOOT_EXPIRE_SECS, ACTIONS, RESTOCK_SECS, sell_price, default_binds, EXTRA_ROLLS, BONUS_LOOT, WAYSTONE_COST, roll_props, random_gear, RANDOM_GEAR_CHANCE, rare_gear, BOUNTIES, BOUNTY_SHOP, SETS, VEXMOOR_SET)
 from world import PORTALS, World, in_safe, SAFE_ZONES, PIT_ROOMS, to_global
 from game_data import PIT_CHAMPION_KILLS, FERRY_COST, FERRY_DEST, CHEST_COOLDOWN
 
@@ -97,12 +97,22 @@ class Player:
                     armor += v
                 else:
                     a[k] = a.get(k, 0) + v
+        sc = {}
+        for e in self.equipment.values():
+            if ITEMS[e["item"]].get("set"):
+                sc[ITEMS[e["item"]]["set"]] = sc.get(ITEMS[e["item"]]["set"], 0) + 1
+        for sid, cnt in sc.items():
+            for need, bon in SETS[sid]["bonuses"].items():
+                if cnt >= need:
+                    for k, v in bon.items():
+                        if k != "text":
+                            a[k] = a.get(k, 0) + v
         if "armor" in self.buffs:
             armor += self.buffs["armor"][0]
         if "str" in self.buffs:
             a["str"] += self.buffs["str"][0]
         self.tot, self.armor = a, round(armor)
-        self.max_hp = 50 + self.level * 8 + a["sta"] * 6 + a.get("max_hp", 0)
+        self.max_hp = round((50 + self.level * 8 + a["sta"] * 6 + a.get("max_hp", 0)) * (1 + a.get("max_hp_pct", 0) / 100))
         self.max_mp = 30 + self.level * 4 + a["wis"] * 6 + a.get("max_mp", 0)
         w = self.weapon()
         self.attack_interval = round(w["spd"] / (1 + a["dex"] * 0.012), 3)
@@ -154,6 +164,7 @@ class Game:
         self.players = {}
         self.monsters = {}
         self.loot = {}
+        self.room_hits, self.room_cd = {}, {}
         self.parties, self.invites, self.party_acc = {}, {}, 0.0
         self.storages, self.storage_lock = {}, asyncio.Lock()
         self.sched, self.gates = [], {}
@@ -257,6 +268,7 @@ class Game:
         p.admin = admin
         chat = await self.db.chat.find({}, {"_id": 0}).sort("ts", -1).to_list(40)
         p.send({"t": "init", "me": p.self_view(), "chat": list(reversed(chat)), "stock": None})
+        self.grant_spells(p)
         return p
 
     def detach(self, p, ws):
@@ -587,6 +599,8 @@ class Game:
         if p is not None and p.buffs.pop("invis", None):
             p.dirty = True
             p.send({"t": "sys", "msg": "You attacked — Contra Visus fades and you are visible again."})
+        if p is not None and p.tot.get("dmg_pct"):
+            raw *= 1 + p.tot["dmg_pct"] / 100
         res = m.d["resist"].get("magic" if dtype in ("magic", "poison", "fire", "frost", "lightning") else "phys", 1.0)
         armor = 0 if dtype != "phys" else m.d["armor"]
         dmg = max(1, round(raw * (1 - armor / (armor + COMBAT["armor_k"])) * res))
@@ -607,9 +621,55 @@ class Game:
         if m.hp <= 0:
             self.kill_monster(m)
 
+    def grant_spells(self, p):
+        new = [k for k, ab in ABILITIES.items() if p.cls in ab["cls"] and ab["level"] <= p.level and k not in p.abilities]
+        if new:
+            p.abilities += new
+            p.dirty = True
+            p.send({"t": "sys", "msg": "New spell" + ("s" if len(new) > 1 else "") + " learned: " + ", ".join(ABILITIES[k]["name"] for k in new) + "!", "kind": "quest"})
+        p.skill_points = 0
+
+    def room_clear(self, m, t):
+        room = m.spawn.get("room")
+        hits = self.room_hits.setdefault(room, {})
+        for pid in m.dmg_by:
+            hits[pid] = t
+        if t < self.room_cd.get(room, 0) or any(o.spawn.get("room") == room and not o.dead_until for o in self.monsters.values()):
+            return
+        self.room_cd[room] = t + 120
+        winners = [self.players[pid] for pid, ht in hits.items() if t - ht < 240 and pid in self.players]
+        self.room_hits[room] = {}
+        rx, rz = m.spawn["x"], m.spawn["z"]
+        for i, p in enumerate(winners):
+            a = i * 1.3
+            lid = "l" + uid()
+            self.loot[lid] = dict(id=lid, item="vexmoor_coffer", qty=1, props=None, pname=None, x=round(rx + math.cos(a) * 1.5, 2), z=round(rz + math.sin(a) * 1.5, 2),
+                                  owner=p.id, party=None, owner_until=t + 120, expires=t + 120)
+            p.send({"t": "sys", "msg": "Room cleared! A Vexmoor Coffer has appeared for you — claim it within 2 minutes.", "kind": "quest"})
+            self.fx(rx, rz, {"t": "fx", "k": "levelup", "src": p.id, "lv": p.level})
+
+    def open_coffer(self, p, lvl):
+        t = now()
+        drops = [("gold", rnd.randint(lvl * 40, lvl * 70)), ("hp_potion", 3), ("mp_potion", 2)]
+        g = rnd.choice(list(VEXMOOR_SET)) if rnd.random() < 0.25 else rare_gear(lvl, rnd)
+        if g:
+            drops.append((g, 1 if g in VEXMOOR_SET else -1))
+        for i, (item, qty) in enumerate(drops):
+            a = i * 2.1 + rnd.uniform(0, 1)
+            lx, lz = p.x + math.cos(a) * 1.3, p.z + math.sin(a) * 1.3
+            if not self.world.walkable(lx, lz):
+                lx, lz = p.x, p.z
+            props, pname = (None, None) if item == "gold" or item in VEXMOOR_SET else roll_props(item, lvl, rnd, force=qty == -1)
+            lid = "l" + uid()
+            self.loot[lid] = dict(id=lid, item=item, qty=max(1, qty), props=props, pname=pname, x=round(lx, 2), z=round(lz, 2), owner=p.id,
+                                  party=None, owner_until=t + LOOT_OWNER_SECS, expires=t + LOOT_EXPIRE_SECS)
+        p.send({"t": "sys", "msg": "You break the Vexmoor seal. Treasure spills out!", "kind": "quest"})
+
     def kill_monster(self, m):
         t = now()
         m.hp, m.dead_until, m.died_at, m.path, m.target, m.dots = 0, t + m.d["respawn"], t, [], None, []
+        if m.spawn.get("room") is not None:
+            self.room_clear(m, t)
         killer = self.players.get(max(m.dmg_by, key=m.dmg_by.get)) if m.dmg_by else None
         self.fx(m.x, m.z, {"t": "fx", "k": "death", "tgt": m.id})
         if m.type.startswith("pit_") and not m.d.get("champion"):
@@ -637,6 +697,8 @@ class Game:
         for lv, item, chance in BONUS_LOOT:
             if m.d["level"] >= lv and rnd.random() < chance:
                 drops.append((item, 1))
+        if m.d.get("castle") and rnd.random() < 0.04:
+            drops.append((rnd.choice(list(VEXMOOR_SET)), 1))
         if m.d.get("isle") and rnd.random() < 0.35:
             g = random_gear(m.d["level"], rnd)
             if g:
@@ -698,7 +760,6 @@ class Game:
         while p.level < MAX_LEVEL and p.xp >= XP_TABLE[p.level + 1]:
             p.level += 1
             p.attr_points += ATTR_POINTS_PER_LEVEL
-            p.skill_points += SKILL_POINTS_PER_LEVEL
             levels += 1
         if levels:
             p.recalc()
@@ -707,6 +768,7 @@ class Game:
             p.mp = min(p.max_mp, p.mp + p.max_mp * r)
             self.fx(p.x, p.z, {"t": "fx", "k": "levelup", "src": p.id, "lv": p.level})
             p.send({"t": "levelup", "lv": p.level, "n": levels})
+            self.grant_spells(p)
             self.broadcast_sys(f"{p.name} has reached level {p.level}!")
             asyncio.create_task(self.save(p))
         p.dirty = True
@@ -728,6 +790,8 @@ class Game:
     def damage_player(self, p, dmg, m, dtype):
         if p.dead_until or in_safe(p.x, p.z):
             return
+        if p.tot.get("dr_pct"):
+            dmg = max(1, round(dmg * (1 - p.tot["dr_pct"] / 100)))
         p.hp -= dmg
         self.fx(p.x, p.z, {"t": "fx", "k": "pdmg", "tgt": p.id, "v": dmg, "dt": dtype})
         if p.hp <= 0:
@@ -1683,6 +1747,12 @@ class Game:
         it = ITEMS[s["item"]]
         if it["type"] != "consumable":
             return self.equip(p, suid) if it["type"] in ("weapon", "armor") else "You can't use that."
+        if it.get("coffer"):
+            s["qty"] -= 1
+            if s["qty"] <= 0:
+                p.inventory.remove(s)
+            p.dirty = True
+            return self.open_coffer(p, it["coffer"])
         if p.cds.get("potion", 0) > now():
             return "You must wait before drinking again."
         p.cds["potion"] = now() + 2
@@ -1805,20 +1875,7 @@ class Game:
             else:
                 err = "No attribute points available."
         elif t == "unlock":
-            ab = ABILITIES.get(msg.get("ab"))
-            if not ab or msg.get("ab") in p.abilities:
-                err = "Cannot learn that."
-            elif p.cls not in ab["cls"]:
-                err = "Your class cannot learn that."
-            elif p.level < ab["level"]:
-                err = f"Requires level {ab['level']}."
-            elif p.skill_points < 1:
-                err = "You need a skill point."
-            else:
-                p.skill_points -= 1
-                p.abilities.append(msg["ab"])
-                p.dirty = True
-                p.send({"t": "sys", "msg": f"You learned {ab['name']}!", "kind": "quest"})
+            err = "Spells are learned automatically as you level up."
         elif t == "equip":
             err = self.equip(p, msg.get("uid"), msg.get("slot"))
         elif t == "unequip":

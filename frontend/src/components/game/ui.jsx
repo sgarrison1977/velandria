@@ -48,6 +48,17 @@ function Compare({ item, cur }) {
     </div>
   );
 }
+function SetInfo({ set, me }) {
+  const S = window.__SX_SETS?.[set];
+  if (!S) return null;
+  const have = Object.values(me?.equipment || {}).filter((e) => S.items.includes(e.item)).length;
+  return (
+    <div className="tip-set" data-testid="tip-set-info">
+      <div className="tip-meta" style={{ color: "#7fd38a" }}>{S.name} ({have}/{S.items.length})</div>
+      {Object.entries(S.bonuses).map(([n, txt]) => <div key={n} className={have >= Number(n) ? "up" : "tip-meta"}>({n}) {txt}</div>)}
+    </div>
+  );
+}
 export function ItemTip({ id, item, me, extra, equipped }) {
   if (!item) return null;
   const rslot = item.slot === "ring" ? ["ring1", "ring2", "ring3", "ring4", "ring5", "ring6"].find((r) => !me?.equipment?.[r]) || "ring1" : item.slot;
@@ -67,7 +78,8 @@ export function ItemTip({ id, item, me, extra, equipped }) {
       {Object.entries(item.stats || {}).map(([k, v]) => <div key={k} className={STAT[k]?.startsWith("%") || k.endsWith("regen") || item.props?.[k] ? "up prop" : "up"}>+{v}{STAT[k]?.startsWith("%") ? "" : " "}{STAT[k] || k.replace(/_/g, " ")}</div>)}
       {item.heal && <div className="up">Restores {item.heal} health</div>}{item.full && <div className="up">Restores all {item.full === "hp" ? "health" : "mana"}</div>}
       {item.mana && <div className="up">Restores {item.mana} mana</div>}
-      {item.desc && item.type !== "consumable" && <div className="tip-desc">{item.desc}</div>}
+      {item.desc && (item.type !== "consumable" || item.coffer) && <div className="tip-desc">{item.desc}</div>}
+      {item.set && <SetInfo set={item.set} me={me} />}
       {!equipped && me && item.slot && <Compare item={item} cur={cur} />}
       {extra}
     </div>

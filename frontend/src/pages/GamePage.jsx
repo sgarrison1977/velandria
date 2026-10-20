@@ -33,7 +33,7 @@ export default function GamePage() {
     (async () => {
       const [d, w] = await Promise.all([http.get("/game/data"), http.get("/game/world")]);
       if (dead) return;
-      window.__SX_ITEMS = d.data.items;
+      window.__SX_ITEMS = d.data.items; window.__SX_SETS = d.data.sets;
       setData(d.data); setStep("Sculpting terrain and growing the forests…");
       await new Promise((r) => setTimeout(r, 60));
       const queue = [];

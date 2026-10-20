@@ -584,13 +584,21 @@ _boss("pyrrhax", "abyssal_fiend", 70, "Pyrrhax the Ashen Tyrant", 3.5, "ashen_co
 
 # ---------- Castle Vexmoor (open-air castle, far NE): one monster type per room
 for _k, _b, _l, _n, _x in [("castle_barbarian", "orc_warrior", 65, "Ironhide Barbarian", dict(interval=1.6)),
-                           ("castle_battlemage", "dark_cultist", 67, "Vexmoor Battlemage", dict(range=11.0)),
-                           ("castle_necromancer", "dark_cultist", 69, "Bonechant Necromancer", dict(range=10.0, poison=[60, 4])),
-                           ("castle_gargoyle", "stone_golem", 71, "Rampart Gargoyle", dict(speed=3.6)),
-                           ("castle_hellhound", "dire_wolf", 73, "Castle Hellhound", dict(speed=5.0)),
-                           ("castle_assassin", "forest_bandit", 75, "Shadowblade Assassin", dict(interval=1.2, speed=4.6)),
-                           ("castle_knight", "death_knight", 77, "Vexmoor Sentinel", {}),
-                           ("castle_royal_guard", "death_knight", 78, "Royal Guard of Vexmoor", {})]:
+                           ("castle_berserker", "orc_warrior", 66, "Bloodrage Berserker", dict(interval=1.25, speed=4.4)),
+                           ("castle_plague_ghoul", "crypt_ghoul", 67, "Plague Ghoul", dict(poison=[70, 4])),
+                           ("castle_crossbowman", "forest_bandit", 68, "Vexmoor Crossbowman", dict(ranged=True, range=12.0, interval=2.2)),
+                           ("castle_battlemage", "dark_cultist", 69, "Vexmoor Battlemage", dict(range=11.0)),
+                           ("castle_pyromancer", "dark_cultist", 70, "Ember Pyromancer", dict(range=11.0)),
+                           ("castle_frost_witch", "dark_cultist", 71, "Rimeveil Witch", dict(range=11.0)),
+                           ("castle_necromancer", "dark_cultist", 72, "Bonechant Necromancer", dict(range=10.0, poison=[60, 4])),
+                           ("castle_gargoyle", "stone_golem", 73, "Rampart Gargoyle", dict(speed=3.6)),
+                           ("castle_golem_warden", "stone_golem", 74, "Golem Warden", {}),
+                           ("castle_hellhound", "dire_wolf", 75, "Castle Hellhound", dict(speed=5.0)),
+                           ("castle_wraith_knight", "death_knight", 76, "Wraith Knight", {}),
+                           ("castle_assassin", "forest_bandit", 77, "Shadowblade Assassin", dict(interval=1.2, speed=4.6)),
+                           ("castle_executioner", "orc_warrior", 78, "Castle Executioner", dict(interval=2.6)),
+                           ("castle_knight", "death_knight", 79, "Vexmoor Sentinel", {}),
+                           ("castle_royal_guard", "death_knight", 80, "Royal Guard of Vexmoor", {})]:
     _c = _pit(_b, _l)
     _c.pop("base")
     _ref = MONSTERS["death_knight"]
@@ -601,6 +609,25 @@ ITEMS["usurper_crown"] = M("Usurper's Crown", "legendary", 5000, "Lord Vexmoor's
 _boss("vexmoor", "death_knight", 80, "Lord Vexmoor, the Usurper King", 1.0, "usurper_crown",
       dict(every=7, radius=10, mult=1.5, name="Royal Decree", c1="#ffd36b", c2="#b02a1a"), scale=1.0, enrage=dict(at=0.3, mult=1.5), leash=16)
 MONSTERS["vexmoor"]["hp"] = 42000
+
+# ---------- Regalia of Vexmoor (castle-only set) + room-clear coffer
+_SD = "Regalia of Vexmoor (set piece). Drops only inside Castle Vexmoor."
+VEXMOOR_SET = {
+    "vexmoor_helm": A("Crown-Helm of Vexmoor", "head", "epic", 30, 4200, 68, stats={"sta": 14, "str": 6, "dex": 6, "int": 6}, desc=_SD, color="#2a1a2a"),
+    "vexmoor_chest": A("Vexmoor Royal Cuirass", "chest", "epic", 56, 5200, 70, stats={"sta": 18, "str": 8, "dex": 8, "int": 8, "max_hp": 120}, desc=_SD, color="#2a1a2a"),
+    "vexmoor_legs": A("Vexmoor Legguards", "legs", "epic", 42, 4600, 69, stats={"sta": 14, "str": 6, "dex": 6, "int": 6}, desc=_SD, color="#1e141e"),
+    "vexmoor_gauntlets": A("Vexmoor Gauntlets", "hands", "epic", 22, 3800, 67, stats={"str": 8, "dex": 8, "int": 8, "crit": 2}, desc=_SD, color="#2a1a2a"),
+    "vexmoor_sabatons": A("Vexmoor Sabatons", "feet", "epic", 24, 3800, 67, stats={"sta": 10, "dex": 8, "move_speed": 4}, desc=_SD, color="#140e14"),
+    "vexmoor_signet": A("Signet of the Usurper", "ring", "epic", 0, 4000, 70, stats={"str": 6, "dex": 6, "int": 6, "wis": 6, "crit": 3}, desc=_SD, color="#ffd36b"),
+}
+for _it in VEXMOOR_SET.values():
+    _it["set"] = "vexmoor"
+ITEMS.update(VEXMOOR_SET)
+SETS = {"vexmoor": dict(name="Regalia of Vexmoor", items=list(VEXMOOR_SET), bonuses={
+    2: dict(dmg_pct=8, text="+8% damage"), 4: dict(max_hp_pct=10, crit=5, text="+10% max health, +5% critical chance"),
+    6: dict(dr_pct=15, text="15% damage reduction")})}
+ITEMS["vexmoor_coffer"] = dict(name="Vexmoor Coffer", type="consumable", rarity="epic", price=0, stack=10, coffer=72,
+                               desc="A gilded strongbox won by clearing a castle room. Use it to break the seal.")
 
 # global lair coordinates for overworld bosses
 BOSS_LAIRS = {"grubnak": (900, 445), "greymaw": (395, 190), "ixra": (548, 540), "malzeth": (1560, 250), "revenant": (988, 190), "pyrrhax": (1205, 178)}
@@ -621,7 +648,7 @@ BOUNTIES = {
     "revenant": _bounty("revenant", "Dreadkeep Ruins", BOSS_LAIRS["revenant"]),
     "pyrrhax": _bounty("pyrrhax", "The Abyssal Rift", BOSS_LAIRS["pyrrhax"]),
     "hollow_king": _bounty("hollow_king", "The Hollow Deep (dungeon)", (680, 222)),
-    "vexmoor": _bounty("vexmoor", "Castle Vexmoor — Usurper's Throne, far northeast", (1693, 184)),
+    "vexmoor": _bounty("vexmoor", "Castle Vexmoor — Usurper's Throne, far northeast", (1693, 173)),
 }
 
 # ---------- Bounty Token shop (exclusive gear)
@@ -652,7 +679,7 @@ def public_data():
     return dict(items=ITEMS, monsters={k: {kk: vv for kk, vv in v.items() if kk != "loot"} | {"drops": [i for i, _ in v["loot"]]} for k, v in MONSTERS.items()},
                 look_opts=LOOK_OPTS, abilities=ABILITIES, classes=CLASSES, xp_table=XP_TABLE, npcs=NPCS, quests=QUESTS, attr_info=ATTR_INFO,
                 actions=ACTIONS, max_level=MAX_LEVEL, inv_slots=INV_SLOTS, sell_ratio=SELL_RATIO,
-                merchants={k: dict(name=v["name"]) for k, v in MERCHANTS.items()}, bounties=BOUNTIES, bounty_shop=BOUNTY_SHOP)
+                merchants={k: dict(name=v["name"]) for k, v in MERCHANTS.items()}, bounties=BOUNTIES, bounty_shop=BOUNTY_SHOP, sets={k: dict(name=v["name"], items=v["items"], bonuses={n: b["text"] for n, b in v["bonuses"].items()}) for k, v in SETS.items()})
 
 
 def sell_price(item_id, props=None):
@@ -685,7 +712,7 @@ def roll_props(item_id, mlvl, rnd, force=False):
     return props, name
 
 
-QUEST_ONLY = {i for q in QUESTS.values() for i, _ in q["reward"].get("items", [])} | set(BOUNTY_ITEMS)
+QUEST_ONLY = {i for q in QUESTS.values() for i, _ in q["reward"].get("items", [])} | set(BOUNTY_ITEMS) | set(VEXMOOR_SET)
 
 
 def rare_gear(mlvl, rnd):
