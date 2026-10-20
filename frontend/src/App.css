@@ -72,11 +72,11 @@ input { font-family: inherit; }
 .hud .bottom { pointer-events: none; }
 
 .plate { position: absolute; left: 0; top: 0; text-align: center; white-space: nowrap; text-shadow: 0 1px 2px #000, 0 0 4px #000, 0 0 6px #000; will-change: transform; }
-.plate-name { font-family: var(--serif); font-size: 20px; letter-spacing: .02em; color: #f0e6d0; }
-.plate-sub { font-size: 15px; font-weight: 600; color: #ffffff; text-transform: capitalize; text-shadow: 0 1px 2px #000, 0 0 3px #000, 0 0 6px #000, 0 0 8px #000; }
+.plate-name { font-family: var(--serif); font-size: calc(20px * var(--np, 1)); letter-spacing: .02em; color: #f0e6d0; }
+.plate-sub { font-size: calc(15px * var(--np, 1)); font-weight: 600; color: #ffffff; text-transform: capitalize; text-shadow: 0 1px 2px #000, 0 0 3px #000, 0 0 6px #000, 0 0 8px #000; }
 .plate-monster .plate-name { color: #ff9a80; } .plate-npc .plate-name { color: #ffe08a; } .plate-player .plate-name { color: #9ad0ff; }
 .plate.is-target .plate-name { color: #ff5a40; }
-.plate-hp { width: 80px; height: 8px; margin: 2px auto 0; background: #000c; border: 1px solid #000; }
+.plate-hp { width: calc(80px * var(--np, 1)); height: 8px; margin: 2px auto 0; background: #000c; border: 1px solid #000; }
 .plate-hp i { display: block; height: 100%; background: linear-gradient(#e0442c, #8a1a0e); transition: width .15s; }
 .plate-player .plate-hp i { background: linear-gradient(#5ad04a, #2a7a1e); }
 .dmg-num { position: absolute; left: 0; top: 0; font-family: var(--serif); font-size: 20px; font-weight: 700; text-shadow: 0 2px 2px #000, 0 0 6px #000; }
@@ -565,4 +565,4 @@ input[type="text"], input[type="email"], input[type="password"], input:not([type
 @media (max-width: 640px) { .trade-offers { grid-template-columns: 1fr; } }
 .panel-head.drag-handle { cursor: grab; user-select: none; }
 body.win-dragging, body.win-dragging * { cursor: grabbing !important; user-select: none !important; }
-.plate.is-say .plate-sub, .nameplate.is-say small { color: #fff4d6; font-style: italic; text-transform: none; }
+.plate.is-say .plate-sub, .nameplate.is-say small { color: #fff4d6; font-style: italic; text-transform: none; font-size: calc(18px * var(--np, 1)); white-space: normal; width: calc(340px * var(--np, 1)); margin-left: 50%; transform: translateX(-50%); line-height: 1.3; }

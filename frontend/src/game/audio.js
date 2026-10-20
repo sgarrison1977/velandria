@@ -45,6 +45,20 @@ export const ambient = {
   },
   stop() { for (const a of Object.values(amb)) { a.el.pause(); a.v = 0; } },
 };
+let hum = null;
+export function portalHum(level) {
+  if (!hum) {
+    if (level <= 0.001) return;
+    const c = ac(); if (!c) return;
+    const g = c.createGain(); g.gain.value = 0; const lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 520; lp.Q.value = 2;
+    for (const [f, type, v] of [[55, "sine", 0.6], [82.6, "sine", 0.35], [110.4, "triangle", 0.18], [164.5, "sine", 0.08]]) {
+      const o = c.createOscillator(); o.type = type; o.frequency.value = f; const og = c.createGain(); og.gain.value = v; o.connect(og); og.connect(lp); o.start();
+    }
+    const lfo = c.createOscillator(), lg = c.createGain(); lfo.frequency.value = 0.35; lg.gain.value = 140; lfo.connect(lg); lg.connect(lp.frequency); lfo.start();
+    lp.connect(g); g.connect(master); hum = { g, c };
+  }
+  hum.g.gain.setTargetAtTime(cfg.muted ? 0 : Math.max(0, Math.min(1, level)) * 0.16, hum.c.currentTime, 0.25);
+}
 function ac() {
   if (!ctx) { const C = window.AudioContext || window.webkitAudioContext; if (!C) return null; ctx = new C(); master = ctx.createGain(); master.gain.value = cfg.muted ? 0 : cfg.vol; master.connect(ctx.destination); }
   if (ctx.state === "suspended") ctx.resume();

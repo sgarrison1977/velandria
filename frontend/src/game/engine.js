@@ -5,7 +5,7 @@ import { LightPool } from "./lightpool";
 import { buildMonster, buildNpc, buildPlayer, buildLoot, proxy, animateGlow, animateRig, setInvis, SHIMMER, RARITY } from "./models";
 import { getState, setState } from "./store";
 import { lootWanted } from "../components/game/LootFilter";
-import { sfx, music, ambient } from "./audio";
+import { sfx, music, ambient, portalHum } from "./audio";
 import { setEnv } from "./rig/tex";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
@@ -82,7 +82,7 @@ export class Engine {
     this.running = true; this.fpsAcc = []; this.loop();
   }
   dispose() {
-    music.stop(); ambient.stop(); this.running = false; window.removeEventListener("resize", this.resize); this.unbind?.(); this.renderer.dispose(); this.overlay.innerHTML = ""; }
+    music.stop(); ambient.stop(); portalHum(0); this.running = false; window.removeEventListener("resize", this.resize); this.unbind?.(); this.renderer.dispose(); this.overlay.innerHTML = ""; }
   resize = () => { const w = this.canvas.clientWidth, h = this.canvas.clientHeight; this.renderer.setSize(w, h, false); if (this.composer) { this.composer.setPixelRatio(this.renderer.getPixelRatio()); this.composer.setSize(w, h); this.bloom.resolution.set(w / 2, h / 2); } this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); };
   groundY(x, z) {
     let h = this.terrain.height(x, z);
@@ -370,7 +370,7 @@ export class Engine {
       const e = this.pick(ev);
       if (e?.kind === "monster") { this.net.send({ t: "target", id: e.id }); sfx("click"); return; }
       if (e?.kind === "loot") { this.net.send({ t: "pickup", id: e.id }); return; }
-      if (e?.kind === "npc" && !e.ambient) { this.net.send({ t: "npc", id: e.id }); return; }
+      if (e?.kind === "npc" && (!e.ambient || this.data.npcs[e.id]?.favor)) { this.net.send({ t: "npc", id: e.id }); return; }
       if (e?.kind === "npc" && e.ambient && this.me && Math.hypot(e.x - this.me.x, e.z - this.me.z) < 14) { this.villagerTalk(e); return; }
       const p = this.groundPoint();
       if (p) { this.net.send({ t: "move", x: +p.x.toFixed(2), z: +p.z.toFixed(2) }); }
@@ -528,6 +528,10 @@ export class Engine {
       for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) { const key = `${cx + i},${cz + j}`; if (!this.discovered.has(key)) { this.discovered.add(key); this.discDirty = true; } }
       const reg = this.regionAt(me.x, me.z);
       if (reg !== this.lastRegion) { this.lastRegion = reg; setState({ region: reg }); }
+      { const P = this._portals || (this._portals = (this.world.props || []).filter((p) => p.kind === "portal")); let pd = 99;
+        for (const p of P) pd = Math.min(pd, Math.hypot(p.x - me.x, p.z - me.z));
+        for (const e of this.entities.values()) if (e.kind === "gate") pd = Math.min(pd, Math.hypot(e.x - me.x, e.z - me.z));
+        portalHum(pd < 20 ? (1 - pd / 20) ** 2 : 0); }
       if (this.world.ox && me.z < this.world.oh) { const cd = this.terrain.coast(me.x, me.z); ambient.set("surf", cd < -45 ? 0 : Math.min(1, (45 + cd) / 40)); } else ambient.set("surf", 0);
       music.play(me.z > this.world.oh ? "dungeon" : this.world.safe_zones.some((s) => Math.hypot(s.x - me.x, s.z - me.z) < 70) ? "town" : "wild");
       const wp = this.waypoint;

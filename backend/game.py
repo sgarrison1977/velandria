@@ -1286,6 +1286,10 @@ class Game:
             return None
         return n
 
+    @staticmethod
+    def repeat_ok(qid, q):
+        return bool(q and QUESTS[qid].get("repeat") and q.get("s") == "done" and q.get("day") != datetime.now(timezone.utc).date().isoformat())
+
     def quest_ready(self, p, qid):
         qd, q = QUESTS[qid], p.quests.get(qid)
         if not q or q["s"] != "active":
@@ -1296,6 +1300,8 @@ class Game:
             return q["k"] >= qd["count"] and self.count_item(p, qd["collect"]) >= qd["collect_count"]
         if qd["kind"] == "deliver":
             return self.count_item(p, qd["item"]) >= 1
+        if qd["kind"] == "collect":
+            return self.count_item(p, qd["collect"]) >= qd["collect_count"]
         if qd["kind"] == "crypt":
             return bool(q.get("opened"))
         return False
@@ -1347,6 +1353,8 @@ class Game:
         for qid in n.get("quests", []):
             q = p.quests.get(qid)
             req = QUESTS[qid].get("requires")
+            if self.repeat_ok(qid, q):
+                q = None
             if not q and (not req or p.quests.get(req, {}).get("s") == "done"):
                 opts.append(dict(id=f"accept:{qid}", label=f"Quest: {QUESTS[qid]['name']}", text=QUESTS[qid]["text"]))
         for qid, qd in QUESTS.items():
@@ -1571,7 +1579,7 @@ class Game:
         if action.startswith("accept:"):
             qid = action[7:]
             req = QUESTS.get(qid, {}).get("requires")
-            if qid not in n.get("quests", []) or qid in p.quests or (req and p.quests.get(req, {}).get("s") != "done"):
+            if qid not in n.get("quests", []) or (qid in p.quests and not self.repeat_ok(qid, p.quests[qid])) or (req and p.quests.get(req, {}).get("s") != "done"):
                 return "Cannot accept that quest."
             qd = QUESTS[qid]
             if qd["kind"] == "deliver" and not self.add_item(p, qd["item"], 1):
@@ -1587,11 +1595,12 @@ class Game:
             r = qd["reward"]
             if not all(self.can_add(p, i, q) for i, q in r["items"]) or (r.get("gear") and len(p.inventory) >= INV_SLOTS):
                 return "Make room in your inventory first."
-            if qd["kind"] == "kill_collect":
+            if qd["kind"] in ("kill_collect", "collect"):
                 self.take_item(p, qd["collect"], qd["collect_count"])
             if qd["kind"] == "deliver":
                 self.take_item(p, qd["item"], 1)
             p.quests[qid]["s"] = "done"
+            p.quests[qid]["day"] = datetime.now(timezone.utc).date().isoformat()
             for i, q in r["items"]:
                 self.add_item(p, i, q)
             if r.get("gear"):

@@ -183,6 +183,7 @@ export function QuestPanel({ data }) {
         if (d.kind === "kill") prog = `${data.monsters[d.target].name}: ${q.k}/${d.count}`;
         if (d.kind === "kill_collect") prog = `${data.monsters[d.target].name}: ${q.k}/${d.count} · ${data.items[d.collect].name}: ${Math.min(d.collect_count, me.inventory.filter((s) => s.item === d.collect).reduce((a, s) => a + s.qty, 0))}/${d.collect_count}`;
         if (d.kind === "crypt") prog = q.opened ? "The crypt is open" : me.inventory.some((s) => s.item === d.item) ? `Use the ${data.items[d.item].name} on a mausoleum door` : `Slay the ${data.monsters[d.target].name}`;
+        if (d.kind === "collect") prog = `${data.items[d.collect].name}: ${Math.min(d.collect_count, me.inventory.filter((s) => s.item === d.collect).reduce((a, s) => a + s.qty, 0))}/${d.collect_count}`;
         if (d.kind === "deliver") prog = `Deliver the ${data.items[d.item].name} to ${giver.name}`;
         return (
           <div key={id} className={`quest ${q.s}`} data-testid={`quest-${id}`}>

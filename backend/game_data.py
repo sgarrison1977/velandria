@@ -672,6 +672,20 @@ BOUNTY_ITEMS = {
 ITEMS.update(BOUNTY_ITEMS)
 BOUNTY_SHOP = [("hunters_signet", 3), ("wardens_girdle", 6), ("trackers_boots", 8), ("huntsman_cleaver", 10), ("huntsman_longbow", 10), ("huntsman_rod", 10),
                ("slayers_visage", 18), ("tyrantbane_amulet", 22), ("tyrantbane_blade", 30), ("tyrantbane_bow", 30), ("tyrantbane_staff", 30)]
+# ---------- villager favors (repeatable daily fetch quests)
+_FAVORS = [("v1", "fav_hob", "Silk for the Scarecrow", "spider_silk", 6, 120, 60, "Spiders keep nesting in my barley. Bring me six bundles of their silk and I'll stitch a scarecrow that'll scare 'em off for good."),
+           ("v2", "fav_ella", "Wolf Pelts for Winter", "wolf_pelt", 5, 260, 110, "Winter's coming and my little ones need warm cloaks. Five wolf pelts would see us through."),
+           ("v3", "fav_tobin", "Goblin Trophies", "goblin_ear", 4, 400, 140, "Bet you can't bring me four goblin ears! My friends say goblins aren't even real."),
+           ("v4", "fav_wren", "The Weaver's Venom", "venom_sac", 4, 1200, 300, "Venom sacs make the finest green dye. Four of them, carefully now, and I'll pay well."),
+           ("v5", "fav_moss", "Bandit Badges", "bandit_insignia", 5, 1500, 350, "Bandits robbed my cart on the road. Bring me five of their insignias so the Wardens believe me."),
+           ("v6", "fav_grimli", "Tusks for the Forge", "orc_tusk", 6, 2400, 500, "Orc tusk makes a fine grip for a hammer. Six of 'em, and there's coin in it for you."),
+           ("v7", "fav_nessa", "Hides for the Tannery", "troll_hide", 3, 4000, 800, "Troll hide is tough as stone. Three hides for my tannery, please — I'll make it worth your while."),
+           ("v8", "fav_pell", "Fangs for the Fishmonger", "dire_fang", 5, 6500, 1200, "Dire wolf fangs make the best fish hooks. Five fangs and I'll fill your purse.")]
+for _npc, _qid, _nm, _it, _n, _xp, _g, _tx in _FAVORS:
+    QUESTS[_qid] = dict(name=_nm, giver=_npc, turnin=_npc, kind="collect", collect=_it, collect_count=_n, repeat=True,
+                        reward=dict(xp=_xp, gold=_g, items=[("hp_potion", 2)]), text=_tx + " (Repeatable once per day.)")
+    NPCS[_npc]["quests"] = NPCS[_npc].get("quests", []) + [_qid]
+    NPCS[_npc]["favor"] = True
 _FOLK = ["Marta", "Odo", "Linnea", "Bram", "Pell", "Gisla", "Corwin", "Fenna", "Hal", "Ysolde", "Dunstan", "Mira", "Edric", "Tilda", "Rook", "Anwen", "Jory", "Sabeth", "Wat", "Ilse"]
 _ROLES = ["Shopper", "Townsfolk", "Merchant's Apprentice", "Traveler", "Washerwoman", "Farmhand", "Gossip", "Errand Runner"]
 for _i, (_t, (_cx, _cz)) in enumerate([(t, c) for t, c in {"semel": (90, 200), "elderglen": (1000, 210), "ironhold": (1260, 200), "sunhollow": (1470, 300)}.items() for _ in range(5)]):

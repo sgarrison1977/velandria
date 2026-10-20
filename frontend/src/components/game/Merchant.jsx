@@ -68,6 +68,18 @@ export function defaultBinds(data, cls) {
 export const applyUiScale = (v) => { localStorage.setItem("sx_ui_scale", v); document.documentElement.style.setProperty("--pz", v); };
 applyUiScale(Number(localStorage.getItem("sx_ui_scale") || 1.25));
 
+export const applyNameplateSize = () => document.documentElement.style.setProperty("--np", localStorage.getItem("sx_np") || "1");
+function NameplateSize() {
+  const [v, setV] = useState(Number(localStorage.getItem("sx_np") || 1));
+  const set = (x) => { setV(x); localStorage.setItem("sx_np", String(x)); applyNameplateSize(); };
+  return (
+    <label className="row" data-testid="settings-nameplate-size">Nameplate text size
+      <input type="range" min={0.7} max={1.8} step={0.05} value={v} onChange={(e) => set(Number(e.target.value))} data-testid="settings-nameplate-size-slider" />
+      <b style={{ minWidth: 44 }}>{Math.round(v * 100)}%</b>
+    </label>
+  );
+}
+
 export function SettingsPanel({ data, net, engine }) {
   const me = useStore((s) => s.me), capture = useStore((s) => s.capture);
   const [tab, setTab] = useState("keys");
@@ -158,6 +170,7 @@ export function SettingsPanel({ data, net, engine }) {
         {["high", "medium", "low"].map((k) => <label key={k} className="row"><input type="radio" name="q" data-testid={`gfx-${k}`} checked={q === k} onChange={() => { setQ(k); localStorage.setItem("sx_quality", k); engine?.setQuality(k); }} /> {k[0].toUpperCase() + k.slice(1)} quality</label>)}
         <label className="row ui-scale">Window size <input type="range" min="0.8" max="1.8" step="0.05" value={pz} data-testid="settings-ui-scale" onChange={(e) => { const v = Number(e.target.value); setPz(v); applyUiScale(v); }} /> <b data-testid="settings-ui-scale-value">{Math.round(pz * 100)}%</b></label>
         <label className="row"><input type="checkbox" data-testid="settings-still-grass-toggle" checked={still} onChange={(e) => { const v = e.target.checked; setStill(v); localStorage.setItem("sx_still_grass", v ? "1" : ""); swayUniform.value = v ? 0 : 1; }} /> Still grass and bushes (no wind sway)</label>
+        <NameplateSize />
         <div className="row"><button type="button" className="btn ghost" data-testid="settings-reset-windows-btn" onClick={() => { resetWindowPositions(); toast("Window positions reset", "good"); }}>Reset window positions</button></div>
         <label className="row"><input type="checkbox" data-testid="settings-fps-toggle" checked={!!showFps} onChange={(e) => { localStorage.setItem("sx_show_fps", e.target.checked ? "1" : ""); setState({ showFps: e.target.checked }); }} /> Show FPS &amp; ping counter</label>
         <p className="hint">Middle-mouse drag rotates the camera · mouse wheel zooms.</p>

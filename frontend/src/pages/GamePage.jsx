@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { PartyFrame, PartyInvite } from "../components/game/Party";
 import { TradeWindow, TradeRequest } from "../components/game/TradeWindow";
+import { applyNameplateSize } from "../components/game/Merchant";
+applyNameplateSize();
 import { BuffBar, MarkPicker } from "../components/game/Spells";
 import { StorageWindow } from "../components/game/Storage";
 import { useNavigate, useParams } from "react-router-dom";
