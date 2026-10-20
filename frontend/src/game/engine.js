@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { Terrain, buildVegetation, buildWater, windUniform, cutUniform, waterLight } from "./world3d";
-import { buildStructures, animateStructures } from "./structures";
+import { buildStructures, animateStructures, portalSwirl } from "./structures";
 import { LightPool } from "./lightpool";
 import { buildMonster, buildNpc, buildPlayer, buildLoot, proxy, animateGlow, animateRig, setInvis, SHIMMER, RARITY } from "./models";
 import { getState, setState } from "./store";
@@ -25,6 +25,11 @@ const AB_SFX = { glacies_nova: "frost", fulmen_catena: "zap", lunae_lumen_nex: "
   attack_run: "dash", multi_shot: "bow", arrow_barrage: "bow", double_stab: "swing", spin_attack: "swing", power_strike: "heavy", cleave: "swing" };
 const ICE_GEO = new THREE.CylinderGeometry(1, 1, 1, 12, 1, true), ICE_MAT = new THREE.MeshBasicMaterial({ color: "#9ae8ff", transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
 const EL_COLOR = { fire: "#ff7a2a", frost: "#9ae8ff", lightning: "#fff27a" }, EL_SFX = { fire: "fire", frost: "frost", lightning: "zap" };
+const TIPS = ["Merchants restock their wares every so often. Check back if they're sold out.", "Right-click a player to trade, invite them to your party, or inspect their gear.",
+  "Each town has a Bounty Board. Take a bounty, slay the beast, then come back to claim it.", "Your storage chest is shared between all your characters.",
+  "Monsters with a red name are far stronger than you. Grey ones are hardly worth the effort.", "Waystones let you travel between towns in the blink of an eye.",
+  "Healers in town will patch you up if you're running low.", "Party up! Kills shared with friends still count toward your bounties.",
+  "Drag an item out of your bag and onto the ground to drop it.", "New spells come to you on their own as you grow stronger."];
 const CHATTER = ["Fresh bread! Still warm!", "Have you seen the price of iron lately?", "They say Lord Vexmoor never sleeps.", "Mind the cart!", "Lovely day for it.", "Two copper for a turnip? Robbery!",
   "My cousin went to the Barrows. Never came back.", "Did you hear the bells last night?", "These apples are the best in Velandria.", "Watch your purse near the gates.",
   "I'll take three of those, thank you.", "Another hero, eh? Good luck to you.", "The fishing's been poor this week.", "Smells like rain.", "Bounty hunters everywhere these days!"];
@@ -187,9 +192,10 @@ export class Engine {
   }
   addGate(id, x, z, owner) {
     const root = new THREE.Group(), c = "#b080ff";
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(1.0, 0.09, 8, 40), new THREE.MeshBasicMaterial({ color: c }));
-    const disc = new THREE.Mesh(new THREE.CircleGeometry(0.95, 32), new THREE.MeshBasicMaterial({ color: "#6a30d0", transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
-    const swirl = new THREE.Group(); swirl.add(ring, disc); swirl.position.y = 1.2; root.add(swirl);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(1.0, 0.1, 8, 48), new THREE.MeshBasicMaterial({ color: c }));
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(0.95, 40), new THREE.MeshBasicMaterial({ map: portalSwirl("#c8a8ff", "#4a1aa0"), transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+    const oval = new THREE.Group(); oval.scale.set(1, 1.45, 1); oval.add(ring, disc);
+    const swirl = new THREE.Group(); swirl.add(oval); swirl.position.y = 1.55; root.add(swirl);
     const base = new THREE.Mesh(new THREE.RingGeometry(0.6, 1.2, 32), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false }));
     base.rotation.x = -Math.PI / 2; base.position.y = 0.05; root.add(base);
     const timer = new THREE.Mesh(new THREE.RingGeometry(1.9, 2.1, 48), new THREE.MeshBasicMaterial({ color: "#e0c8ff", transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false }));
@@ -365,6 +371,7 @@ export class Engine {
       if (e?.kind === "monster") { this.net.send({ t: "target", id: e.id }); sfx("click"); return; }
       if (e?.kind === "loot") { this.net.send({ t: "pickup", id: e.id }); return; }
       if (e?.kind === "npc" && !e.ambient) { this.net.send({ t: "npc", id: e.id }); return; }
+      if (e?.kind === "npc" && e.ambient && this.me && Math.hypot(e.x - this.me.x, e.z - this.me.z) < 14) { this.villagerTalk(e); return; }
       const p = this.groundPoint();
       if (p) { this.net.send({ t: "move", x: +p.x.toFixed(2), z: +p.z.toFixed(2) }); }
       this.hold = { t0: performance.now(), last: performance.now(), dir: false };
@@ -426,7 +433,7 @@ export class Engine {
       let show = false, name = e.name, sub = "", hp = null;
       if (e.kind === "player") { show = d < 45; name = `${e.name}${e.linkdead ? " (linkdead)" : ""}`; sub = `Lv ${e.level} ${e.cls}`; if (e.id !== this.meId && e.hp < e.max) hp = e.hp / e.max; }
       else if (e.kind === "monster") { show = !e.anim.dead && (hovered || targeted || e.aggro || (e.lastHit && now - e.lastHit < 5000)); name = `${e.name} · Lv ${e.level}`; hp = e.hp / e.max; }
-      else if (e.kind === "npc") { show = hovered || (!e.ambient && d < 18) || (e.say && d < 30); sub = e.say && d < 30 ? `“${e.say.text}”` : hovered ? e.role : ""; }
+      else if (e.kind === "npc") { show = hovered || (!e.ambient && d < 18) || (e.say && d < 30); sub = e.say && d < 30 ? `“${e.say.text}”` : hovered ? e.role : ""; if (e.say && performance.now() > e.say.until) e.say = null; }
       else if (e.kind === "gate") { show = d < 25; }
       else { const rar = this.data.items[e.item].rarity; show = e.filtered === "hide" ? false : hovered || (e.filtered !== "dim" && rar !== "common" && d < 14); name = e.qty > 1 ? `${e.name} ×${e.qty}` : e.name; }
       if (!show) { if (e.plate) e.plate.style.display = "none"; continue; }
@@ -570,6 +577,13 @@ export class Engine {
     const x = me.x + (dx / d) * 7, z = me.z + (dz / d) * 7;
     this.net.send({ t: "move", x: +x.toFixed(2), z: +z.toFixed(2), hold: 1 });
   }
+  villagerTalk(e) {
+    const tips = [...this.gossip(), ...TIPS], line = tips[Math.floor(Math.random() * tips.length)];
+    e.say = { text: line, until: performance.now() + 7000 };
+    e.goal = null; e.anim.moving = false; e.wanderT = 7; e.trot = Math.atan2(this.me.x - e.x, this.me.z - e.z);
+    sfx("click");
+  }
+
   gossip() {
     if (this._gossip) return this._gossip;
     const B = Object.values(this.data.bounties || {}), tpl = [

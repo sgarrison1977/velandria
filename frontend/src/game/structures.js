@@ -100,6 +100,34 @@ function hull(g, L, W, wood, trim) {
   box(L * 0.8, 0.1, W * 0.8, M("#7a5a3a"), 0, 0.42, 0, g);
   box(L * 0.85, 0.12, 0.12, trim, 0, 0.62, W / 2 + 0.05, g); box(L * 0.85, 0.12, 0.12, trim, 0, 0.62, -W / 2 - 0.05, g);
 }
+const _swirl = {};
+export function portalSwirl(c1 = "#b48aff", c2 = "#3a1a8a") {
+  const k = c1 + c2;
+  if (_swirl[k]) return _swirl[k];
+  const cv = document.createElement("canvas"); cv.width = cv.height = 256; const x = cv.getContext("2d");
+  const rg = x.createRadialGradient(128, 128, 4, 128, 128, 128); rg.addColorStop(0, "#ffffff"); rg.addColorStop(0.25, c1); rg.addColorStop(0.8, c2); rg.addColorStop(1, "rgba(0,0,0,0)");
+  x.fillStyle = rg; x.fillRect(0, 0, 256, 256);
+  x.globalCompositeOperation = "lighter"; x.lineCap = "round";
+  for (let arm = 0; arm < 5; arm++) {
+    x.beginPath();
+    for (let i = 0; i < 90; i++) { const r = i * 1.35, a = arm * 1.2566 + i * 0.075; const px = 128 + Math.cos(a) * r, pz = 128 + Math.sin(a) * r; i ? x.lineTo(px, pz) : x.moveTo(px, pz); }
+    x.strokeStyle = "rgba(255,255,255,0.28)"; x.lineWidth = 7; x.stroke();
+  }
+  return (_swirl[k] = new THREE.CanvasTexture(cv));
+}
+export function standingPortal(g, c1 = "#b48aff", c2 = "#3a1a8a", glow = "#8a5aff", light = true) {
+  const stone = M("#4a4650"), dark = M("#2e2b33"), rune = M(c1, { emissive: glow, emissiveIntensity: 1.6 });
+  const H = 2.75, oval = new THREE.Group(); oval.position.y = H; oval.scale.set(1, 1.45, 1); g.add(oval);
+  oval.add(new THREE.Mesh(new THREE.TorusGeometry(1.6, 0.24, 10, 48), stone));
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(1.4, 0.06, 6, 48), rune); rim.name = "pulse"; oval.add(rim);
+  const sw = new THREE.Mesh(new THREE.CircleGeometry(1.42, 48), new THREE.MeshBasicMaterial({ map: portalSwirl(c1, c2), transparent: true, opacity: 0.92, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+  sw.name = "spin"; oval.add(sw);
+  for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2, r = box(0.22, 0.22, 0.5, rune, Math.cos(a) * 1.6, Math.sin(a) * 1.6, 0, oval); r.rotation.z = a; }
+  box(3.6, 0.4, 1.6, dark, 0, 0.2, 0, g); box(2.8, 0.3, 1.2, stone, 0, 0.55, 0, g);
+  for (const sx of [-1, 1]) { box(0.7, 1.2, 0.9, stone, sx * 1.75, 1.0, 0, g); cone(0.25, 0.6, 4, rune, sx * 1.75, 1.9, 0, g); }
+  if (light) { const pl = new THREE.PointLight(glow, 20, 12, 1.5); pl.position.set(0, H, 1.2); g.add(pl); }
+  return oval;
+}
 function caveMouth(g, p) {
   const rock = M("#5a554d"), dark = M("#3e3a35"), moss = M("#4a5a32");
   const back = new THREE.Mesh(new THREE.DodecahedronGeometry(6.2, 1), rock); back.scale.set(1.25, 0.85, 0.9); back.position.set(0, 1.4, -6.5); g.add(back);
@@ -207,7 +235,8 @@ function prop(p, terrain, lights) {
       break; }
     case "pillar": { cyl(0.55, 0.65, p.h, 8, M("#77736a"), 0, p.h / 2, 0, g); box(1.4, 0.4, 1.4, M("#6a665c"), 0, 0.2, 0, g); break; }
     case "portal": {
-      if (p.face) { caveMouth(g, p); break; }
+      if (p.face) { caveMouth(g, p); const pg = new THREE.Group(); pg.position.set(0, 0, 0.6); pg.scale.setScalar(0.8); standingPortal(pg, "#ffd9a0", "#7a3a10", "#ffaa44", false); g.add(pg); break; }
+      if (p.exit !== false) { standingPortal(g, "#ffe8b0", "#6a4a10", "#ffcc66"); break; }
       if (p.z > 0) {
         const rock = M("#3e3a35");
         for (let i = 0; i < 7; i++) { const a = (i / 6) * Math.PI; const r = new THREE.Mesh(new THREE.DodecahedronGeometry(1.0 + (i % 2) * 0.3, 0), rock); r.position.set(Math.cos(a) * 2.6, Math.sin(a) * 3.2, -0.6); g.add(r); }
