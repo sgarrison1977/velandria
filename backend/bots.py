@@ -20,6 +20,7 @@ LOOKS = {"warrior": dict(skin="#d8a880", hair="#5a3a1a", hairStyle="short", bear
          "wizard": dict(skin="#e0b090", hair="#d8d8d8", hairStyle="long", beardStyle="long"), "warlock": dict(skin="#c8946e", hair="#1a1a1a", hairStyle="long")}
 GOODS = {"semel": "mira", "elderglen": "fenn", "ironhold": "brikka", "sunhollow": "soren"}
 OFFENSE = {"spell", "melee", "multi", "ranged", "dot", "cone", "aoe_self"}
+RAID_LEVEL, RAID_SECS, RAID_CD = 60, 2400, (1800, 3600)
 rnd = random.Random()
 
 
@@ -31,6 +32,55 @@ class Bot:
         self.next_chat = now() + rnd.uniform(120, 480)
         self.party_until = 0
         self.stuck_pos = (p.x, p.z)
+        self.raid, self.raid_seen, self.raid_cd = False, False, now() + rnd.uniform(*RAID_CD)
+
+    def end_raid(self, msg):
+        for b in [self] + [b for b in getattr(self.g, "bot_list", []) if b.raid and b.p.party == self.p.party and b is not self]:
+            if b.raid:
+                b.raid, b.raid_seen, b.raid_cd, b.party_until = False, False, now() + rnd.uniform(*RAID_CD), 1
+        log.info("bot raid by %s ended: %s", self.p.name, msg)
+
+    def raid_target(self):
+        p = self.p
+        ms = [m for m in self.g.monsters.values() if not m.dead_until and m.spawn.get("room") is not None and self.g.in_castle(m.x, m.z) and self.blacklist.get(m.id, 0) < now()]
+        return min(ms, key=lambda m: dist(p, m), default=None)
+
+    async def raid_tick(self):
+        p, g = self.p, self.g
+        if not self.mate():
+            return self.end_raid("party broke up")
+        mate = self.mate()
+        if g.parties[p.party]["leader"] != p.id:
+            lm = g.monsters.get(mate.target) if mate.target else None
+            if lm and not lm.dead_until and dist(p, lm) < 60:
+                return await self.fight(lm) or True
+            if dist(p, mate) > 8 and not mate.dead_until:
+                if not p.path or dist(p, mate) > 20:
+                    self.go(mate.x + rnd.uniform(-1.5, 1.5), mate.z + rnd.uniform(-1.5, 1.5))
+                return True
+            return False
+        cur = g.monsters.get(p.target) if p.target else None
+        if cur and not cur.dead_until:
+            return await self.fight(cur) or True
+        if g.in_castle(p.x, p.z):
+            if g.run_key(p) in g.castle_runs:
+                self.raid_seen = True
+            elif self.raid_seen:
+                return self.end_raid("run finished")
+            m = self.raid_target()
+            if m:
+                return await self.fight(m) or True
+            return False
+        foe = next((m for m in g.monsters.values() if m.target == p.id and not m.dead_until), None)
+        if foe:
+            return await self.fight(foe) or True
+        if 25 < dist(p, mate) < 90 and not mate.dead_until:
+            p.path = []
+            return True
+        if not p.path:
+            gx, gz = g.world.castle["gate"]
+            self.go(gx, gz - 3)
+        return True
 
     async def act(self, msg):
         try:
@@ -111,6 +161,8 @@ class Bot:
         if p.target != m.id:
             await self.act({"t": "target", "id": m.id})
         if dist(p, m) > 16:
+            if not p.path and not self.go(m.x, m.z):
+                self.blacklist[m.id], p.target = t + 60, None
             return
         abil = [a for a in p.abilities if ABILITIES[a]["kind"] in OFFENSE and p.mp >= ABILITIES[a]["cost"] and p.cds.get(a, 0) < t]
         if abil and rnd.random() < 0.7:
@@ -123,6 +175,8 @@ class Bot:
         p, t = self.p, now()
         if p.dead_until:
             self.state, self.goal = "rest", None
+            if self.raid:
+                self.end_raid("wiped")
             return
         if getattr(self.g, "bot_chat", False) and t > self.next_chat:
             self.next_chat = t + rnd.uniform(240, 720)
@@ -138,6 +192,10 @@ class Bot:
             await self.act({"t": "use", "uid": s["uid"]})
         if p.mp < p.max_mp * 0.2 and (s := self.inv("mp_potion")) and p.cds.get("potion", 0) < t:
             await self.act({"t": "use", "uid": s["uid"]})
+        if (s := self.inv("vexmoor_coffer")) and not p.pending:
+            await self.act({"t": "use", "uid": s["uid"]})
+        if self.raid and t - self.raid_start > RAID_SECS:
+            self.end_raid("timed out")
         if self.state == "hunt" and (hp < 0.25 and not self.inv("hp_potion") or len(p.inventory) >= INV_SLOTS - 3):
             self.state = "town"
             p.target = None
@@ -153,6 +211,8 @@ class Bot:
                 self.state = "hunt"
             elif not in_safe(p.x, p.z) and not p.target:
                 self.state = "town"
+            return
+        if self.raid and await self.raid_tick():
             return
         m = self.g.monsters.get(p.target) if p.target else None
         if m and not m.dead_until:
@@ -225,6 +285,18 @@ def maybe_pair(game, bots):
             b.party_until = 0
     free = [b for b in bots if not getattr(b.p, "party", None) and not b.p.dead_until]
     rnd.shuffle(free)
+    raiders = [b for b in free if b.p.level >= RAID_LEVEL and t > b.raid_cd]
+    if len(raiders) >= 2 and rnd.random() < 0.5:
+        a, o = raiders[:2]
+        free.remove(a), free.remove(o)
+        pid = "bp" + a.p.id[:8]
+        game.parties[pid] = dict(leader=a.p.id, members={a.p.id, o.p.id})
+        a.p.party = o.p.party = pid
+        a.party_until = o.party_until = t + RAID_SECS + 60
+        a.raid = o.raid = True
+        a.raid_start = o.raid_start = t
+        game.party_send(pid)
+        log.info("bots %s and %s are raiding Castle Vexmoor", a.p.name, o.p.name)
     while len(free) >= 2:
         a = free.pop()
         o = next((x for x in free if abs(x.p.level - a.p.level) <= 3), None)
@@ -242,6 +314,7 @@ async def run_bots(game, db):
     cfg = await db.meta.find_one({"_id": "bots"}) or {}
     game.bots_enabled, game.bot_count, game.bot_chat = cfg.get("enabled", True), cfg.get("count", 4), cfg.get("chat", False)
     bots, next_pair = [], now() + 60
+    game.bot_list = bots
     while True:
         want = game.bot_count if game.bots_enabled else 0
         while len(bots) > want:
@@ -260,8 +333,32 @@ async def run_bots(game, db):
             if game.players.get(b.p.id) is not b.p:
                 b.p = game.players.get(b.p.id) or await game.attach(await db.characters.find_one({"id": b.p.id}, {"_id": 0}), None)
                 b.p.bot = True
+                b.state, b.raid = "hunt", False
             try:
                 await b.tick()
             except Exception:
                 log.exception("bot %s tick failed", b.p.name)
         await asyncio.sleep(0.6)
+
+
+def town_spot(p):
+    z = min((z for z in SAFE_ZONES if z["town"] in GOODS), key=lambda z: (z["x"] - p.x) ** 2 + (z["z"] - p.z) ** 2)
+    return z["x"] + rnd.uniform(-4, 4), z["z"] + rnd.uniform(-8, -5)
+
+
+async def reset_bot(game, db, cid):
+    doc = await db.characters.find_one({"id": cid, "account_id": BOT_ACCOUNT}, {"_id": 0})
+    if not doc:
+        return None
+    fresh = new_character_doc(BOT_ACCOUNT, doc["name"], doc["cls"])
+    fresh |= {k: doc[k] for k in ("id", "look", "bot_slot", "created_at") if k in doc}
+    live = game.players.get(cid)
+    if live:
+        game.trade_close(live, f"{live.name} left the world.")
+        game.party_leave(live)
+        del game.players[cid]
+        for m in game.monsters.values():
+            if m.target == cid:
+                m.target = None
+    await db.characters.replace_one({"id": cid}, fresh)
+    return fresh

@@ -364,6 +364,29 @@ async def admin_set_bots(body: AdminBotsIn, _=Depends(current_admin)):
     return {"enabled": game.bots_enabled, "count": game.bot_count, "chat": game.bot_chat}
 
 
+@api.post("/admin/bots/{cid}/reset")
+async def admin_bot_reset(cid: str, _=Depends(current_admin)):
+    import bots
+    if not await bots.reset_bot(game, db, cid):
+        raise HTTPException(404, "Bot not found")
+    return {"ok": True}
+
+
+@api.post("/admin/bots/{cid}/teleport")
+async def admin_bot_teleport(cid: str, _=Depends(current_admin)):
+    import bots
+    b = next((b for b in getattr(game, "bot_list", []) if b.p.id == cid and game.players.get(cid) is b.p), None)
+    if not b:
+        raise HTTPException(400, "Bot is not in the world")
+    if b.p.dead_until:
+        raise HTTPException(400, "Bot is dead — it will respawn in town shortly")
+    if b.raid:
+        b.end_raid("teleported by admin")
+    game.teleport(b.p, *bots.town_spot(b.p))
+    b.state = "rest"
+    return {"ok": True}
+
+
 @api.post("/admin/broadcast")
 async def admin_broadcast(body: AdminTextIn, _=Depends(current_admin)):
     game.announce(body.text.strip())
