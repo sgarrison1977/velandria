@@ -89,7 +89,12 @@ export class Terrain {
     if (z > this.w.oh - 3) return this.caveHeight(x, z);
     const cd = this.w.ox ? this.coast(x, z) : -99;
     if (cd > -3) return -1.2 - Math.min(5, (cd + 3) * 0.12) + vnoise(x * 0.2, z * 0.2) * 0.3;
-    return mix(-0.9, this.landHeight(x, z), smooth(-3, -18, cd));
+    const h = mix(-0.9, this.landHeight(x, z), smooth(-3, -18, cd)), c = this.w.castle;
+    if (!c) return h;
+    const ex = Math.max(c.x0 - 4 - x, x - c.x0 - c.w - 4, 0), ez = Math.max(c.z0 - 4 - z, z - c.z0 - c.d - 4, 0), e = Math.hypot(ex, ez);
+    if (e > 14) return h;
+    if (this.castleH === undefined) this.castleH = this.landHeight(c.cx, c.cz);
+    return mix(this.castleH, h, smooth(0, 14, e));
   }
   landHeight(x, z) {
     const rd = this.sample(this.RD, x, z), sd = this.sample(this.SD, x, z);

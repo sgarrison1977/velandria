@@ -582,6 +582,26 @@ _boss("revenant", "death_knight", 55, "The Iron Revenant", 5, "revenant_heart",
 _boss("pyrrhax", "abyssal_fiend", 70, "Pyrrhax the Ashen Tyrant", 3.5, "ashen_core",
       dict(every=6, radius=11, mult=1.5, name="Hellfire Nova", dtype="fire", c1="#ff7a1a", c2="#ffd23a"), scale=1.0, enrage=dict(at=0.25, mult=1.4))
 
+# ---------- Castle Vexmoor (open-air castle, far NE): one monster type per room
+for _k, _b, _l, _n, _x in [("castle_barbarian", "orc_warrior", 65, "Ironhide Barbarian", dict(interval=1.6)),
+                           ("castle_battlemage", "dark_cultist", 67, "Vexmoor Battlemage", dict(range=11.0)),
+                           ("castle_necromancer", "dark_cultist", 69, "Bonechant Necromancer", dict(range=10.0, poison=[60, 4])),
+                           ("castle_gargoyle", "stone_golem", 71, "Rampart Gargoyle", dict(speed=3.6)),
+                           ("castle_hellhound", "dire_wolf", 73, "Castle Hellhound", dict(speed=5.0)),
+                           ("castle_assassin", "forest_bandit", 75, "Shadowblade Assassin", dict(interval=1.2, speed=4.6)),
+                           ("castle_knight", "death_knight", 77, "Vexmoor Sentinel", {}),
+                           ("castle_royal_guard", "death_knight", 78, "Royal Guard of Vexmoor", {})]:
+    _c = _pit(_b, _l)
+    _c.pop("base")
+    _ref = MONSTERS["death_knight"]
+    _c.update(name=_n, hp=round(_ref["hp"] * (_l / _ref["level"]) ** 1.25 * (0.75 if _c.get("ranged") else 1.0)), xp=round(3500 * (_l / 58) ** 1.3), respawn=90, leash=20, castle=True,
+              loot=_c["loot"] + [("hp_potion", 0.3), ("mp_potion", 0.25)], **_x)
+    MONSTERS[_k] = _c
+ITEMS["usurper_crown"] = M("Usurper's Crown", "legendary", 5000, "Lord Vexmoor's stolen crown, still warm with ambition.")
+_boss("vexmoor", "death_knight", 80, "Lord Vexmoor, the Usurper King", 1.0, "usurper_crown",
+      dict(every=7, radius=10, mult=1.5, name="Royal Decree", c1="#ffd36b", c2="#b02a1a"), scale=1.0, enrage=dict(at=0.3, mult=1.5), leash=16)
+MONSTERS["vexmoor"]["hp"] = 42000
+
 # global lair coordinates for overworld bosses
 BOSS_LAIRS = {"grubnak": (900, 445), "greymaw": (395, 190), "ixra": (548, 540), "malzeth": (1560, 250), "revenant": (988, 190), "pyrrhax": (1205, 178)}
 
@@ -601,6 +621,7 @@ BOUNTIES = {
     "revenant": _bounty("revenant", "Dreadkeep Ruins", BOSS_LAIRS["revenant"]),
     "pyrrhax": _bounty("pyrrhax", "The Abyssal Rift", BOSS_LAIRS["pyrrhax"]),
     "hollow_king": _bounty("hollow_king", "The Hollow Deep (dungeon)", (680, 222)),
+    "vexmoor": _bounty("vexmoor", "Castle Vexmoor — Usurper's Throne, far northeast", (1693, 184)),
 }
 
 # ---------- Bounty Token shop (exclusive gear)

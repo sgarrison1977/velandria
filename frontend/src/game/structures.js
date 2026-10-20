@@ -230,7 +230,7 @@ function prop(p, terrain, lights) {
       const stn = M("#2a2630"), gold = M("#c9a24e", { metalness: 0.8, roughness: 0.3 });
       box(4, 0.6, 4, stn, 0, 0.3, 0, g); box(2.2, 1.2, 2, stn, 0, 1.2, 0, g); box(0.5, 4.5, 2.4, stn, 0.9, 2.8, 0, g);
       for (const sz of [-1.1, 1.1]) { box(1.8, 0.4, 0.3, stn, 0, 2.0, sz, g); cone(0.2, 1.2, 4, gold, 0.9, 5.6, sz, g); }
-      box(0.15, 1, 1, M("#b060ff", { emissive: "#8a3aff", emissiveIntensity: 2 }), 0.62, 4.2, 0, g).name = "pulse"; break; }
+      box(0.15, 1, 1, M("#b060ff", { emissive: "#8a3aff", emissiveIntensity: 2 }), 0.62, 4.2, 0, g).name = "pulse"; if (p.rot) g.rotation.y = Math.PI; break; }
     case "dock": {
       const plank = M("#6a4c30"), post = M("#3e2c1c");
       const along = p.d > p.w, L = along ? p.d : p.w, Wd = along ? p.w : p.d;
@@ -317,6 +317,33 @@ function prop(p, terrain, lights) {
   return g;
 }
 
+function castleKeep(c, terrain, root) {
+  const H = terrain.height(c.cx, c.cz), WH = 4.2, stone = M("#7d776d"), dark = M("#57534b"), cloth = M("#7a1a1a"), gold = M("#c9a24e", { metalness: 0.7, roughness: 0.35 });
+  const merl = [], add = (x, y, z, ry = 0) => merl.push([x, y, z, ry]);
+  for (const [x, z, w, d] of c.segs) {
+    box(w, WH, d, stone, x, H + WH / 2, z, root); box(w + 0.3, 0.7, d + 0.3, dark, x, H + 0.35, z, root);
+    const L = Math.max(w, d), n = Math.floor(L / 1.6);
+    for (let i = 0; i < n; i++) { const o = -L / 2 + 0.8 + i * (L / n); w > d ? add(x + o, H + WH + 0.4, z, 0) : add(x, H + WH + 0.4, z + o, Math.PI / 2); }
+  }
+  for (const [x, z] of c.towers) {
+    cyl(3.2, 3.5, 8, 12, stone, x, H + 4, z, root); cyl(3.6, 3.6, 0.5, 12, dark, x, H + 8.2, z, root);
+    for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; add(x + Math.cos(a) * 3.2, H + 8.85, z + Math.sin(a) * 3.2, -a); }
+  }
+  const [gx, gz] = c.gate;
+  box(7, 1.6, 2.6, stone, gx, H + WH + 0.3, gz - 1, root);
+  for (let i = -2; i < 3; i++) box(0.14, 1.4, 0.14, M("#2a2622", { metalness: 0.6 }), gx + i, H + WH - 0.9, gz - 1, root);
+  for (const sx of [-1, 1]) { cyl(0.06, 0.06, 4, 4, dark, gx + sx * 4.5, H + 10, gz - 1, root); const f = box(1.6, 1, 0.05, cloth, gx + sx * 4.5 + 0.8, H + 11.4, gz - 1, root); f.name = "flag"; }
+  const im = new THREE.InstancedMesh(new THREE.BoxGeometry(0.8, 0.9, 2), stone, merl.length), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), one = new THREE.Vector3(1, 1, 1);
+  merl.forEach(([x, y, z, ry], i) => { q.setFromAxisAngle(up, ry); m4.compose(new THREE.Vector3(x, y, z), q, one); im.setMatrixAt(i, m4); });
+  root.add(im);
+  const floor = new THREE.MeshStandardMaterial({ map: plazaTexture("semel"), roughness: 0.9, polygonOffset: true, polygonOffsetFactor: -2 });
+  for (const r of c.rooms) {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(r.w + 2, r.d + 2), floor); m.rotation.x = -Math.PI / 2; m.position.set(r.x, H + 0.05, r.z); root.add(m);
+    box(4, 0.04, r.d - 6, cloth, r.x, H + 0.08, r.z, root);
+    for (const sx of [-6, 6]) { box(1.3, 2.6, 0.08, cloth, r.x + sx, H + 2.5, r.z - r.d / 2 - 0.05, root); box(1.5, 0.12, 0.12, gold, r.x + sx, H + 3.85, r.z - r.d / 2 - 0.1, root); }
+  }
+}
+
 export function buildStructures(world, terrain, scene) {
   const root = new THREE.Group(), animated = [];
   const lights = { count: 0 };
@@ -356,6 +383,7 @@ export function buildStructures(world, terrain, scene) {
     m.rotation.x = -Math.PI / 2; m.position.set(x, 0.04, z); m.receiveShadow = true;
     root.add(m);
   }
+  if (world.castle) castleKeep(world.castle, terrain, root);
   if (world.cave_rocks?.length) {
     const im = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1, 0), M("#3a3632"), world.cave_rocks.length), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
     world.cave_rocks.forEach(([x, z, sc], i) => { e.set(i * 0.7, i * 1.3, i * 0.4); q.setFromEuler(e); m4.compose(new THREE.Vector3(x, terrain.height(x, z) * 0.45, z), q, new THREE.Vector3(sc * 1.1, sc * 0.85, sc * 1.1)); im.setMatrixAt(i, m4); });

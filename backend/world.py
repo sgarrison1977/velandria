@@ -194,8 +194,15 @@ SCATTER_BANDS = [(200, ["giant_spider", "imp"]), (330, ["forest_wolf", "imp", "g
                  (600, ["forest_bandit", "venomous_spider", "skeleton"]), (760, ["orc_warrior", "venomous_spider", "forest_bandit"]),
                  (900, ["dark_cultist", "orc_warrior"]), (1120, ["forest_troll", "dark_cultist"]),
                  (1350, ["dire_wolf", "shadow_wraith", "forest_troll"]), (99999, ["broodmother", "stone_golem", "shadow_wraith"])]
-TARGET_MONSTERS = 1800
-CAMP_COUNT = 52
+TARGET_MONSTERS = 2000
+CAMP_COUNT = 36
+# open-air castle (global coords): 4x2 rooms, entered from the south gate, snaking to the throne room
+CASTLE = dict(name="Castle Vexmoor", x0=1680, z0=170, rw=23, rd=25, t=2, cols=4, rows=2, door=5)
+CASTLE_ROOMS = [  # (col, row, name, monster, count, level label)
+    (0, 1, "Barbarian Warhall", "castle_barbarian", 8, "65"), (1, 1, "Arcane Gallery", "castle_battlemage", 7, "67"),
+    (2, 1, "Bonechant Crypt", "castle_necromancer", 7, "69"), (3, 1, "Gargoyle Roost", "castle_gargoyle", 7, "71"),
+    (3, 0, "Hellhound Kennels", "castle_hellhound", 8, "73"), (2, 0, "Hall of Knives", "castle_assassin", 7, "75"),
+    (1, 0, "Sentinel Hall", "castle_knight", 7, "77"), (0, 0, "Usurper's Throne", "castle_royal_guard", 4, "78-80 (Boss)")]
 OUTSKIRT_MOBS = ["giant_spider", "forest_wolf", "imp", "restless_bones", "goblin_scout"]
 CAMP_FAMILY = {"giant_spider": "spider", "venomous_spider": "spider", "broodmother": "spider", "imp": "imp", "abyssal_fiend": "imp", "forest_wolf": "beast",
                "dire_wolf": "beast", "goblin_scout": "goblin", "skeleton": "undead", "shadow_wraith": "undead", "death_knight": "undead",
@@ -320,6 +327,7 @@ class World:
         self._harbor()
         self._cave_sites()
         self._graveyard()
+        self._castle()
         self._monster_camps()
         from game_data import BOSS_LAIRS
         for k, (x, z) in BOSS_LAIRS.items():
@@ -407,7 +415,7 @@ class World:
         from game_data import MONSTERS
         rr = random.Random(5150)
         REGIONS[:] = [r for r in REGIONS if not r.get("camp")]
-        towns = [to_global(*c) for c in (SEMEL, ELDER, IRON, SUNH)] + [HARBOR, GRAVEYARD]
+        towns = [to_global(*c) for c in (SEMEL, ELDER, IRON, SUNH)] + [HARBOR, GRAVEYARD, (self.castle["cx"], self.castle["cz"])]
         caves = [(pt["x"], pt["z"]) for pt in PORTALS if pt.get("face")]
         band = lambda x: next(o for lim, o in SCATTER_BANDS if min(max(x - OX, 0), LW - 1) < lim)
         def land(x, z, m=10):
@@ -438,15 +446,7 @@ class World:
         for i, c in enumerate(camps):
             x, z, prim = c["x"], c["z"], c["primary"]
             fam = CAMP_FAMILY.get(prim, "beast")
-            pl = MONSTERS[prim]["level"]
-            opts = [o for o in band(x) if o != prim and abs(MONSTERS[o]["level"] - pl) <= 8]
-            lead = max([o for o in band(x) if 0 <= MONSTERS[o]["level"] - pl <= 6] + [prim], key=lambda k: MONSTERS[k]["level"])
-            n = rr.randint(20, 30)
-            parts = [(prim, round(n * 0.6))]
-            if opts:
-                parts.append((rr.choice(opts), round(n * 0.28)))
-            if lead != prim and all(lead != p for p, _ in parts):
-                parts.append((lead, 2))
+            parts = [(prim, rr.randint(14, 20))]
             for k, (m, cnt) in enumerate(parts):
                 if cnt > 0:
                     a = k * 2.1
@@ -473,10 +473,72 @@ class World:
             tries += 1
             x, z = rr.uniform(20, W - 20), rr.uniform(20, GOH - 20)
             if land(x, z, 8) and all(math.hypot(x - a, z - b) > 80 for a, b in towns) and all(math.hypot(x - cc["x"], z - cc["z"]) > 24 for cc in camps):
-                k = 2 if rr.random() < 0.35 else 1
+                k = 2 if rr.random() < 0.3 else 1
                 self.spawns.append(dict(monster=rr.choice(band(x)), x=round(x, 1), z=round(z, 1), r=18, n=k))
                 want -= k
         self.camp_count = len(camps)
+
+    def _castle(self):
+        C = CASTLE
+        x0, z0, rw, rd, t, D = C["x0"], C["z0"], C["rw"], C["rd"], C["t"], C["door"]
+        W2, H2 = C["cols"] * (rw + t) + t, C["rows"] * (rd + t) + t
+        rx = lambda c: x0 + t + c * (rw + t)
+        rz = lambda r: z0 + t + r * (rd + t)
+        segs = []
+        def hwall(z, xa, xb, gaps):
+            cur = xa
+            for g in sorted(gaps) + [None]:
+                end = xb if g is None else g - D / 2
+                if end - cur > 0.5:
+                    segs.append([round((cur + end) / 2, 2), z + t / 2, round(end - cur, 2), t])
+                if g is not None:
+                    cur = g + D / 2
+        def vwall(x, za, zb, gaps):
+            cur = za
+            for g in sorted(gaps) + [None]:
+                end = zb if g is None else g - D / 2
+                if end - cur > 0.5:
+                    segs.append([x + t / 2, round((cur + end) / 2, 2), t, round(end - cur, 2)])
+                if g is not None:
+                    cur = g + D / 2
+        gate = (rx(0) + rw / 2, z0 + H2)
+        hwall(z0, x0, x0 + W2, [])
+        hwall(rz(1) - t, x0, x0 + W2, [rx(3) + rw / 2])
+        hwall(z0 + H2 - t, x0, x0 + W2, [gate[0]])
+        for c in range(C["cols"] + 1):
+            x = x0 + c * (rw + t)
+            vwall(x, z0, z0 + H2, [] if c in (0, C["cols"]) else [rz(0) + rd / 2, rz(1) + rd / 2])
+        b = self.blocked
+        b[z0 - 3:z0 + H2 + 4, x0 - 3:x0 + W2 + 4] = 0
+        for sx, sz, w, d in segs:
+            b[int(sz - d / 2):int(sz + d / 2 + 0.999), int(sx - w / 2):int(sx + w / 2 + 0.999)] = 1
+        towers = [[x0 + 1, z0 + 1], [x0 + W2 - 1, z0 + 1], [x0 + 1, z0 + H2 - 1], [x0 + W2 - 1, z0 + H2 - 1],
+                  [gate[0] - D / 2 - 2, gate[1] - 1], [gate[0] + D / 2 + 2, gate[1] - 1], [x0 + W2 / 2, z0 + 1]]
+        for tx, tz in towers:
+            self._disc(tx, tz, 3.2)
+        inside = lambda v: x0 - 4 < v[0] < x0 + W2 + 4 and z0 - 4 < v[1] < z0 + H2 + 4
+        self.trees, self.rocks, self.bushes, self.grass = [[v for v in L if not inside(v)] for L in (self.trees, self.rocks, self.bushes, self.grass)]
+        self.props = [p for p in self.props if not inside((p["x"], p["z"]))]
+        REGIONS[:] = [r for r in REGIONS if not r.get("castle")]
+        REGIONS.append(dict(name="Castle Vexmoor", x=x0 + W2 / 2, z=z0 + H2 / 2, r=58, lvl="65-80 (Castle)", castle=True))
+        rooms = []
+        for c, r, name, mob, n, lvl in CASTLE_ROOMS:
+            cx, cz = rx(c) + rw / 2, rz(r) + rd / 2
+            rooms.append(dict(name=name, x=cx, z=cz, w=rw, d=rd))
+            REGIONS.append(dict(name=name, x=cx, z=cz, r=11.5, lvl=lvl, castle=True))
+            self.spawns.append(dict(monster=mob, x=cx, z=cz, r=7, n=n))
+            for k in range(4):
+                bx, bz = cx + (-1 if k % 2 else 1) * (rw / 2 - 2), cz + (-1 if k < 2 else 1) * (rd / 2 - 2)
+                self.props.append(dict(kind="brazier", x=bx, z=bz)); self._disc(bx, bz, 0.6)
+            if mob == "castle_knight":
+                for k in range(4):
+                    px, pz = cx + (k % 2 * 2 - 1) * 6, cz + (k // 2 * 2 - 1) * 6
+                    self.props.append(dict(kind="pillar", x=px, z=pz, h=4.5)); self._disc(px, pz, 0.7)
+            if mob == "castle_royal_guard":
+                self.props.append(dict(kind="throne", x=cx - rw / 2 + 4, z=cz, rot=1)); self._disc(cx - rw / 2 + 4, cz, 2.2)
+                self.spawns.append(dict(monster="vexmoor", x=cx - rw / 2 + 8, z=cz, r=1.5, n=1))
+                self.throne = (cx, cz)
+        self.castle = dict(name=C["name"], x0=x0, z0=z0, w=W2, d=H2, cx=x0 + W2 / 2, cz=z0 + H2 / 2, segs=segs, towers=towers, gate=list(gate), rooms=rooms)
 
     def _camp_props(self, cx, cz, fam, rr):
         P = self.props
@@ -991,4 +1053,5 @@ class World:
                     walls=self.walls, buildings=self.buildings, props=self.props, trees=self.trees, rocks=self.rocks, bushes=self.bushes,
                     grass=self.grass, regions=REGIONS + DUNGEON_ROOMS + PIT_ROOMS + BARROW_ROOMS, dungeons=DUNGEONS, safe_zones=SAFE_ZONES, oh=OH, cave_rocks=self.cave_rocks,
                     portals=[dict(x=p['x'], z=p['z'], name=p['name']) for p in PORTALS], isles=ISLES, isle_bars=ISLE_BARS, docks=DOCKS,
+                    castle=self.castle,
                     towns={**{k: to_global(*v) for k, v in dict(semel=SEMEL, elderglen=ELDER, ironhold=IRON, sunhollow=SUNH).items()}, "harbor": HARBOR, "graveyard": GRAVEYARD})
