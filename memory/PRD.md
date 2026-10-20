@@ -116,3 +116,7 @@ Later requests: hold-to-walk toward pointer; ranged/spell abilities fire at the 
 - Admin Bots panel: per-bot "Teleport to Town" (online bots) and "Reset to Lv 1" (fresh starter character; keeps name/look/slot). Endpoints: POST /api/admin/bots/{id}/teleport, POST /api/admin/bots/{id}/reset
 - Bot castle raids (bots.py): two free bots at level 60+ (RAID_LEVEL) occasionally party up, walk to Castle Vexmoor, clear halls together (follower assists leader target); clears record to castle_runs rankings. Raid ends on wipe/finish/40-min timeout, 30–60 min cooldown before retrying. Bots now auto-open Vexmoor Coffers and path toward out-of-range targets.
 - Verified via isolated simulation (lv70 bots cleared 7/16 halls then wiped → respawn in town).
+
+## 2026-06 — Multi Vis Nex rework
+- Multi Vis Nex: Wizard + Warlock, unlocks Lv 11, 24 MP, hits up to 8 enemies within 14m (12 + 110% Int each), no target needed. Visual = red Lunae Lumen Nex-style beam to every target, beam sound (played once per cast), red icon.
+- grant_spells now removes spells above the character's level (wizards Lv 4–10 lose Multi Vis Nex until Lv 11).

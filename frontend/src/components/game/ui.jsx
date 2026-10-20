@@ -171,7 +171,7 @@ const AB_ICONS = {
   agredi: [Wand2, "#9ac8ff", "#1a1a5a"], glacies_nova: [Snowflake, "#bff4ff", "#0a2a3a"], fulmen_catena: [Cable, "#fff27a", "#2a2a0a"], lunae_lumen_nex: [MoonStar, "#e8f4ff", "#101a3a"], minor_mederi: [HeartPulse, "#9affb0", "#0a3a1a"], minor_sanatio: [Droplet, "#c8ff9a", "#1a3a0a"],
   double_stab: [Swords, "#ffe0a0", "#5a2a12"], attack_run: [Footprints, "#ffb070", "#4a1a0a"], spin_attack: [Layers, "#ffd0a0", "#4a2a0a"],
   multi_shot: [Orbit, "#ffe08a", "#3a1a2a"], arrow_barrage: [Crosshair, "#ffd36b", "#2a200a"], ignis: [Flame, "#ff8a3a", "#4a0a00"],
-  multi_vis_nex: [Radiation, "#b0d8ff", "#0a1a4a"], radius: [Zap, "#e0f0ff", "#1a2a5a"], venenum: [Bug, "#9aff6a", "#13300a"],
+  multi_vis_nex: [Radiation, "#ff8a7a", "#4a0a0a"], radius: [Zap, "#e0f0ff", "#1a2a5a"], venenum: [Bug, "#9aff6a", "#13300a"],
   flamma_ventus: [Wind, "#ff7a2a", "#3a0a00"], tabes_viscera: [Skull, "#b0ff7a", "#1a2a0a"], teuri: [Shield, "#9ac8ff", "#1a2a4a"],
   velocitas: [Footprints, "#c8f0ff", "#0a2a3a"], robur: [Dumbbell, "#ffb060", "#4a1a0a"], contra_visus: [EyeOff, "#d0c0ff", "#1a1030"],
   pergere_trans: [Move, "#c0a0ff", "#20103a"], creare_porta: [DoorOpen, "#b080ff", "#200a3a"], power_strike: [Sword, "#e8c27a", "#5a2a12"], iron_guard: [Shield, "#9ac8ff", "#1a2a4a"], cleave: [Layers, "#ffb070", "#4a1a0a"], arcane_bolt: [Wand2, "#9ac8ff", "#1a1a5a"],

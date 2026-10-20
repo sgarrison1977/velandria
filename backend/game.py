@@ -704,6 +704,10 @@ class Game:
                 self.announce(f"{' and '.join(names) if len(names) < 3 else ', '.join(names[:-1]) + ' and ' + names[-1]} conquered Castle Vexmoor in {fmt_secs(secs)}!", title="Castle Conquered")
 
     def grant_spells(self, p):
+        locked = [k for k in p.abilities if k in ABILITIES and ABILITIES[k]["level"] > p.level]
+        if locked:
+            p.abilities = [k for k in p.abilities if k not in locked]
+            p.dirty = True
         new = [k for k, ab in ABILITIES.items() if p.cls in ab["cls"] and ab["level"] <= p.level and k not in p.abilities]
         if new:
             p.abilities += new
