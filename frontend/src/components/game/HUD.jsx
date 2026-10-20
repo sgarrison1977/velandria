@@ -153,6 +153,7 @@ export function ContextMenu({ net }) {
       {c.kind === "player" && <>
         <button type="button" data-testid="ctx-inspect" onClick={() => { net.send({ t: "inspect", id: c.id }); close(); }}>Inspect character</button>
         <button type="button" data-testid="ctx-equipment" onClick={() => { net.send({ t: "inspect", id: c.id }); close(); }}>View equipment</button>
+        <button type="button" data-testid="ctx-trade" onClick={() => { net.send({ t: "trade_req", id: c.id }); close(); }}>Trade</button>
         <button type="button" data-testid="ctx-party-invite" onClick={() => { net.send({ t: "party_invite", id: c.id }); close(); }}>Invite to party</button>
         <button type="button" data-testid="ctx-whisper" onClick={() => { setState((s) => ({ ctx: null, chatPrefill: `/w ${c.name} `, chatFocus: (s.chatFocus || 0) + 1 })); }}>Send private message</button>
       </>}

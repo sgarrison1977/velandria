@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { PartyFrame, PartyInvite } from "../components/game/Party";
+import { TradeWindow, TradeRequest } from "../components/game/TradeWindow";
 import { BuffBar, MarkPicker } from "../components/game/Spells";
 import { StorageWindow } from "../components/game/Storage";
 import { useNavigate, useParams } from "react-router-dom";
@@ -64,6 +65,8 @@ export default function GamePage() {
           case "inspect": setState({ inspect: m.d }); break;
           case "party": e.party = m.id ? m : null; setState({ party: m.id ? m : null }); break;
           case "party_invite": setState({ partyInvite: m }); sfx("open"); break;
+          case "trade_req": setState({ tradeReq: m }); sfx("open"); setTimeout(() => getState().tradeReq?.fid === m.fid && setState({ tradeReq: null }), 30000); break;
+          case "trade": if (m.closed) { setState({ trade: null }); toast(m.msg, m.done ? "good" : "info"); if (m.done) sfx("loot"); } else { if (!getState().trade) sfx("open"); setState({ trade: m, tradeReq: null }); } break;
           default:
         }
       };
@@ -133,6 +136,8 @@ export default function GamePage() {
         <ContextMenu net={n} />
         <PartyFrame net={n} data={data} />
         <PartyInvite net={n} />
+        <TradeRequest net={n} />
+        <TradeWindow net={n} data={data} />
         <DialogWindow net={n} data={data} />
         <InspectWindow data={data} />
         <MerchantWindow net={n} data={data} />

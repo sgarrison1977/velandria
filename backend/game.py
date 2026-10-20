@@ -171,6 +171,7 @@ class Game:
         self.monsters = {}
         self.loot = {}
         self.room_hits, self.room_cd, self.castle_runs = {}, {}, {}
+        self.trades, self.trade_reqs = {}, {}
         self.parties, self.invites, self.party_acc = {}, {}, 0.0
         self.storages, self.storage_lock = {}, asyncio.Lock()
         self.sched, self.gates = [], {}
@@ -244,6 +245,7 @@ class Game:
 
     async def remove_player(self, p):
         if self.players.get(p.id) is p:
+            self.trade_close(p, f"{p.name} left the world.")
             self.party_leave(p)
             del self.players[p.id]
             await self.save(p)
@@ -613,8 +615,10 @@ class Game:
         if p is not None and p.buffs.pop("invis", None):
             p.dirty = True
             p.send({"t": "sys", "msg": "You attacked — Contra Visus fades and you are visible again."})
-        if p is not None and p.tot.get("dmg_pct"):
-            raw *= 1 + p.tot["dmg_pct"] / 100
+        if p is not None:
+            p.last_combat = now()
+            if p.tot.get("dmg_pct"):
+                raw *= 1 + p.tot["dmg_pct"] / 100
         res = m.d["resist"].get("magic" if dtype in ("magic", "poison", "fire", "frost", "lightning") else "phys", 1.0)
         armor = 0 if dtype != "phys" else m.d["armor"]
         dmg = max(1, round(raw * (1 - armor / (armor + COMBAT["armor_k"])) * res))
@@ -876,6 +880,7 @@ class Game:
             return
         if p.tot.get("dr_pct"):
             dmg = max(1, round(dmg * (1 - p.tot["dr_pct"] / 100)))
+        p.last_combat = now()
         p.hp -= dmg
         self.fx(p.x, p.z, {"t": "fx", "k": "pdmg", "tgt": p.id, "v": dmg, "dt": dtype})
         if p.hp <= 0:
@@ -1623,6 +1628,153 @@ class Game:
             self.loot[lid] = dict(id=lid, item=item, qty=max(1, qty), props=props, pname=pname, x=round(lx, 2), z=round(lz, 2), owner=p.id,
                                   party=getattr(p, "party", None), owner_until=t + LOOT_OWNER_SECS, expires=t + LOOT_EXPIRE_SECS)
 
+    # ------------- player trading
+    def trade_block(self, p, o):
+        if not o or o is p:
+            return "That player is not here."
+        if p.dead_until or o.dead_until:
+            return "You cannot trade while dead."
+        if dist(p, o) > 12:
+            return f"{o.name} is too far away to trade."
+        if now() - getattr(p, "last_combat", 0) < 6 or now() - getattr(o, "last_combat", 0) < 6:
+            return "You cannot trade while in combat."
+        return None
+
+    def trade_view(self, tr):
+        for a, b in ((tr["a"], tr["b"]), (tr["b"], tr["a"])):
+            pa, pb = self.players.get(a), self.players.get(b)
+            if not pa or not pb:
+                continue
+            side = lambda pp: dict(name=pp.name, gold=tr["gold"][pp.id], lock=tr["lock"][pp.id], conf=tr["conf"][pp.id],
+                                   items=[s for u in tr["items"][pp.id] if (s := self.slot_of(pp, u))])
+            pa.send({"t": "trade", "id": tr["id"], "me": side(pa), "them": side(pb)})
+
+    def trade_close(self, p, msg):
+        tr = self.trades.pop(getattr(p, "trade", None), None)
+        if not tr:
+            return
+        for pid in (tr["a"], tr["b"]):
+            o = self.players.get(pid)
+            if o:
+                o.trade = None
+                o.send({"t": "trade", "closed": True, "msg": msg})
+
+    def trade_unlock(self, tr):
+        for k in tr["lock"]:
+            tr["lock"][k] = tr["conf"][k] = False
+
+    def trade_cmd(self, p, t, msg):
+        if t == "trade_req":
+            o = self.players.get(msg.get("id"))
+            if getattr(p, "trade", None) or getattr(o, "trade", None):
+                return "One of you is already trading."
+            err = self.trade_block(p, o)
+            if err:
+                return err
+            self.trade_reqs[o.id] = (p.id, now() + 30)
+            o.send({"t": "trade_req", "from": p.name, "fid": p.id, "lvl": p.level})
+            p.send({"t": "sys", "msg": f"Trade request sent to {o.name}."})
+            return None
+        if t in ("trade_accept", "trade_decline"):
+            req = self.trade_reqs.pop(p.id, None)
+            o = self.players.get(req[0]) if req and now() < req[1] else None
+            if not o:
+                return "That trade request has expired."
+            if t == "trade_decline":
+                o.send({"t": "sys", "msg": f"{p.name} declined your trade.", "kind": "bad"})
+                return None
+            if getattr(p, "trade", None) or getattr(o, "trade", None):
+                return "One of you is already trading."
+            err = self.trade_block(p, o)
+            if err:
+                return err
+            tid = "t" + uid()
+            ids = (o.id, p.id)
+            self.trades[tid] = dict(id=tid, a=o.id, b=p.id, items={i: [] for i in ids}, gold={i: 0 for i in ids},
+                                    lock={i: False for i in ids}, conf={i: False for i in ids})
+            p.trade = o.trade = tid
+            self.trade_view(self.trades[tid])
+            return None
+        tr = self.trades.get(getattr(p, "trade", None))
+        if not tr:
+            return "You are not trading."
+        o = self.players.get(tr["b"] if tr["a"] == p.id else tr["a"])
+        if t == "trade_cancel" or not o:
+            self.trade_close(p, f"{p.name} cancelled the trade.")
+            return None
+        if dist(p, o) > 15:
+            self.trade_close(p, "Trade cancelled — you moved too far apart.")
+            return None
+        mine = tr["items"][p.id]
+        if t == "trade_offer":
+            u = msg.get("uid")
+            if msg.get("remove"):
+                if u in mine:
+                    mine.remove(u)
+            else:
+                sl = self.slot_of(p, u)
+                if not sl:
+                    return "That item is gone."
+                if ITEMS[sl["item"]]["type"] == "quest" :
+                    return "Quest items cannot be traded."
+                if u in mine:
+                    return None
+                if len(mine) >= 12:
+                    return "Your offer is full (12 items)."
+                mine.append(u)
+            self.trade_unlock(tr)
+        elif t == "trade_gold":
+            g = msg.get("gold")
+            if not isinstance(g, int) or g < 0:
+                return "Invalid gold amount."
+            tr["gold"][p.id] = min(g, p.gold)
+            self.trade_unlock(tr)
+        elif t == "trade_lock":
+            tr["lock"][p.id] = bool(msg.get("on", True))
+            if not tr["lock"][p.id]:
+                self.trade_unlock(tr)
+        elif t == "trade_confirm":
+            if not all(tr["lock"].values()):
+                return "Both players must lock their offers first."
+            err = self.trade_block(p, o)
+            if err:
+                return err
+            tr["conf"][p.id] = True
+            if all(tr["conf"].values()):
+                return self.trade_execute(tr, p, o)
+        else:
+            return "Unknown trade action."
+        self.trade_view(tr)
+        return None
+
+    def trade_execute(self, tr, p, o):
+        give = {}
+        for pp in (p, o):
+            slots = [self.slot_of(pp, u) for u in tr["items"][pp.id]]
+            if None in slots or tr["gold"][pp.id] > pp.gold:
+                self.trade_close(p, f"Trade failed — {pp.name}'s offer changed.")
+                return None
+            give[pp.id] = slots
+        for a, b in ((p, o), (o, p)):
+            if len(b.inventory) - len(give[b.id]) + len(give[a.id]) > INV_SLOTS:
+                self.trade_close(p, f"Trade failed — {b.name}'s inventory is too full.")
+                return None
+        for a, b in ((p, o), (o, p)):
+            for sl in give[a.id]:
+                a.inventory.remove(sl)
+        for a, b in ((p, o), (o, p)):
+            b.inventory.extend(give[a.id])
+            a.gold -= tr["gold"][a.id]
+            b.gold += tr["gold"][a.id]
+        for pp in (p, o):
+            pp.dirty = True
+            asyncio.ensure_future(self.save(pp))
+        self.trades.pop(tr["id"], None)
+        p.trade = o.trade = None
+        for a, b in ((p, o), (o, p)):
+            a.send({"t": "trade", "closed": True, "done": True, "msg": f"Trade with {b.name} complete!"})
+        return None
+
     def drop_item(self, p, suid):
         s = self.slot_of(p, suid)
         if not s:
@@ -1970,6 +2122,8 @@ class Game:
             err = self.destroy(p, msg.get("uid"))
         elif t == "drop":
             err = self.drop_item(p, msg.get("uid"))
+        elif t.startswith("trade_"):
+            err = self.trade_cmd(p, t, msg)
         elif t == "bounty":
             err = self.bounty_cmd(p, msg.get("npc"), msg.get("action"), msg.get("id"))
         elif t == "give":

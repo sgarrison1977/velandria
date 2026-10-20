@@ -1,0 +1,240 @@
+{
+  "project_info": {
+    "name": "Velandria MMORPG HUD Restyle & Trade System",
+    "theme": "Sleek Minimal Modern Dark Fantasy",
+    "app_type": "3D Canvas MMORPG HUD Overlays",
+    "version": "2026.1"
+  },
+  "design_philosophy": {
+    "core_concept": "Sleek Minimal Modern dark HUD overlays that maintain maximum 3D canvas visibility while giving players precision, tactile clarity, and effortless trade interaction.",
+    "key_principles": [
+      "Tactile Glassmorphism: Dark semi-transparent panels with backdrop blur (12px-20px), razor-sharp 1px subtle borders, and subtle gold/amber ambient accents.",
+      "Content & Visual Hierarchy: Rarity colors pop cleanly with high WCAG AA/APCA contrast on deep charcoal/void backgrounds.",
+      "Non-Obtrusive Canvas Preservation: Compact grid densities, sub-pixel alignment, and refined paddings so HUD elements never obstruct 3D gameplay.",
+      "Smooth Micro-Interactions: Clean 0.15s cubic-bezier transitions for hover, active, drag, lock, and confirm states."
+    ]
+  },
+  "color_system": {
+    "theme_mode": "dark",
+    "css_variables": {
+      "--bg": "#0B0D12",
+      "--panel": "rgba(15, 18, 26, 0.88)",
+      "--panel2": "rgba(22, 27, 38, 0.94)",
+      "--panel-blur": "16px",
+      "--edge": "rgba(255, 255, 255, 0.12)",
+      "--edge-hover": "rgba(245, 197, 99, 0.5)",
+      "--edge-active": "#F5C563",
+      "--edge2": "rgba(255, 255, 255, 0.06)",
+      "--gold": "#F5C563",
+      "--gold-glow": "rgba(245, 197, 99, 0.25)",
+      "--text": "#ECEEF2",
+      "--muted": "#94A3B8",
+      "--hp": "#EF4444",
+      "--mp": "#3B82F6",
+      "--xp": "#EAB308",
+      "--good": "#10B981",
+      "--bad": "#F87171",
+      "--trade-lock": "#8B5CF6",
+      "--trade-confirm": "#10B981"
+    },
+    "rarity_colors": {
+      "common": {
+        "hex": "#94A3B8",
+        "border": "rgba(148, 163, 184, 0.4)",
+        "glow": "rgba(148, 163, 184, 0.1)"
+      },
+      "uncommon": {
+        "hex": "#34D399",
+        "border": "rgba(52, 211, 153, 0.6)",
+        "glow": "rgba(52, 211, 153, 0.2)"
+      },
+      "rare": {
+        "hex": "#60A5FA",
+        "border": "rgba(96, 165, 250, 0.6)",
+        "glow": "rgba(96, 165, 250, 0.2)"
+      },
+      "epic": {
+        "hex": "#C084FC",
+        "border": "rgba(192, 132, 252, 0.7)",
+        "glow": "rgba(192, 132, 252, 0.25)"
+      },
+      "legendary": {
+        "hex": "#F59E0B",
+        "border": "rgba(245, 158, 11, 0.8)",
+        "glow": "rgba(245, 158, 11, 0.35)"
+      }
+    }
+  },
+  "typography": {
+    "heading_font": "'Cinzel', 'IM Fell English SC', serif",
+    "body_font": "'Inter', 'Alegreya Sans', sans-serif",
+    "mono_font": "'JetBrains Mono', monospace",
+    "scale": {
+      "panel_title": "17px",
+      "h2": "20px",
+      "body": "14px",
+      "small": "12px",
+      "badge": "11px"
+    },
+    "letter_spacing": {
+      "headings": "0.04em",
+      "labels": "0.08em",
+      "buttons": "0.05em"
+    }
+  },
+  "component_restyle_spec": {
+    ".panel": {
+      "background": "var(--panel)",
+      "backdropFilter": "blur(var(--panel-blur))",
+      "border": "1px solid var(--edge)",
+      "borderRadius": "10px",
+      "boxShadow": "0 20px 50px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1)",
+      "transition": "border-color 0.2s, box-shadow 0.2s"
+    },
+    ".panel-head": {
+      "background": "linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(0, 0, 0, 0.2) 100%)",
+      "borderBottom": "1px solid var(--edge2)",
+      "padding": "10px 16px",
+      "fontFamily": "var(--heading-font)",
+      "fontSize": "16px",
+      "color": "var(--gold)",
+      "letterSpacing": "0.04em"
+    },
+    ".btn": {
+      "background": "linear-gradient(180deg, rgba(245, 197, 99, 0.18) 0%, rgba(180, 135, 40, 0.28) 100%)",
+      "border": "1px solid rgba(245, 197, 99, 0.4)",
+      "borderRadius": "6px",
+      "color": "#FFF8E7",
+      "padding": "7px 16px",
+      "fontWeight": "600",
+      "fontSize": "13px",
+      "boxShadow": "0 2px 8px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)",
+      "hover": {
+        "background": "linear-gradient(180deg, rgba(245, 197, 99, 0.3) 0%, rgba(210, 155, 50, 0.45) 100%)",
+        "borderColor": "var(--gold)",
+        "boxShadow": "0 0 12px var(--gold-glow)"
+      }
+    },
+    ".btn.ghost": {
+      "background": "rgba(255, 255, 255, 0.04)",
+      "border": "1px solid var(--edge)",
+      "color": "var(--text)",
+      "hover": {
+        "background": "rgba(255, 255, 255, 0.08)",
+        "borderColor": "rgba(255, 255, 255, 0.25)"
+      }
+    },
+    ".btn.danger": {
+      "background": "linear-gradient(180deg, rgba(239, 68, 68, 0.25) 0%, rgba(153, 27, 27, 0.4) 100%)",
+      "border": "1px solid rgba(239, 68, 68, 0.5)",
+      "color": "#FEE2E2",
+      "hover": {
+        "background": "linear-gradient(180deg, rgba(239, 68, 68, 0.4) 0%, rgba(185, 28, 28, 0.6) 100%)",
+        "boxShadow": "0 0 12px rgba(239, 68, 68, 0.3)"
+      }
+    },
+    ".btn.claim": {
+      "background": "linear-gradient(180deg, rgba(16, 185, 129, 0.25) 0%, rgba(6, 95, 70, 0.4) 100%)",
+      "border": "1px solid rgba(16, 185, 129, 0.5)",
+      "color": "#D1FAE5"
+    },
+    ".item-icon": {
+      "borderRadius": "8px",
+      "background": "radial-gradient(circle at center, rgba(30, 38, 52, 0.6) 0%, rgba(11, 13, 18, 0.9) 100%)",
+      "border": "1px solid rgba(255, 255, 255, 0.12)",
+      "boxShadow": "inset 0 1px 1px rgba(255, 255, 255, 0.1)",
+      "transition": "transform 0.12s, border-color 0.15s, box-shadow 0.15s"
+    },
+    ".hov-tip": {
+      "background": "rgba(11, 14, 20, 0.95)",
+      "backdropFilter": "blur(20px)",
+      "border": "1px solid rgba(245, 197, 99, 0.3)",
+      "borderRadius": "8px",
+      "boxShadow": "0 12px 36px rgba(0, 0, 0, 0.8), 0 0 1px rgba(255, 255, 255, 0.2)"
+    },
+    ".ctxmenu": {
+      "background": "rgba(13, 16, 23, 0.96)",
+      "backdropFilter": "blur(18px)",
+      "border": "1px solid var(--edge)",
+      "borderRadius": "8px",
+      "boxShadow": "0 16px 40px rgba(0, 0, 0, 0.75)"
+    }
+  },
+  "new_trade_system_spec": {
+    "overview": "Real-time 2-player trade system integrated into the HUD over 3D canvas.",
+    "user_flow": [
+      "1. Right-click player -> Context menu displays 'Trade with [PlayerName]'.",
+      "2. Click 'Trade' -> Sends WebSocket message { t: 'trade_req', id: targetId }.",
+      "3. Target receives trade request popup: '[PlayerName] wants to trade with you.' with 'Accept' and 'Decline' buttons.",
+      "4. Upon Accept -> Trade window opens for both players.",
+      "5. Players drag items from their inventory or click items to offer them in 'Your Offer' (12-slot grid).",
+      "6. Players enter Gold amount in input field.",
+      "7. Clicking 'Lock Offer' freezes the offered items & gold for that player (status changes to 'Locked'). Either player modifying their offer unlocks both sides.",
+      "8. When both sides are locked, 'Confirm Trade' becomes active.",
+      "9. When both click 'Confirm Trade', trade executes on server, items/gold transfer, window closes with success toast."
+    ],
+    "components": {
+      "trade_window": {
+        "panel_title": "Player Trade",
+        "className": "trade-panel",
+        "dimensions": "width: min(880px, 95vw); max-height: calc(100vh - 100px)",
+        "layout": "2-column side-by-side offer areas + integrated inventory bottom/side panel",
+        "your_offer_section": {
+          "title": "Your Offer",
+          "slots_grid": "3x4 grid (12 slots of 52px)",
+          "gold_input": "Numeric gold input field with max limit validation",
+          "lock_button": {
+            "testid": "trade-lock-offer-btn",
+            "active_text": "Lock Offer",
+            "locked_text": "Offer Locked ✓"
+          },
+          "confirm_button": {
+            "testid": "trade-confirm-btn",
+            "disabled_until": "Both players locked",
+            "active_text": "Confirm Trade",
+            "confirmed_text": "Trade Confirmed ✓"
+          }
+        },
+        "their_offer_section": {
+          "title": "Their Offer ([TargetName])",
+          "slots_grid": "3x4 grid (12 slots of 52px)",
+          "gold_display": "Read-only gold display with gold icon",
+          "status_badge": "Shows 'Modifying...', 'Locked ✓', 'Confirmed ✓'"
+        }
+      },
+      "trade_request_popup": {
+        "testid": "trade-request-popup",
+        "className": "trade-request-modal",
+        "accept_btn_testid": "trade-accept-btn",
+        "decline_btn_testid": "trade-decline-btn"
+      }
+    },
+    "test_ids": [
+      "trade-window",
+      "trade-close-btn",
+      "trade-your-offer-grid",
+      "trade-their-offer-grid",
+      "trade-your-gold-input",
+      "trade-their-gold-display",
+      "trade-lock-offer-btn",
+      "trade-confirm-btn",
+      "trade-status-your-side",
+      "trade-status-their-side",
+      "trade-request-popup",
+      "trade-accept-btn",
+      "trade-decline-btn"
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Apply pure CSS restyle to /app/frontend/src/App.css replacing old brown medieval gradient styles with sleek minimal modern dark glass variables and rules.",
+    "Implement Trade Window React component in /app/frontend/src/components/game/TradeWindow.jsx or inside Panels.jsx / HUD.jsx.",
+    "Integrate trade WebSocket events ({ t: 'trade_req' }, { t: 'trade_accept' }, { t: 'trade_offer' }, { t: 'trade_lock' }, { t: 'trade_confirm' }, { t: 'trade_cancel' }) with backend server and game state in store.js.",
+    "Update right-click context menu ContextMenu in HUD.jsx to add 'Trade with player' option for player target context menus.",
+    "Ensure all interactive elements have data-testid attributes matching the test_ids spec."
+  ],
+  "UNIVERSAL GUIDELINES FOR MAIN AGENT": {
+    "css_rule": "Avoid universal transition: all. Use specific properties like transition: background-color 0.15s, border-color 0.15s, transform 0.1s.",
+    "contrast_rule": "Keep text contrast above WCAG AA against dark backgrounds.",
+    "test_id_rule": "All interactive buttons, slots, inputs, and modals MUST have data-testid attributes."
+  }
+}
