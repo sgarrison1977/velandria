@@ -963,6 +963,8 @@ class Game:
             return self.do_cast(p, ab_id, m)
         if k in ("aoe_self", "multi") and in_safe(p.x, p.z):
             return "You cannot fight from within a safe square."
+        if ab_id == "multi_vis_nex" and not any(not mm.dead_until and dist(p, mm) <= ab["range"] + mm.d["radius"] and not in_safe(mm.x, mm.z) for mm in self.monsters.values()):
+            return "No enemies in range."
         return self.do_cast(p, ab_id, None)
 
     def dash_to(self, p, ab_id, pt):
