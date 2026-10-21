@@ -387,6 +387,19 @@ async def admin_bot_teleport(cid: str, _=Depends(current_admin)):
     return {"ok": True}
 
 
+@api.get("/admin/lockouts")
+async def admin_lockouts(_=Depends(current_admin)):
+    docs = await db.login_attempts.find({"identifier": {"$regex": "^admin:"}}, {"_id": 0}).to_list(500)
+    nowi = datetime.now(timezone.utc)
+    return {"locked": sum(1 for d in docs if d.get("count", 0) >= 5 and datetime.fromisoformat(d["until"]) > nowi), "failed": len(docs)}
+
+
+@api.delete("/admin/lockouts")
+async def admin_clear_lockouts(_=Depends(current_admin)):
+    r = await db.login_attempts.delete_many({"identifier": {"$regex": "^admin:"}})
+    return {"cleared": r.deleted_count}
+
+
 @api.post("/admin/broadcast")
 async def admin_broadcast(body: AdminTextIn, _=Depends(current_admin)):
     game.announce(body.text.strip())

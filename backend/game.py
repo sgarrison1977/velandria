@@ -743,16 +743,27 @@ class Game:
         g = rnd.choice(list(VEXMOOR_SET)) if rnd.random() < 0.25 else rare_gear(lvl, rnd)
         if g:
             drops.append((g, 1 if g in VEXMOOR_SET else -1))
+        got, dropped = [], []
         for i, (item, qty) in enumerate(drops):
             a = i * 2.1 + rnd.uniform(0, 1)
             lx, lz = p.x + math.cos(a) * 1.3, p.z + math.sin(a) * 1.3
             if not self.world.walkable(lx, lz):
                 lx, lz = p.x, p.z
             props, pname = (None, None) if item == "gold" or item in VEXMOOR_SET else roll_props(item, lvl, rnd, force=qty == -1)
+            qty = max(1, qty)
+            label = f"{qty} gold" if item == "gold" else (pname or ITEMS[item]["name"]) + (f" x{qty}" if qty > 1 else "")
+            if self.add_item(p, item, qty, props, pname):
+                got.append(label)
+                continue
+            dropped.append(label)
             lid = "l" + uid()
-            self.loot[lid] = dict(id=lid, item=item, qty=max(1, qty), props=props, pname=pname, x=round(lx, 2), z=round(lz, 2), owner=p.id,
+            self.loot[lid] = dict(id=lid, item=item, qty=qty, props=props, pname=pname, x=round(lx, 2), z=round(lz, 2), owner=p.id,
                                   party=None, owner_until=t + LOOT_OWNER_SECS, expires=t + LOOT_EXPIRE_SECS)
-        p.send({"t": "sys", "msg": "You break the Vexmoor seal. Treasure spills out!", "kind": "quest"})
+        p.dirty = True
+        msg = "You break the Vexmoor seal! Added to your bags: " + (", ".join(got) or "nothing") + "."
+        if dropped:
+            msg += " Your bags are full, so these dropped at your feet: " + ", ".join(dropped) + "."
+        p.send({"t": "sys", "msg": msg, "kind": "quest"})
 
     def kill_monster(self, m):
         t = now()

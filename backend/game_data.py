@@ -602,13 +602,14 @@ for _k, _b, _l, _n, _x in [("castle_barbarian", "orc_warrior", 65, "Ironhide Bar
     _c = _pit(_b, _l)
     _c.pop("base")
     _ref = MONSTERS["death_knight"]
-    _c.update(name=_n, hp=round(_ref["hp"] * (_l / _ref["level"]) ** 1.25 * (0.75 if _c.get("ranged") else 1.0)), xp=round(3500 * (_l / 58) ** 1.3), respawn=90, leash=20, castle=True,
+    _c.update(name=_n, hp=round(_ref["hp"] * (_l / _ref["level"]) ** 1.25 * (0.75 if _c.get("ranged") else 1.0)), xp=round(3500 * (_l / 58) ** 1.3), respawn=900, leash=20, castle=True,
               loot=_c["loot"] + [("hp_potion", 0.3), ("mp_potion", 0.25)], **_x)
     MONSTERS[_k] = _c
 ITEMS["usurper_crown"] = M("Usurper's Crown", "legendary", 5000, "Lord Vexmoor's stolen crown, still warm with ambition.")
 _boss("vexmoor", "death_knight", 80, "Lord Vexmoor, the Usurper King", 1.0, "usurper_crown",
       dict(every=7, radius=10, mult=1.5, name="Royal Decree", c1="#ffd36b", c2="#b02a1a"), scale=1.0, enrage=dict(at=0.3, mult=1.5), leash=16)
 MONSTERS["vexmoor"]["hp"] = 42000
+MONSTERS["vexmoor"]["respawn"] = 900
 MONSTERS["vexmoor"]["phase2"] = dict(at=0.5, summon="castle_royal_guard", n=6, heal=0.1, interval_mult=0.8,
                                      slam=dict(every=5, radius=13, mult=1.5, name="Usurper's Wrath", dtype="shadow", c1="#a040ff", c2="#2a0a3a"))
 

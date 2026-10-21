@@ -5,6 +5,7 @@ import { errMsg } from "@/lib/api";
 import { AdminLogin } from "@/components/admin/AdminLogin";
 import { AccountRow } from "@/components/admin/AccountRow";
 import { Broadcast } from "@/components/admin/Broadcast";
+import { LockoutReset } from "@/components/admin/LockoutReset";
 import { BotsControl } from "@/components/admin/BotsControl";
 
 export default function AdminPage() {
@@ -40,6 +41,7 @@ export default function AdminPage() {
         </div>
       </header>
       <Broadcast onMsg={setMsg} />
+      <LockoutReset onMsg={setMsg} />
       <BotsControl onMsg={setMsg} />
       {msg && <div className={msg.ok ? "admin-ok" : "form-err"} data-testid="admin-message" onClick={() => setMsg(null)}>{msg.text}</div>}
       <div className="admin-list" data-testid="admin-accounts-list">

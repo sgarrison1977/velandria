@@ -122,3 +122,6 @@ Later requests: hold-to-walk toward pointer; ranged/spell abilities fire at the 
 - grant_spells now removes spells above the character's level (wizards Lv 4–10 lose Multi Vis Nex until Lv 11).
 - Multi Vis Nex now only casts when an enemy is within 14m (else 'No enemies in range.', no mana spent).
 - Admin login: username case-insensitive, both fields trimmed (fix for mobile auto-capitalize/autofill lockouts).
+- Admin "Admin Login Lockouts" panel: shows locked/failed counts, Clear Lockouts button (GET/DELETE /api/admin/lockouts, admin:* identifiers only).
+- Castle Vexmoor monsters + Lord Vexmoor respawn every 15 min (respawn=900).
+- Vexmoor Coffer: contents go straight into bags with a chat list; overflow drops at feet when bags full.

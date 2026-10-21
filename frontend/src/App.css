@@ -566,6 +566,8 @@ input[type="text"], input[type="email"], input[type="password"], input:not([type
 .panel-head.drag-handle { cursor: grab; user-select: none; }
 body.win-dragging, body.win-dragging * { cursor: grabbing !important; user-select: none !important; }
 .plate.is-say .plate-sub, .nameplate.is-say small { color: #fff4d6; font-style: italic; text-transform: none; font-size: calc(18px * var(--np, 1)); white-space: normal; width: calc(340px * var(--np, 1)); margin-left: 50%; transform: translateX(-50%); line-height: 1.3; }
+.admin-lockouts { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; padding: 10px 14px; background: var(--panel); border: 1px solid var(--edge2); border-radius: 8px; }
+.admin-lockouts .btn { margin-left: auto; }
 .admin-bots { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; padding: 10px 14px; background: var(--panel); border: 1px solid var(--edge2); border-radius: 8px; }
 .admin-bots .btn { margin-left: auto; }
 .admin-bot-list { flex-basis: 100%; display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 6px; }
