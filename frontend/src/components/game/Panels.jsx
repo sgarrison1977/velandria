@@ -120,6 +120,20 @@ export function InventoryPanel({ data, net }) {
 }
 
 const ATTRS = [["str", "Strength"], ["sta", "Stamina"], ["wis", "Wisdom"], ["int", "Intelligence"], ["dex", "Dexterity"]];
+function SetBonuses({ sets, me }) {
+  const worn = Object.entries(sets || {}).map(([id, S]) => [id, S, Object.values(me.equipment || {}).filter((e) => S.items.includes(e.item)).length]).filter(([, , n]) => n > 0);
+  if (!worn.length) return null;
+  return worn.map(([id, S, have]) => (
+    <div className="set-bonus" key={id} data-testid={`set-bonus-${id}`}>
+      <div className="set-bonus-head"><b>{S.name}</b><span data-testid={`set-bonus-count-${id}`}>{have}/{S.items.length} pieces</span></div>
+      {Object.entries(S.bonuses).map(([n, txt]) => {
+        const on = have >= Number(n);
+        return <div key={n} className={`set-tier ${on ? "on" : ""}`} data-testid={`set-tier-${id}-${n}`}>{on ? <Check size={12} /> : <Lock size={12} />} <em>{n} pieces</em> {txt}{on ? " · active" : ""}</div>;
+      })}
+    </div>
+  ));
+}
+
 export function CharacterPanel({ data, net }) {
   const me = useStore((s) => s.me);
   if (!me) return null;
@@ -142,6 +156,7 @@ export function CharacterPanel({ data, net }) {
         <div><em>Armor</em><b data-testid="stat-armor">{me.armor}</b></div><div><em>Crit chance</em><b>{(me.crit * 100).toFixed(1)}%</b></div>
         <div><em>Range</em><b>{me.range}m</b></div><div><em>Experience</em><b>{me.xp.toLocaleString()}</b></div>
       </div>
+      <SetBonuses sets={data.sets} me={me} />
     </Panel>
   );
 }

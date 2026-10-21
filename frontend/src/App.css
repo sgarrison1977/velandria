@@ -577,3 +577,11 @@ body.win-dragging, body.win-dragging * { cursor: grabbing !important; user-selec
 .admin-bot-row .admin-sub { font-size: 12px; }
 .admin-bot-row .btn:first-of-type { margin-left: auto; }
 .admin-bots select { background: #0b0907; border: 1px solid #4a3a26; color: var(--text); padding: 4px 8px; margin-left: 6px; }
+
+.set-bonus { margin-top: 12px; padding: 10px 12px; border: 1px solid #3a5a3e; background: rgba(40, 70, 44, 0.18); border-radius: 6px; }
+.set-bonus-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.set-bonus-head b { color: #7fd38a; font-family: var(--serif); }
+.set-bonus-head span { color: var(--muted); font-size: 12px; }
+.set-tier { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); padding: 2px 0; }
+.set-tier em { font-style: normal; min-width: 62px; }
+.set-tier.on { color: #9affb0; }

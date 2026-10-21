@@ -125,3 +125,4 @@ Later requests: hold-to-walk toward pointer; ranged/spell abilities fire at the 
 - Admin "Admin Login Lockouts" panel: shows locked/failed counts, Clear Lockouts button (GET/DELETE /api/admin/lockouts, admin:* identifiers only).
 - Castle Vexmoor monsters + Lord Vexmoor respawn every 15 min (respawn=900).
 - Vexmoor Coffer: contents go straight into bags with a chat list; overflow drops at feet when bags full.
+- Set bonuses shown clearly: Character panel 'Regalia of Vexmoor x/6' box with active/locked tiers; chat message when a set tier activates or is lost (Player.recalc).

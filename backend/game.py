@@ -107,6 +107,14 @@ class Player:
         for e in self.equipment.values():
             if ITEMS[e["item"]].get("set"):
                 sc[ITEMS[e["item"]]["set"]] = sc.get(ITEMS[e["item"]]["set"], 0) + 1
+        tiers = {(sid, need) for sid, cnt in sc.items() for need in SETS[sid]["bonuses"] if cnt >= need}
+        prev = getattr(self, "set_tiers", None)
+        if prev is not None:
+            for sid, need in sorted(tiers - prev):
+                self.send({"t": "sys", "msg": f"Set bonus active — {SETS[sid]['name']} ({need} pieces): {SETS[sid]['bonuses'][need]['text']}", "kind": "quest"})
+            for sid, need in sorted(prev - tiers):
+                self.send({"t": "sys", "msg": f"Set bonus lost — {SETS[sid]['name']} ({need} pieces): {SETS[sid]['bonuses'][need]['text']}", "kind": "bad"})
+        self.set_tiers = tiers
         for sid, cnt in sc.items():
             for need, bon in SETS[sid]["bonuses"].items():
                 if cnt >= need:
