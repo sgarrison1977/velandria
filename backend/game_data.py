@@ -99,9 +99,9 @@ ABILITIES = {
                          desc="Open a portal to one of your marks (type mark0 – mark9 in chat to set). Lasts 10 seconds."),
 }
 
-ACTIONS = ["attack_nearest", "stop", "loot_all", "inventory", "character", "skills", "map", "quests", "chat", "menu"] + [f"ability:{a}" for a in ABILITIES]
+ACTIONS = ["attack_nearest", "stop", "loot_all", "inventory", "character", "skills", "map", "quests", "chat", "chat_history", "menu"] + [f"ability:{a}" for a in ABILITIES]
 DEFAULT_BINDS = {"attack_nearest": "Space", "stop": "KeyS", "loot_all": "KeyF", "inventory": "KeyI", "character": "KeyC", "skills": "KeyK",
-                 "map": "KeyM", "quests": "KeyL", "chat": "Enter", "menu": "Escape"}
+                 "map": "KeyM", "quests": "KeyL", "chat": "Enter", "chat_history": "KeyH", "menu": "Escape"}
 
 
 def default_binds(cls):

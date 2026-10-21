@@ -38,34 +38,56 @@ export function WorldMap({ engine }) {
 }
 
 const fmt = (ts) => { try { return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); } catch (e) { return ""; } };
+function ChatLine({ m }) {
+  return (
+    <div className={`cm cm-${m.kind}`}>
+      <time>{fmt(m.ts)}</time>
+      {m.kind === "world" && <><b className={`cls-${m.cls}`}>{m.name}</b><small>[{m.lvl}]</small>: </>}
+      {m.kind === "whisper" && <b className="wh">{m.name} → {m.to}: </b>}
+      {m.kind === "party" && <b className="pt">[Party] {m.name}: </b>}
+      <span>{m.text}</span>
+    </div>
+  );
+}
+
+const FADE_MS = 30000;
 export function Chat({ net }) {
   const chat = useStore((s) => s.chat), focus = useStore((s) => s.chatFocus), prefill = useStore((s) => s.chatPrefill), conn = useStore((s) => s.conn);
   const [text, setText] = useState("");
   const [open, setOpen] = useState(false);
-  const inp = useRef(), list = useRef();
+  const [, tick] = useState(0);
+  const inp = useRef();
+  useEffect(() => { const iv = setInterval(() => tick((x) => x + 1), 1000); return () => clearInterval(iv); }, []);
   useEffect(() => { if (focus) { setOpen(true); if (prefill) { setText(prefill); setState({ chatPrefill: null }); } setTimeout(() => inp.current?.focus(), 0); } }, [focus]); // eslint-disable-line
-  useEffect(() => { if (list.current) list.current.scrollTop = list.current.scrollHeight; }, [chat]);
   const send = () => {
     const t = text.trim();
-    if (t) { if (!net.send({ t: "chat", msg: t })) setState((s) => ({ chat: [...s.chat, { kind: "error", text: "Not connected — message not sent.", ts: new Date().toISOString() }] })); }
+    if (t) { if (!net.send({ t: "chat", msg: t })) setState((s) => ({ chat: [...s.chat, { kind: "error", text: "Not connected — message not sent.", ts: new Date().toISOString(), _at: Date.now() }] })); }
     setText(""); setOpen(false); inp.current?.blur();
   };
+  const nowMs = Date.now();
+  const shown = chat.slice(-5).filter((m) => open || (m._at && nowMs - m._at < FADE_MS));
   return (
     <div className={`chat ${open ? "open" : ""}`} data-testid="chat-window" onMouseDown={(e) => e.stopPropagation()}>
-      <div className="chat-list" ref={list} data-testid="chat-messages">
-        {chat.map((m, i) => (
-          <div key={i} className={`cm cm-${m.kind}`}>
-            <time>{fmt(m.ts)}</time>
-            {m.kind === "world" && <><b className={`cls-${m.cls}`}>{m.name}</b><small>[{m.lvl}]</small>: </>}
-            {m.kind === "whisper" && <b className="wh">{m.name} → {m.to}: </b>}
-            {m.kind === "party" && <b className="pt">[Party] {m.name}: </b>}
-            <span>{m.text}</span>
-          </div>
-        ))}
+      <div className="chat-list" data-testid="chat-messages">
+        {shown.map((m, i) => <div key={`${chat.length}-${i}`} className={!open && nowMs - m._at > FADE_MS - 3000 ? "cm-fade" : ""}><ChatLine m={m} /></div>)}
       </div>
-      <input ref={inp} data-testid="chat-input" maxLength={200} value={text} placeholder={conn === "online" ? "Press Enter to chat · /w Name whisper · /p party · /who online · Esc to cancel" : "Disconnected"}
-        onFocus={() => setOpen(true)} onChange={(e) => setText(e.target.value)}
+      <input ref={inp} data-testid="chat-input" maxLength={200} value={text} placeholder={conn === "online" ? "Enter to chat · /w Name whisper · /p party · /who · H history · Esc cancel" : "Disconnected"}
+        onFocus={() => setOpen(true)} onBlur={() => !text && setOpen(false)} onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => { e.stopPropagation(); if (e.key === "Enter") send(); if (e.key === "Escape") { setText(""); setOpen(false); inp.current.blur(); } }} />
     </div>
+  );
+}
+
+export function ChatHistory() {
+  const chat = useStore((s) => s.chat);
+  const list = useRef();
+  const log = chat.filter((m) => m._at);
+  useEffect(() => { if (list.current) list.current.scrollTop = list.current.scrollHeight; }, [log.length]);
+  return (
+    <Panel title="Chat History" testid="chat-history-panel" className="chat-history" onClose={() => togglePanel("chat_history", false)}>
+      <div className="chat-history-list" ref={list} data-testid="chat-history-list">
+        {log.length ? log.map((m, i) => <ChatLine key={i} m={m} />) : <p className="hint">No messages since you logged in.</p>}
+      </div>
+    </Panel>
   );
 }

@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { PartyFrame, PartyInvite } from "../components/game/Party";
 import { TradeWindow, TradeRequest } from "../components/game/TradeWindow";
-import { applyNameplateSize } from "../components/game/Merchant";
+import { applyNameplateSize, applyChatStyle } from "../components/game/Merchant";
 applyNameplateSize();
+applyChatStyle();
 import { BuffBar, MarkPicker } from "../components/game/Spells";
 import { StorageWindow } from "../components/game/Storage";
 import { useNavigate, useParams } from "react-router-dom";
@@ -14,7 +15,7 @@ import { sfx } from "@/game/audio";
 import { PlayerFrame, XpBar, TargetFrame, MenuBar, ExitButton, Toasts, Banners, ContextMenu, DialogWindow, InspectWindow } from "@/components/game/HUD";
 import { InventoryPanel, CharacterPanel, SkillsPanel, QuestPanel } from "@/components/game/Panels";
 import { MerchantWindow, SettingsPanel } from "@/components/game/Merchant";
-import { Minimap, WorldMap, Chat } from "@/components/game/Maps";
+import { Minimap, WorldMap, Chat, ChatHistory } from "@/components/game/Maps";
 import { LeaderboardPanel } from "@/components/game/Leaderboard";
 import { AdminGivePanel } from "@/components/game/AdminGive";
 import { getLootFilter } from "@/components/game/LootFilter";
@@ -51,7 +52,7 @@ export default function GamePage() {
           case "fx": e.onFx(m); break;
           case "init": setState({ me: m.me, meAt: performance.now(), chat: m.chat, hp: m.me.hp, mp: m.me.mp }); { const lf = getLootFilter(); net.current?.send({ t: "autoloot", filter: lf.auto ? lf : null }); } break;
           case "me": setState({ me: m.me, meAt: performance.now() }); break;
-          case "chat": setState((s) => ({ chat: [...s.chat.slice(-150), m.m] })); break;
+          case "chat": setState((s) => ({ chat: [...s.chat.slice(-2000), { ...m.m, _at: Date.now() }] })); break;
           case "pong": setState((st) => { const v = Math.round(performance.now() - m.c); return { ping: st.ping ? Math.round(st.ping * 0.6 + v * 0.4) : v }; }); break;
           case "sys": toast(m.msg, m.kind || "info"); if (m.kind === "quest") sfx("loot"); break;
           case "err": toast(m.msg, "error"); sfx("error"); break;
@@ -129,6 +130,7 @@ export default function GamePage() {
         <TargetFrame data={data} />
         <Minimap engine={e} />
         <Chat net={n} />
+        {panels.chat_history && <ChatHistory />}
         <div className="bottom"><XpBar data={data} /></div>
         <MenuBar onLogout={logout} />
         <ExitButton netRef={net} onLogout={logout} />

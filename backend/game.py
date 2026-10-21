@@ -82,6 +82,8 @@ class Player:
             self.equipment["ring1"] = self.equipment.pop("ring")
         if "loot_all" not in self.binds and "KeyF" not in self.binds.values():
             self.binds["loot_all"] = "KeyF"
+        if "chat_history" not in self.binds and "KeyH" not in self.binds.values():
+            self.binds["chat_history"] = "KeyH"
         if self.cls == "mage":
             self.cls = "wizard"
         self.recalc()

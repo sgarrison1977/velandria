@@ -51,10 +51,16 @@ function Compare({ item, cur }) {
 function SetInfo({ set, me }) {
   const S = window.__SX_SETS?.[set];
   if (!S) return null;
-  const have = Object.values(me?.equipment || {}).filter((e) => S.items.includes(e.item)).length;
+  const worn = new Set(Object.values(me?.equipment || {}).map((e) => e.item));
+  const bag = new Set((me?.inventory || []).map((e) => e.item));
+  const have = S.items.filter((i) => worn.has(i)).length;
   return (
     <div className="tip-set" data-testid="tip-set-info">
-      <div className="tip-meta" style={{ color: "#7fd38a" }}>{S.name} ({have}/{S.items.length})</div>
+      <div className="tip-meta" style={{ color: "#7fd38a" }}>{S.name} ({have}/{S.items.length} worn)</div>
+      <div className="tip-set-pieces" data-testid="tip-set-pieces">
+        {S.items.map((i) => { const st = worn.has(i) ? "worn" : bag.has(i) ? "bag" : "missing";
+          return <div key={i} className={`tsp tsp-${st}`} data-testid={`tip-set-piece-${i}`}>{st === "worn" ? "✓" : st === "bag" ? "◆" : "✗"} {window.__SX_ITEMS?.[i]?.name || i}{st === "bag" ? " (in bags)" : st === "missing" ? " (missing)" : ""}</div>; })}
+      </div>
       {Object.entries(S.bonuses).map(([n, txt]) => <div key={n} className={have >= Number(n) ? "up" : "tip-meta"}>({n}) {txt}</div>)}
     </div>
   );

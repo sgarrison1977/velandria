@@ -57,9 +57,9 @@ export function MerchantWindow({ data, net }) {
   );
 }
 
-const ACTION_LABEL = { attack_nearest: "Attack nearest enemy", stop: "Stop Action (ends Contra Visus)", loot_all: "Pick up all nearby loot", inventory: "Inventory", character: "Character stats", skills: "Skills & spells", map: "World map", quests: "Quest journal", chat: "Open chat", menu: "Menu / close windows" };
+const ACTION_LABEL = { attack_nearest: "Attack nearest enemy", stop: "Stop Action (ends Contra Visus)", loot_all: "Pick up all nearby loot", inventory: "Inventory", character: "Character stats", skills: "Skills & spells", map: "World map", quests: "Quest journal", chat: "Open chat", chat_history: "Chat history window", menu: "Menu / close windows" };
 export function defaultBinds(data, cls) {
-  const b = { attack_nearest: "Space", stop: "KeyS", loot_all: "KeyF", inventory: "KeyI", character: "KeyC", skills: "KeyK", map: "KeyM", quests: "KeyL", chat: "Enter", menu: "Escape" };
+  const b = { attack_nearest: "Space", stop: "KeyS", loot_all: "KeyF", inventory: "KeyI", character: "KeyC", skills: "KeyK", map: "KeyM", quests: "KeyL", chat: "Enter", chat_history: "KeyH", menu: "Escape" };
   const abil = Object.keys(data.abilities).filter((k) => data.abilities[k].cls.includes(cls));
   abil.forEach((a, i) => { b[`ability:${a}`] = i < 10 ? `Digit${(i + 1) % 10}` : ""; });
   return b;
@@ -79,6 +79,19 @@ function NameplateSize() {
     </label>
   );
 }
+
+export const applyChatStyle = () => { const r = document.documentElement.style; r.setProperty("--chatfs", `${localStorage.getItem("sx_chat_fs") || 14}px`); r.setProperty("--chatw", `${localStorage.getItem("sx_chat_w") || 420}px`); };
+function ChatSlider({ k, def, min, max, step, label, unit, testid }) {
+  const [v, setV] = useState(Number(localStorage.getItem(k) || def));
+  const set = (x) => { setV(x); localStorage.setItem(k, String(x)); applyChatStyle(); };
+  return (
+    <label className="row" data-testid={`settings-${testid}`}>{label}
+      <input type="range" min={min} max={max} step={step} value={v} onChange={(e) => set(Number(e.target.value))} data-testid={`settings-${testid}-slider`} />
+      <b style={{ minWidth: 52 }}>{v}{unit}</b>
+    </label>
+  );
+}
+const ChatSettings = () => <><ChatSlider k="sx_chat_fs" def={14} min={10} max={24} step={1} label="Chat text size" unit="px" testid="chat-size" /><ChatSlider k="sx_chat_w" def={420} min={260} max={900} step={10} label="Chat width" unit="px" testid="chat-width" /></>;
 
 export function SettingsPanel({ data, net, engine }) {
   const me = useStore((s) => s.me), capture = useStore((s) => s.capture);
@@ -171,6 +184,7 @@ export function SettingsPanel({ data, net, engine }) {
         <label className="row ui-scale">Window size <input type="range" min="0.8" max="1.8" step="0.05" value={pz} data-testid="settings-ui-scale" onChange={(e) => { const v = Number(e.target.value); setPz(v); applyUiScale(v); }} /> <b data-testid="settings-ui-scale-value">{Math.round(pz * 100)}%</b></label>
         <label className="row"><input type="checkbox" data-testid="settings-still-grass-toggle" checked={still} onChange={(e) => { const v = e.target.checked; setStill(v); localStorage.setItem("sx_still_grass", v ? "1" : ""); swayUniform.value = v ? 0 : 1; }} /> Still grass and bushes (no wind sway)</label>
         <NameplateSize />
+          <ChatSettings />
         <div className="row"><button type="button" className="btn ghost" data-testid="settings-reset-windows-btn" onClick={() => { resetWindowPositions(); toast("Window positions reset", "good"); }}>Reset window positions</button></div>
         <label className="row"><input type="checkbox" data-testid="settings-fps-toggle" checked={!!showFps} onChange={(e) => { localStorage.setItem("sx_show_fps", e.target.checked ? "1" : ""); setState({ showFps: e.target.checked }); }} /> Show FPS &amp; ping counter</label>
         <p className="hint">Middle-mouse drag rotates the camera · mouse wheel zooms.</p>

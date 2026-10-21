@@ -126,3 +126,5 @@ Later requests: hold-to-walk toward pointer; ranged/spell abilities fire at the 
 - Castle Vexmoor monsters + Lord Vexmoor respawn every 15 min (respawn=900).
 - Vexmoor Coffer: contents go straight into bags with a chat list; overflow drops at feet when bags full.
 - Set bonuses shown clearly: Character panel 'Regalia of Vexmoor x/6' box with active/locked tiers; chat message when a set tier activates or is lost (Player.recalc).
+- Chat rework: transparent box, no scrollbar, last 5 lines, each fades after 30s (all 5 shown while typing), input only visible while typing. Settings sliders: chat text size (sx_chat_fs, 10-24px) and chat width (sx_chat_w, 260-900px). H (bind "chat_history", auto-added to existing chars) opens "Chat History" panel with all messages since login (store keeps 2000).
+- Set piece tooltip lists all 6 Regalia pieces: worn (green ✓), in bags (gold ◆), missing (grey ✗).
