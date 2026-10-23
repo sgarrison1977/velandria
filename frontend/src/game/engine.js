@@ -21,7 +21,7 @@ const glowTex = (() => {
 })();
 const sprite = (color, size) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); s.scale.setScalar(size); return s; };
 const AB_SFX = { glacies_nova: "frost", fulmen_catena: "electric", lunae_lumen_nex: "beam", ignis: "Spell4", flamma_ventus: "attwind", agredi: "Spell4", multi_vis_nex: "Dstar", radius: "beam", venenum: "poison", tabes_viscera: "rot",
-  minor_mederi: "angel", minor_sanatio: "angel", teuri: "cast", velocitas: "angel2", robur: "cast2", contra_visus: "cast2", creare_porta: "portal", pergere_trans: "flap",
+  minor_mederi: "angel", minor_sanatio: "angel", teuri: "cast", velocitas: "angel2", robur: "cast2", contra_visus: "cvwind", creare_porta: "portal", pergere_trans: "flap",
   attack_run: "dash", multi_shot: "bow", arrow_barrage: "bow", double_stab: "swing", spin_attack: "swing", power_strike: "heavy", cleave: "swing" };
 const ICE_GEO = new THREE.CylinderGeometry(1, 1, 1, 12, 1, true), ICE_MAT = new THREE.MeshBasicMaterial({ color: "#9ae8ff", transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
 const EL_COLOR = { fire: "#ff7a2a", frost: "#9ae8ff", lightning: "#fff27a" }, EL_SFX = { fire: "fire", frost: "frost", lightning: "zap" };
