@@ -117,11 +117,11 @@ SIDE_PATHS = [
 STREAMS = [[(300, -5), (290, 80), (310, 160), (300, 235), (320, 320), (310, 405)],
            [(700, -5), (715, 90), (690, 170), (705, 240), (690, 330), (700, 405)]]
 LAKES = [dict(x=1045, z=335, rx=30, rz=20), dict(x=1548, z=352, rx=26, rz=16), dict(x=420, z=330, rx=14, rz=9)]
-# meandering lava stream + small pools east of the Shattered Quarry
-LAVA_STREAMS = [[(555, 418), (568, 408), (575, 395), (588, 388), (605, 392), (618, 400), (628, 390), (638, 378)]]
-LAVA_POOLS = [dict(x=572, z=402, rx=4.2, rz=3.0), dict(x=600, z=394, rx=3.4, rz=2.4),
-              dict(x=625, z=397, rx=5.0, rz=3.4), dict(x=645, z=382, rx=3.0, rz=2.2),
-              dict(x=580, z=414, rx=3.6, rz=2.6)]
+# meandering lava stream + small pools just south of the Shattered Quarry
+LAVA_STREAMS = [[(475, 408), (498, 414), (520, 408), (545, 416), (570, 412), (595, 418), (620, 410), (640, 420)]]
+LAVA_POOLS = [dict(x=490, z=411, rx=4.4, rz=3.2), dict(x=528, z=413, rx=3.6, rz=2.6),
+              dict(x=565, z=415, rx=5.2, rz=3.6), dict(x=605, z=416, rx=3.4, rz=2.4),
+              dict(x=638, z=416, rx=4.0, rz=2.8)]
 
 REGIONS = [
     dict(name="Titus", x=90, z=200, r=58, lvl="Safe town"),
@@ -141,7 +141,7 @@ REGIONS = [
     dict(name="Broodmother's Lair", x=380, z=372, r=30, lvl="25 (Danger)"),
     dict(name="Wraithmoor", x=660, z=48, r=32, lvl="30 (Danger)"),
     dict(name="Shattered Quarry", x=505, z=365, r=30, lvl="38 (Danger)"),
-    dict(name="Molten Vein", x=610, z=400, r=50, lvl="12-15"),
+    dict(name="Molten Vein", x=555, z=414, r=92, lvl="12-15"),
     dict(name="Dreadkeep Ruins", x=820, z=35, r=28, lvl="48 (Deadly)"),
     dict(name="Abyssal Rift", x=1040, z=25, r=26, lvl="60 (Deadly)"),
     dict(name="The Old Pass", x=1094, z=210, r=14, lvl="-"),
@@ -442,13 +442,14 @@ class World:
                 self.grass.append([round(x, 1), round(z, 1), round(rnd.uniform(0.7, 1.1), 2)])
 
     def _lava_imp_cluster(self):
-        # global coords (post-globalize). 5 clusters totalling 60 lava imps around the Molten Vein stream
-        clusters = [(735, 568, 14, 14), (765, 555, 15, 15), (790, 555, 14, 14), (745, 538, 12, 10), (803, 542, 10, 7)]
-        for (x, z, r, n) in clusters:
+        # global coords (post-globalize). Spawn at each lava pool so imps emerge from the lava
+        pool_pts = [(p["x"], p["z"]) for p in LAVA_POOLS]
+        counts = [14, 12, 15, 10, 9]  # 60 total
+        for (x, z), n in zip(pool_pts, counts):
             w = self.nearest_walkable(x, z, 10)
             if w:
                 x, z = w
-            self.spawns.append(dict(monster="lava_imp", x=round(x, 1), z=round(z, 1), r=r, n=n))
+            self.spawns.append(dict(monster="lava_imp", x=round(x, 1), z=round(z, 1), r=6, n=n))
 
     def _monster_camps(self):
         """global: big themed monster camps across the continent + a sprinkling of lone wanderers (~TARGET_MONSTERS total)"""

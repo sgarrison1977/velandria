@@ -143,7 +143,7 @@ function headParts(head, o, skinM, hc) {
     if (style === "tail") mesh(tube("ptail", [[0, 0, 0], [0, -0.05, -0.04], [0, -0.15, -0.06], [0, -0.24, -0.05]], 0.03, 10), hairM, 0, hc + 0.04, -0.11, head);
   } else if (hideHair && (helm === "nasal" || helm === "cap") && o.hairStyle === "long") mesh(longHairBack(), hairM, 0, hc - 0.1, -0.012, head);
   if (o.mohawk) mesh(tube("mhk", [[0, 0.1, 0.07], [0, 0.135, 0], [0, 0.11, -0.08], [0, 0.05, -0.12]], 0.022, 12, false), mat("hair", o.mohawk), 0, hc, 0, head).scale.x = 0.5;
-  if (o.horns) for (const sd of [-1, 1]) mesh(tube("horn" + sd, [[0, 0, 0], [sd * 0.05, 0.06, -0.02], [sd * 0.09, 0.14, -0.08], [sd * 0.06, 0.21, -0.17]], 0.028, 12), mat("bone", o.horns), sd * 0.07, hc + 0.08, 0.01, head);
+  if (o.horns) { const hs = o.hornScale || 1; for (const sd of [-1, 1]) mesh(tube("horn" + sd + (hs !== 1 ? "x" + hs : ""), [[0, 0, 0], [sd * 0.05 * hs, 0.06 * hs, -0.02 * hs], [sd * 0.09 * hs, 0.14 * hs, -0.08 * hs], [sd * 0.06 * hs, 0.21 * hs, -0.17 * hs]], 0.028 * hs, 12), mat("bone", o.horns), sd * 0.07, hc + 0.08, 0.01, head); }
   if (o.antlers) for (const sd of [-1, 1]) { const am = mat("leather", "#8a7a5a"); mesh(tube("ant" + sd, [[0, 0, 0], [sd * 0.06, 0.1, -0.02], [sd * 0.12, 0.22, -0.04], [sd * 0.14, 0.34, -0.02]], 0.018, 10), am, sd * 0.06, hc + 0.09, 0, head); mesh(tube("antb" + sd, [[0, 0, 0], [sd * 0.05, 0.06, 0.03], [sd * 0.06, 0.13, 0.04]], 0.012, 8), am, sd * 0.12, hc + 0.27, -0.03, head); }
   helmet(head, o, hc);
 }
@@ -313,9 +313,28 @@ export function humanoid(o) {
   rig.armL = arm(-1); rig.armR = arm(1);
 
   if (o.cape) { const cg = grp(0, 0.6, -0.03, torso); mesh(capeGeo(o.robeCape ? 1.35 : 1.15, w, o.tatter), mat("cloth", o.cape, { side: THREE.DoubleSide }), 0, 0, 0, cg).name = "cape"; rig.cape = cg; }
-  if (o.wings) { rig.wings = []; for (const sd of [-1, 1]) { const wg = grp(sd * 0.07, 0.48, -0.13, torso); wg.rotation.y = sd * 0.5; const wm = mesh(wingGeo(), mat("leather", o.wings, { side: THREE.DoubleSide }), 0, 0, 0, wg); wm.scale.set(sd * 0.9, 0.9, 1); wm.name = "wing"; mesh(tube("wbone" + sd, [[0, 0, 0], [sd * 0.32, 0.4, 0], [sd * 0.85, 0.5, 0]], 0.022, 10), mat("bone", "#2a1410"), 0, 0, 0, wg); rig.wings.push(wg); } }
+  if (o.wings) { rig.wings = []; const ws = o.wingScale || 1; for (const sd of [-1, 1]) { const wg = grp(sd * 0.07, 0.48, -0.13, torso); wg.rotation.y = sd * 0.5; const wm = mesh(wingGeo(), mat("leather", o.wings, { side: THREE.DoubleSide }), 0, 0, 0, wg); wm.scale.set(sd * 0.9 * ws, 0.9 * ws, 1); wm.name = "wing"; mesh(tube("wbone" + sd + (ws !== 1 ? "x" + ws : ""), [[0, 0, 0], [sd * 0.32 * ws, 0.4 * ws, 0], [sd * 0.85 * ws, 0.5 * ws, 0]], 0.022 * Math.sqrt(ws), 10), mat("bone", "#2a1410"), 0, 0, 0, wg); rig.wings.push(wg); } }
   if (o.tail) { const tg = grp(0, 0.92, -0.12, body); mesh(tube("tail", [[0, 0, 0], [0, -0.15, -0.2], [0, -0.35, -0.45], [0, -0.42, -0.7], [0, -0.35, -0.85]], 0.045, 16), mat("skin", o.tail), 0, 0, 0, tg); mesh(cone(0.05, 0.1, 4), mat("bone", "#1a0a0a"), 0, -0.33, -0.9, tg, -1.2, 0, 0); rig.tail = tg; }
   if (o.rocky) for (const a of [rig.armL, rig.armR]) { mesh(rockGeo(0.07 * w, 3), mat("stone", o.skin), 0, -0.12, -0.03, a.el); mesh(rockGeo(0.08 * w, 5), mat("stone", o.skin), 0, 0.02, 0, a.sh); }
+  if (o.lavaPatches) {
+    // molten lava patches/cracks oozing across the skin
+    const lavaM = glowMat(o.glow || "#ff7a1a", 3.2);
+    const emberM = glowMat("#ffd36b", 2.4);
+    // torso front/back
+    for (const [px, py, pz, sx, sy, sz] of [[0, 0.42, 0.09, 0.15, 0.08, 0.02], [0, 0.26, 0.08, 0.11, 0.06, 0.02], [-0.08, 0.5, 0.07, 0.07, 0.09, 0.02], [0.09, 0.34, 0.07, 0.08, 0.06, 0.02], [0, 0.16, -0.09, 0.14, 0.07, 0.02]])
+      mesh(sph(1, 10, 8), lavaM, px, py, pz, torso).scale.set(sx, sy, sz);
+    // arms and legs
+    for (const limb of [rig.armL.sh, rig.armR.sh, rig.armL.el, rig.armR.el, rig.legL.hip, rig.legR.hip, rig.legL.knee, rig.legR.knee]) {
+      mesh(sph(0.045, 10, 8), lavaM, 0.03, -0.1, 0.03, limb).scale.set(1, 0.55, 0.35);
+      mesh(sph(0.03, 8, 6), emberM, -0.03, -0.2, 0.02, limb).scale.set(0.9, 0.5, 0.3);
+    }
+    // face patches
+    mesh(sph(0.035, 10, 8), lavaM, 0.045, 0.06, 0.085, head).scale.set(1, 0.5, 0.35);
+    mesh(sph(0.03, 10, 8), lavaM, -0.055, 0.14, 0.085, head).scale.set(0.9, 0.6, 0.35);
+    // bright emissive dots scattered for ember glow
+    for (const [px, py, pz] of [[0.06, 0.55, 0.08], [-0.07, 0.6, 0.08], [0.03, 0.3, 0.1], [-0.04, 0.42, 0.09], [0, 0.5, -0.1]])
+      mesh(sph(0.012, 8, 6), emberM, px, py, pz, torso);
+  }
 
   if (o.weapon) {
     const wm = typeof o.weapon === "string" ? weaponMesh(o.weapon, o.weaponColor, o.glow) : o.weapon;
