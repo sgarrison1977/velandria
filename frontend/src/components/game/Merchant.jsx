@@ -177,6 +177,12 @@ export function SettingsPanel({ data, net, engine }) {
       {tab === "audio" && <div className="audio-set">
         <label>Music volume {Math.round((aud.music ?? 0.35) * 100)}%<input type="range" min={0} max={1} step={0.05} value={aud.music ?? 0.35} data-testid="audio-music-slider" onChange={(e) => { setAudio({ music: +e.target.value }); setAud(audioCfg()); }} /></label>
         <p className="hint">Calm music plays in towns, gentle themes in the wilds and darker music in dungeons.</p>
+        <label className="row" data-testid="settings-voice">Character voice
+          <select data-testid="settings-voice-select" defaultValue={localStorage.getItem("sx_voice") || "male"} onChange={(e) => { localStorage.setItem("sx_voice", e.target.value); sfx("click"); }}>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+          </select>
+        </label>
       </div>}
       {tab === "loot" && <LootFilterSettings />}
       {tab === "gfx" && <div className="audio-set">

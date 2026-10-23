@@ -171,7 +171,10 @@ export class Engine {
         if (src && tgt && f.style !== "melee") this.projectile(src, tgt, f.el ? EL_COLOR[f.el] : f.style === "arrow" ? "#e8d8b0" : f.style === "spell" ? "#b05cff" : "#7fb8ff", f.style === "arrow", 0.6, null, f.el);
         if (near(src)) {
           if (src?.type === "imp" && f.style === "melee") sfx("impgrr");
-          else if (src?.id === this.meId && f.style === "melee") sfx("mal1att1");
+          else if (src?.id === this.meId && f.style === "melee") {
+            const v = localStorage.getItem("sx_voice") === "female" ? (Math.random() < 0.5 ? "fem1att1" : "fem1att2") : "mal1att1";
+            sfx(v);
+          }
           else sfx(f.style === "melee" ? "swing" : f.style === "arrow" ? "bow" : "zap");
         }
         if (f.miss && tgt) this.number(tgt, "miss", "#bbb");
@@ -189,7 +192,7 @@ export class Engine {
       case "legendary_burst": this.shock(f.x, f.z, "#ffd36b", 4); this.dirtBurst(f.x, f.z, "#ffd36b"); sfx("legendary"); break;
       case "pdmg": if (tgt) { tgt.anim.hurt = 1; this.number(tgt, f.v, "#ff5040"); if (f.tgt === this.meId) { sfx("hurt"); this.shake = 0.25; } } break;
       case "death": if (tgt) { tgt.anim.dead = true; if (tgt?.type === "imp" && near(tgt)) sfx("impdie"); } break;
-      case "pdeath": if (tgt) tgt.anim.dead = true; if (f.tgt === this.meId) sfx("mal1die2"); break;
+      case "pdeath": if (tgt) tgt.anim.dead = true; if (f.tgt === this.meId) sfx(localStorage.getItem("sx_voice") === "female" ? "fem1die2" : "mal1die2"); break;
       case "heal": if (tgt) { this.burst(tgt, "#7aff9a", 14, 1.4); if (f.v) this.number(tgt, `+${f.v}`, "#7aff9a"); if (near(tgt)) sfx("heal"); } break;
       case "levelup": if (src) { this.pillar(src); sfx("levelup"); } break;
       case "slam": if (src) { this.shock(src.x, src.z, f.c1 || "#b060ff", f.r); this.shock(src.x, src.z, f.c2 || "#ff6a3a", f.r * 0.6); src.anim.atk = 1; if (near(src)) { sfx("heavy"); this.shake = 0.4; } } break;
