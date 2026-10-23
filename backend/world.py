@@ -117,6 +117,11 @@ SIDE_PATHS = [
 STREAMS = [[(300, -5), (290, 80), (310, 160), (300, 235), (320, 320), (310, 405)],
            [(700, -5), (715, 90), (690, 170), (705, 240), (690, 330), (700, 405)]]
 LAKES = [dict(x=1045, z=335, rx=30, rz=20), dict(x=1548, z=352, rx=26, rz=16), dict(x=420, z=330, rx=14, rz=9)]
+# meandering lava stream + small pools east of the Shattered Quarry
+LAVA_STREAMS = [[(555, 418), (568, 408), (575, 395), (588, 388), (605, 392), (618, 400), (628, 390), (638, 378)]]
+LAVA_POOLS = [dict(x=572, z=402, rx=4.2, rz=3.0), dict(x=600, z=394, rx=3.4, rz=2.4),
+              dict(x=625, z=397, rx=5.0, rz=3.4), dict(x=645, z=382, rx=3.0, rz=2.2),
+              dict(x=580, z=414, rx=3.6, rz=2.6)]
 
 REGIONS = [
     dict(name="Titus", x=90, z=200, r=58, lvl="Safe town"),
@@ -136,6 +141,7 @@ REGIONS = [
     dict(name="Broodmother's Lair", x=380, z=372, r=30, lvl="25 (Danger)"),
     dict(name="Wraithmoor", x=660, z=48, r=32, lvl="30 (Danger)"),
     dict(name="Shattered Quarry", x=505, z=365, r=30, lvl="38 (Danger)"),
+    dict(name="Molten Vein", x=610, z=400, r=50, lvl="12-15"),
     dict(name="Dreadkeep Ruins", x=820, z=35, r=28, lvl="48 (Deadly)"),
     dict(name="Abyssal Rift", x=1040, z=25, r=26, lvl="60 (Deadly)"),
     dict(name="The Old Pass", x=1094, z=210, r=14, lvl="-"),
@@ -207,7 +213,7 @@ _CR = [("Barbarian Warhall", "castle_barbarian"), ("Berserker Pit", "castle_bers
 _SN = [(c, 3) for c in range(4)] + [(c, 2) for c in (3, 2, 1, 0)] + [(c, 1) for c in range(4)] + [(c, 0) for c in (3, 2, 1, 0)]
 CASTLE_ROOMS = [(c, r, n, m, 4 if i == 15 else 6, f"{65 + i}" if i < 15 else "80 (Boss)") for i, ((c, r), (n, m)) in enumerate(zip(_SN, _CR))]
 OUTSKIRT_MOBS = ["giant_spider", "forest_wolf", "imp", "restless_bones", "goblin_scout"]
-CAMP_FAMILY = {"giant_spider": "spider", "venomous_spider": "spider", "broodmother": "spider", "imp": "imp", "abyssal_fiend": "imp", "forest_wolf": "beast",
+CAMP_FAMILY = {"giant_spider": "spider", "venomous_spider": "spider", "broodmother": "spider", "imp": "imp", "lava_imp": "imp", "abyssal_fiend": "imp", "forest_wolf": "beast",
                "dire_wolf": "beast", "goblin_scout": "goblin", "skeleton": "undead", "shadow_wraith": "undead", "death_knight": "undead",
                "forest_bandit": "bandit", "orc_warrior": "orc", "dark_cultist": "cultist", "forest_troll": "troll", "stone_golem": "golem"}
 CAMP_NOUN = {"spider": "Nest", "imp": "Pit", "beast": "Den", "goblin": "Warren", "undead": "Boneyard", "bandit": "Hideout", "orc": "Warcamp",
@@ -293,6 +299,7 @@ class World:
         for p in self.paths:
             self._stamp_dist(p["pts"], p["w"], 8)
         self.streams = [catmull(s, 2.0) for s in STREAMS]
+        self.lava_streams = [catmull(s, 2.0) for s in LAVA_STREAMS]
         self.bridges = []
         for s in self.streams:
             run = []
@@ -307,6 +314,12 @@ class World:
             for (x, z) in s:
                 if z < OH - 3:
                     self._disc(x, z, 2.6, skip_road=True)
+        # lava: clear foliage along the stream & pools so decorations don't float on it
+        for s in self.lava_streams:
+            for (x, z) in s:
+                self._disc(x, z, 2.4, skip_road=True)
+        for p in LAVA_POOLS:
+            self._disc(p["x"], p["z"], max(p["rx"], p["rz"]) + 0.6, skip_road=True)
         for lk in LAKES:
             for zi in range(int(lk["z"] - lk["rz"]), int(lk["z"] + lk["rz"]) + 1):
                 for xi in range(int(lk["x"] - lk["rx"]), int(lk["x"] + lk["rx"]) + 1):
@@ -345,6 +358,7 @@ class World:
         self._graveyard()
         self._castle()
         self._monster_camps()
+        self._lava_imp_cluster()
         from game_data import BOSS_LAIRS
         for k, (x, z) in BOSS_LAIRS.items():
             x, z = self.nearest_walkable(x, z, 12) or (x, z)
@@ -374,6 +388,7 @@ class World:
         for p in self.paths:
             p["pts"] = [pt(q) for q in p["pts"]]
         self.streams = [[pt(q) for q in st] for st in self.streams]
+        self.lava_streams = [[pt(q) for q in st] for st in self.lava_streams]
         def dxz(d, kx="x", kz="z"):
             d[kx], d[kz] = T(d[kx], d[kz])
         for d in self.bridges + self.props + self.buildings + self.spawns:
@@ -386,7 +401,7 @@ class World:
         global _SHIFTED
         if not _SHIFTED:
             _SHIFTED = True
-            for d in SAFE_ZONES + REGIONS + DUNGEON_ROOMS + PIT_ROOMS + BARROW_ROOMS + LAKES:
+            for d in SAFE_ZONES + REGIONS + DUNGEON_ROOMS + PIT_ROOMS + BARROW_ROOMS + LAKES + LAVA_POOLS:
                 dxz(d)
             for d in PORTALS:
                 dxz(d); d["to"] = T(*d["to"])
@@ -425,6 +440,15 @@ class World:
                 self.bushes.append([round(x, 1), round(z, 1), round(rnd.uniform(0.7, 1.3), 2), rnd.randint(0, 2)])
             else:
                 self.grass.append([round(x, 1), round(z, 1), round(rnd.uniform(0.7, 1.1), 2)])
+
+    def _lava_imp_cluster(self):
+        # global coords (post-globalize). 5 clusters totalling 60 lava imps around the Molten Vein stream
+        clusters = [(735, 568, 14, 14), (765, 555, 15, 15), (790, 555, 14, 14), (745, 538, 12, 10), (803, 542, 10, 7)]
+        for (x, z, r, n) in clusters:
+            w = self.nearest_walkable(x, z, 10)
+            if w:
+                x, z = w
+            self.spawns.append(dict(monster="lava_imp", x=round(x, 1), z=round(z, 1), r=r, n=n))
 
     def _monster_camps(self):
         """global: big themed monster camps across the continent + a sprinkling of lone wanderers (~TARGET_MONSTERS total)"""
@@ -1204,7 +1228,10 @@ class World:
         bits = np.packbits(self.blocked.flatten())
         return dict(ox=OX, oz=OZ, lw=LW, loh=LOH, w=W, h=H, grid=base64.b64encode(bits.tobytes()).decode(), main_road=[[round(a, 1), round(b, 1)] for a, b in self.main_road],
                     paths=[dict(w=p["w"], hidden=p["hidden"], pts=[[round(a, 1), round(b, 1)] for a, b in p["pts"]]) for p in self.paths],
-                    streams=[[[round(a, 1), round(b, 1)] for a, b in s] for s in self.streams], bridges=self.bridges, lakes=LAKES,
+                    streams=[[[round(a, 1), round(b, 1)] for a, b in s] for s in self.streams],
+                    lava_streams=[[[round(a, 1), round(b, 1)] for a, b in s] for s in self.lava_streams],
+                    lava_pools=LAVA_POOLS,
+                    bridges=self.bridges, lakes=LAKES,
                     walls=self.walls, buildings=self.buildings, props=self.props, trees=self.trees, rocks=self.rocks, bushes=self.bushes,
                     grass=self.grass, regions=REGIONS + DUNGEON_ROOMS + PIT_ROOMS + BARROW_ROOMS, dungeons=DUNGEONS, safe_zones=SAFE_ZONES, oh=OH, cave_rocks=self.cave_rocks,
                     portals=[dict(x=p['x'], z=p['z'], name=p['name']) for p in PORTALS], isles=ISLES, isle_bars=ISLE_BARS, docks=DOCKS,

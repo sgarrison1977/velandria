@@ -170,7 +170,7 @@ export class Engine {
         if (src) { src.anim.atk = 1; if (f.style !== "melee") src.anim.cast = 0; }
         if (src && tgt && f.style !== "melee") this.projectile(src, tgt, f.el ? EL_COLOR[f.el] : f.style === "arrow" ? "#e8d8b0" : f.style === "spell" ? "#b05cff" : "#7fb8ff", f.style === "arrow", 0.6, null, f.el);
         if (near(src)) {
-          if (src?.type === "imp" && f.style === "melee") sfx("impgrr");
+          if ((src?.type === "imp" || src?.type === "lava_imp") && f.style === "melee") sfx("impgrr");
           else if (src?.id === this.meId && f.style === "melee") {
             const v = localStorage.getItem("sx_voice") === "female" ? (Math.random() < 0.5 ? "fem1att1" : "fem1att2") : "mal1att1";
             sfx(v);
@@ -184,14 +184,14 @@ export class Engine {
         this.number(tgt, f.v, el || (f.crit ? "#ffcf3a" : f.dt === "poison" ? "#8aff5a" : f.dt === "magic" ? "#9ac8ff" : "#fff"), f.crit);
         if (el) { this.burst(tgt, el, f.dt === "lightning" ? 6 : 8, f.dt === "frost" ? 0.6 : 1.2); if (near(tgt)) sfx(EL_SFX[f.dt]); }
         else if (near(tgt) && !f.q) {
-          if (tgt?.type === "imp") sfx("imphit");
+          if (tgt?.type === "imp" || tgt?.type === "lava_imp") sfx("imphit");
           else sfx(f.crit ? "crit" : "hit");
         }
       } break;
       case "arc": if (src && tgt) this.arc(src, tgt); break;
       case "legendary_burst": this.shock(f.x, f.z, "#ffd36b", 4); this.dirtBurst(f.x, f.z, "#ffd36b"); sfx("legendary"); break;
       case "pdmg": if (tgt) { tgt.anim.hurt = 1; this.number(tgt, f.v, "#ff5040"); if (f.tgt === this.meId) { sfx("hurt"); this.shake = 0.25; } } break;
-      case "death": if (tgt) { tgt.anim.dead = true; if (tgt?.type === "imp" && near(tgt)) sfx("impdie"); } break;
+      case "death": if (tgt) { tgt.anim.dead = true; if ((tgt?.type === "imp" || tgt?.type === "lava_imp") && near(tgt)) sfx("impdie"); } break;
       case "pdeath": if (tgt) tgt.anim.dead = true; if (f.tgt === this.meId) sfx(localStorage.getItem("sx_voice") === "female" ? "fem1die2" : "mal1die2"); break;
       case "heal": if (tgt) { this.burst(tgt, "#7aff9a", 14, 1.4); if (f.v) this.number(tgt, `+${f.v}`, "#7aff9a"); if (near(tgt)) sfx("heal"); } break;
       case "levelup": if (src) { this.pillar(src); sfx("levelup"); } break;
@@ -718,6 +718,10 @@ export class Engine {
     for (const l of this.world.lakes) { const [px, pz] = P(l.x, l.z); ctx.beginPath(); ctx.ellipse(px, pz, l.rx * scale, l.rz * scale, 0, 0, 6.28); ctx.fill(); }
     ctx.strokeStyle = "#3f6a7a"; ctx.lineWidth = Math.max(1.5, 4 * scale);
     for (const s of this.world.streams) { ctx.beginPath(); s.forEach(([x, z], i) => { const [px, pz] = P(x, z); i ? ctx.lineTo(px, pz) : ctx.moveTo(px, pz); }); ctx.stroke(); }
+    ctx.fillStyle = "#ff5a1a";
+    for (const p of this.world.lava_pools || []) { const [px, pz] = P(p.x, p.z); ctx.beginPath(); ctx.ellipse(px, pz, p.rx * scale, p.rz * scale, 0, 0, 6.28); ctx.fill(); }
+    ctx.strokeStyle = "#ff6a1a"; ctx.lineWidth = Math.max(1.5, 3.6 * scale);
+    for (const s of this.world.lava_streams || []) { ctx.beginPath(); s.forEach(([x, z], i) => { const [px, pz] = P(x, z); i ? ctx.lineTo(px, pz) : ctx.moveTo(px, pz); }); ctx.stroke(); }
     ctx.strokeStyle = "#a88a5a"; ctx.lineWidth = Math.max(1.2, 3 * scale);
     for (const path of [this.world.main_road, ...this.world.paths.map((p) => p.pts)]) { ctx.beginPath(); path.forEach(([x, z], i) => { const [px, pz] = P(x, z); i ? ctx.lineTo(px, pz) : ctx.moveTo(px, pz); }); ctx.stroke(); }
     ctx.fillStyle = "#8a7a62";

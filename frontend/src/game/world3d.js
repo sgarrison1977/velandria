@@ -532,6 +532,34 @@ export function buildWater(world, terrain, scene) {
     m.rotation.x = -Math.PI / 2; m.scale.set(l.rx * 1.15, l.rz * 1.15, 1); m.position.set(l.x, -0.6, l.z);
     scene.add(m);
   }
+  // --- lava stream + pools ---
+  const lavaMat = new THREE.ShaderMaterial({
+    transparent: false, depthWrite: true,
+    uniforms: { uTime: windUniform },
+    vertexShader: "varying vec2 vP; void main(){ vP=position.xz; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }",
+    fragmentShader: "varying vec2 vP; uniform float uTime; float n(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5);} float fb(vec2 p){float v=0.0,a=0.5;for(int i=0;i<4;i++){v+=a*n(p);p*=2.03;a*=0.5;}return v;} void main(){ float t=uTime*0.4; float f=fb(vP*0.35+vec2(t,-t*0.6)); float g=fb(vP*0.9+vec2(-t*0.7,t)); float c=smoothstep(0.25,0.95,f*0.6+g*0.55); vec3 lo=vec3(0.6,0.08,0.02); vec3 mid=vec3(1.5,0.45,0.08); vec3 hi=vec3(2.3,1.4,0.5); vec3 col=mix(lo,mid,c); col=mix(col,hi,smoothstep(0.7,1.0,c*c)); gl_FragColor=vec4(col,1.0); }",
+  });
+  for (const s of world.lava_streams || []) {
+    const pos = [], idx = [];
+    s.forEach(([x, z], i) => {
+      const [x2, z2] = s[Math.min(s.length - 1, i + 1)], [x0, z0] = s[Math.max(0, i - 1)];
+      const dx = x2 - x0, dz = z2 - z0, l = Math.hypot(dx, dz) || 1, nx = -dz / l * 2.6, nz = dx / l * 2.6;
+      const y = terrain.height(x, z) + 0.05;
+      pos.push(x + nx, y, z + nz, x - nx, y, z - nz);
+      if (i) { const k = i * 2; idx.push(k - 2, k - 1, k, k - 1, k + 1, k); }
+    });
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
+    scene.add(new THREE.Mesh(g, lavaMat));
+  }
+  for (const p of world.lava_pools || []) {
+    const g = new THREE.CircleGeometry(1, 36);
+    const m = new THREE.Mesh(g, lavaMat);
+    m.rotation.x = -Math.PI / 2;
+    m.scale.set(p.rx, p.rz, 1);
+    m.position.set(p.x, terrain.height(p.x, p.z) + 0.06, p.z);
+    scene.add(m);
+  }
   const plank = M("#5b4128"), rail = M("#3d2b1b");
   for (const b of world.bridges) {
     const g = new THREE.Group();

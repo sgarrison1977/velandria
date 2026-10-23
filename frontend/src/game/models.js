@@ -26,6 +26,7 @@ const MONSTER_BUILD = {
   giant_spider: () => spider({ body: "#2e231a", abd: "#3b2b1d", mark: "#9a6a32", scale: 1.0 }),
   venomous_spider: () => spider({ body: "#16201a", abd: "#21301a", mark: "#8aff3a", leg: "#2a1a30", glow: true, scale: 1.45 }),
   imp: () => humanoid({ scale: 0.62, body: "bare", head: "goblin", skin: "#a8352a", hairStyle: "bald", boots: { style: "bare" }, loin: "#3a1410", horns: "#2a1a10", wings: "#5a1a14", tail: "#8a2a22", eyes: "#ffd23a", ears: true, claws: true }),
+  lava_imp: () => humanoid({ scale: 0.68, body: "bare", head: "goblin", skin: "#ff5a1a", hairStyle: "bald", boots: { style: "bare" }, loin: "#5a1a08", horns: "#ffb03a", wings: "#8a1a08", tail: "#ff7a2a", eyes: "#fff2a0", ears: true, claws: true, glow: "#ff7a1a" }),
   forest_wolf: () => wolf({ color: "#625e57", dark: "#3d3a35" }),
   goblin_scout: () => humanoid({ scale: 0.74, head: "goblin", skin: "#64803a", ears: true, helm: { style: "hood", color: "#4a3a22" }, top: { style: "leather", color: "#55452a" }, legs: { style: "cloth", color: "#3a3020" }, boots: { style: "bare" }, sleeveless: true, weapon: "dagger", eyes: "#ffe14a", headScale: 1.25 }),
   skeleton: () => humanoid({ body: "bone", skin: "#d8d2bc", head: "skull", top: { color: "#4a4238" }, weapon: "sword", weaponColor: "#7a6a5a", off: "shield", shieldColor: "#3a2e22", eyes: "#7fe0ff" }),
