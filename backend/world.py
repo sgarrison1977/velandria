@@ -408,7 +408,7 @@ class World:
         self.bushes = [t for t in self.bushes if t[1] > GOH or dry(t[0], t[1], 5)]
         self.grass = [t for t in self.grass if t[1] > GOH or dry(t[0], t[1], 8)]
         # wild growth on the new outer lands
-        for _ in range(18000):
+        for _ in range(8000):
             x, z = rnd.uniform(5, GW - 5), rnd.uniform(5, GOH - 5)
             if OX - 4 < x < OX + LW + 4 and OZ - 4 < z < OZ + LOH + 4:
                 continue
@@ -416,7 +416,7 @@ class World:
             if c > -14 or nb[int(z), int(x)]:
                 continue
             r = rnd.random()
-            if r < 0.10 and c < -22:
+            if r < 0.04 and c < -22:
                 self.trees.append([round(x, 1), round(z, 1), rnd.randint(0, 2), round(rnd.uniform(0.8, 1.3), 2), round(rnd.uniform(0, 6.28), 2)])
                 self._disc(x, z, 0.6)
             elif r < 0.3:
@@ -764,7 +764,7 @@ class World:
                 x, z = isle["x"] + math.cos(a) * dd, isle["z"] + math.sin(a) * dd
                 if sea(x, z) > -7 or self.blocked[int(z), int(x)] or math.hypot(x - ISLE_LANDING[0], z - ISLE_LANDING[1]) < 8:
                     continue
-                if rr.random() < 0.55:
+                if rr.random() < 0.22:
                     self.trees.append([round(x, 1), round(z, 1), rr.choice([0, 2]), round(rr.uniform(0.8, 1.2), 2), round(rr.uniform(0, 6.28), 2)]); self._disc(x, z, 0.6)
                 else:
                     self.bushes.append([round(x, 1), round(z, 1), round(rr.uniform(0.7, 1.3), 2), 1])
@@ -1042,18 +1042,18 @@ class World:
                 return False
             return True
         n_tree = 0
-        for _ in range(5000 * W // 1100):
+        for _ in range(1500 * W // 1100):
             x, z = rnd.uniform(3, W - 3), rnd.uniform(3, OH - 3)
             if town_d(x, z) < 1.05:
                 continue
-            dens = 0.42
+            dens = 0.18
             for (cx, cz, cr) in clearings:
                 if (x - cx) ** 2 + (z - cz) ** 2 < cr * cr:
-                    dens = 0.03
+                    dens = 0.01
                     break
             edge = min(x, W - x, z, OH - z)
             if edge < 25:
-                dens = 0.6
+                dens = 0.28
             if rnd.random() > dens or not ok(x, z, 4.0):
                 continue
             if x > 820: kind = rnd.choice([0, 0, 2, 2, 0])
