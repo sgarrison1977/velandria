@@ -243,7 +243,7 @@ export class Engine {
     if (ab === "radius" && tgt) this.beam(src, tgt, c);
     if (ab === "venenum" && tgt) this.projectile(src, tgt, c, false, 0.7, () => this.burst(tgt, c, 10, 1));
     if (ab === "flamma_ventus" && tgt) this.cone(src, tgt, c);
-    if (ab === "tabes_viscera") this.aura(src, "#c01818", 2);
+    if (ab === "tabes_viscera") { /* no caster aura */ }
     if (ab === "glacies_nova") { this.shock(src.x, src.z, c, 8); this.shock(src.x, src.z, "#e8fbff", 5); this.burst(src, c, 34, 3.5); this.burst(src, "#ffffff", 14, 2); if (src.id === this.meId) this.shake = 0.12; }
     if (ab === "fulmen_catena" && tgt) { this.arc(src, tgt); setTimeout(() => this.arc(src, tgt), 60); }
     if (["teuri", "velocitas", "robur", "contra_visus"].includes(ab)) { this.aura(src, c, 3); this.burst(src, c, 14, 2); }
@@ -251,16 +251,42 @@ export class Engine {
     if (ab === "creare_porta" && tgt) this.shock(tgt.x, tgt.z, c, 2.5);
   }
   rotCloud(e) {
-    const top = () => this.groundY(e.x, e.z) + (e.height || 1.5) + 0.6;
-    for (let i = 0; i < 9; i++) {
-      const s = sprite(i % 3 ? "#b01010" : "#5a0606", 0.9 + Math.random() * 0.6), ox = (Math.random() - 0.5) * 1.1, oz = (Math.random() - 0.5) * 1.1, oy = Math.random() * 0.35, ph = Math.random() * 6;
-      s.material.blending = THREE.NormalBlending;
-      this.addFx(s, 2.2, (t) => { s.position.set(e.x + ox + Math.sin(t * 5 + ph) * 0.12, top() + oy, e.z + oz); s.material.opacity = Math.min(1, t * 6) * (1 - t) * 0.9; s.scale.setScalar((0.8 + t * 0.8) * (1.2 + Math.sin(t * 9 + ph) * 0.1)); });
-    }
+    const y0 = () => this.groundY(e.x, e.z);
+    const top = () => y0() + (e.height || 1.5) + 0.4;
+    // ground rot stain
+    const stain = new THREE.Mesh(new THREE.CircleGeometry(1.4, 20), new THREE.MeshBasicMaterial({ color: "#3a4a10", transparent: true, opacity: 0.75, depthWrite: false }));
+    stain.rotation.x = -Math.PI / 2; stain.position.set(e.x, y0() + 0.04, e.z);
+    this.addFx(stain, 2.4, (t) => { stain.material.opacity = 0.75 * (1 - t) * (1 - t); stain.scale.setScalar(0.7 + t * 0.7); }, () => { stain.geometry.dispose(); stain.material.dispose(); });
+    // boil-up gas puffs: sickly green + mustard
+    const palette = ["#9ed938", "#6fae1c", "#b7e04a", "#4a6a10", "#c2c04a"];
     for (let i = 0; i < 14; i++) {
-      const d = sprite("#d01c1c", 0.18), ox = (Math.random() - 0.5) * 0.9, oz = (Math.random() - 0.5) * 0.9, dl = Math.random() * 1.4;
-      this.addFx(d, 2.2, (t) => { const k = Math.max(0, (t * 2.2 - dl) / 0.8); d.visible = k > 0 && k < 1; d.position.set(e.x + ox, top() - k * ((e.height || 1.5) + 0.6), e.z + oz); d.material.opacity = 1 - k; });
+      const col = palette[i % palette.length];
+      const s = sprite(col, 0.85 + Math.random() * 0.7), ox = (Math.random() - 0.5) * 1.3, oz = (Math.random() - 0.5) * 1.3, ph = Math.random() * 6, rise = 0.6 + Math.random() * 0.8, dl = Math.random() * 0.3;
+      s.material.blending = THREE.NormalBlending;
+      this.addFx(s, 2.4, (t) => {
+        const k = Math.max(0, (t - dl) / (1 - dl));
+        s.position.set(e.x + ox + Math.sin(k * 5 + ph) * 0.18, y0() + 0.2 + k * rise, e.z + oz + Math.cos(k * 4 + ph) * 0.18);
+        s.material.opacity = Math.min(1, k * 5) * (1 - k * k) * 0.85;
+        s.scale.setScalar((0.9 + k * 1.4) * (1 + Math.sin(k * 11 + ph) * 0.08));
+      });
     }
+    // additive bright inner highlights
+    for (let i = 0; i < 8; i++) {
+      const s = sprite("#d6ff6a", 0.5 + Math.random() * 0.4), ox = (Math.random() - 0.5) * 0.9, oz = (Math.random() - 0.5) * 0.9, oy = Math.random() * 0.5, ph = Math.random() * 6;
+      this.addFx(s, 1.6, (t) => { s.position.set(e.x + ox, y0() + 0.3 + oy + Math.sin(t * 7 + ph) * 0.1, e.z + oz); s.material.opacity = (1 - t) * 0.7; s.scale.setScalar(0.5 + t * 0.9); });
+    }
+    // dripping green ichor from above
+    for (let i = 0; i < 12; i++) {
+      const d = sprite("#78b020", 0.22), ox = (Math.random() - 0.5) * 1.0, oz = (Math.random() - 0.5) * 1.0, dl = Math.random() * 1.3;
+      this.addFx(d, 2.4, (t) => { const k = Math.max(0, (t * 2.4 - dl) / 0.8); d.visible = k > 0 && k < 1; d.position.set(e.x + ox, top() - k * ((e.height || 1.5) + 0.4), e.z + oz); d.material.opacity = 1 - k; d.scale.setScalar(0.6 + k * 0.4); });
+    }
+    // flesh-fly specks orbiting the target
+    for (let i = 0; i < 10; i++) {
+      const fly = sprite("#2a1a0a", 0.14), a0 = Math.random() * 6.283, sp = 3.5 + Math.random() * 2, rr = 0.6 + Math.random() * 0.5, yy = 0.5 + Math.random() * 1.2;
+      this.addFx(fly, 1.8, (t) => { fly.position.set(e.x + Math.cos(a0 + t * sp) * rr, y0() + yy + Math.sin(t * sp * 2 + a0) * 0.15, e.z + Math.sin(a0 + t * sp) * rr); fly.material.opacity = (1 - t) * 0.9; });
+    }
+    // single bright pop at impact
+    this.shock(e.x, e.z, "#b7ff4a", 1.4);
   }
   cone(src, tgt, color) {
     const ang = Math.atan2(tgt.x - src.x, tgt.z - src.z);
