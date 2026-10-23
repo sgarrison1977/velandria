@@ -142,17 +142,31 @@ export class Terrain {
       out[0] = (wall ? 0.27 : 0.13) * v; out[1] = (wall ? 0.25 : 0.13 + moss * 0.05) * v; out[2] = (wall ? 0.23 : 0.14) * v;
       return;
     }
-    const n = fbm(x * 3.1, z * 3.1), n2 = vnoise(x * 0.6, z * 0.6), lx = x - (this.w.ox || 0);
+    const n = fbm(x * 3.1, z * 3.1), n2 = vnoise(x * 0.6, z * 0.6), nhi = vnoise(x * 1.9, z * 1.9), lx = x - (this.w.ox || 0);
     const cd = this.w.ox ? this.coast(x, z) : -99;
     if (cd > -3) { const deep = smooth(-3, 40, cd); out[0] = mix(0.12, 0.04, deep); out[1] = mix(0.32, 0.12, deep); out[2] = mix(0.38, 0.26, deep); return; }
+    // regional base palettes (richer, more saturated)
     const east = smooth(780, 900, lx), mid = smooth(330, 480, lx) * (1 - east);
-    let r = mix(0.3, 0.22, mid), g = mix(0.4, 0.3, mid), b = mix(0.16, 0.14, mid);
-    r = mix(r, 0.18, east); g = mix(g, 0.32, east); b = mix(b, 0.24, east);
+    // west meadow: lush emerald, mid plains: olive, east shadowlands: dark forest
+    let r = mix(0.22, 0.27, mid), g = mix(0.46, 0.36, mid), b = mix(0.17, 0.13, mid);
+    r = mix(r, 0.14, east); g = mix(g, 0.30, east); b = mix(b, 0.20, east);
+    // far-east arid clay
     const far = smooth(1110, 1250, lx);
-    r = mix(r, 0.42, far); g = mix(g, 0.38, far); b = mix(b, 0.18, far);
-    const dirt = smooth(0.55, 0.8, n2) * 0.6;
-    r = mix(r, 0.3, dirt); g = mix(g, 0.24, dirt); b = mix(b, 0.15, dirt);
-    const v = 0.82 + n * 0.36;
+    r = mix(r, 0.46, far); g = mix(g, 0.36, far); b = mix(b, 0.16, far);
+    // moss / clover patches (bright emerald tufts)
+    const moss = smooth(0.62, 0.82, vnoise(x * 0.18 + 11, z * 0.18 + 7));
+    if (moss > 0 && far < 0.4) { r = mix(r, 0.17, moss * 0.45); g = mix(g, 0.52, moss * 0.55); b = mix(b, 0.18, moss * 0.4); }
+    // dry grass streaks
+    const dry = smooth(0.5, 0.75, vnoise(x * 0.09 + 3, z * 0.09 + 5)) * (1 - east * 0.7);
+    r = mix(r, 0.44, dry * 0.4); g = mix(g, 0.42, dry * 0.4); b = mix(b, 0.18, dry * 0.4);
+    // dirt / soil patches, less overbearing than before
+    const dirt = smooth(0.6, 0.82, n2) * 0.45;
+    r = mix(r, 0.33, dirt); g = mix(g, 0.24, dirt); b = mix(b, 0.14, dirt);
+    // speckle highlights for texture richness
+    const sp = (hash(Math.floor(x * 4) + 0.1, Math.floor(z * 4) + 0.1) - 0.5) * 0.08;
+    r += sp; g += sp * 0.9; b += sp * 0.6;
+    // large-scale light/dark modulation
+    const v = 0.78 + n * 0.4 + nhi * 0.12;
     r *= v; g *= v; b *= v;
     const rd = this.sample(this.RD, x, z);
     if (rd < 1.6) {
@@ -394,7 +408,11 @@ export function buildVegetation(world, terrain, scene) {
   const grassMat = windify(new THREE.MeshStandardMaterial({ map: grassTexture(), alphaTest: 0.5, side: THREE.DoubleSide, roughness: 1 }), 0.25);
   for (const [x, z, sc] of world.grass) {
     const y = terrain.height(x, z);
-    add("g", x, z, "grass", mk(x, y, z, sc, x * 5.1), col.setHSL(x - (world.ox || 0) > 820 ? 0.38 : 0.22, 0.45, 0.28 + ((z * 1.7) % 1) * 0.14).clone());
+    const east = x - (world.ox || 0) > 820;
+    const hue = east ? 0.33 + ((x * 0.3) % 1) * 0.06 : 0.22 + ((x * 0.19) % 1) * 0.08;
+    const sat = 0.42 + ((z * 0.73) % 1) * 0.2;
+    const lig = 0.3 + ((z * 1.7) % 1) * 0.18;
+    add("g", x, z, "grass", mk(x, y, z, sc, x * 5.1), col.setHSL(hue, sat, lig).clone());
   }
   const geos = {}, mats = {};
   species.forEach((sp, k) => sp.parts.forEach(([g, m], pi) => { geos[`t${k}_${pi}`] = g; mats[`t${k}_${pi}`] = m; }));

@@ -421,7 +421,7 @@ class World:
                 self._disc(x, z, 0.6)
             elif r < 0.3:
                 self.rocks.append([round(x, 1), round(z, 1), round(rnd.uniform(0.4, 1.4), 2), round(rnd.uniform(0, 6.28), 2)])
-            elif r < 0.6:
+            elif r < 0.14:
                 self.bushes.append([round(x, 1), round(z, 1), round(rnd.uniform(0.7, 1.3), 2), rnd.randint(0, 2)])
             else:
                 self.grass.append([round(x, 1), round(z, 1), round(rnd.uniform(0.7, 1.1), 2)])
@@ -1074,12 +1074,12 @@ class World:
             self.rocks.append([round(x, 1), round(z, 1), round(s, 2), round(rnd.uniform(0, 6.28), 2)])
             if s > 0.6:
                 self._disc(x, z, s * 0.75)
-        for _ in range(9000 * W // 1100):
+        for _ in range(1800 * W // 1100):
             x, z = rnd.uniform(4, W - 4), rnd.uniform(4, OH - 4)
             if town_d(x, z) < 0.9 or not ok(x, z, 1.5):
                 continue
             self.bushes.append([round(x, 1), round(z, 1), round(rnd.uniform(0.6, 1.4), 2), 1 if x > 820 else 0])
-        for _ in range(16000 * W // 1100):
+        for _ in range(22000 * W // 1100):
             x, z = rnd.uniform(4, W - 4), rnd.uniform(4, OH - 4)
             if not ok(x, z, 0.8) or any(abs(x - t["x"]) < 23 and abs(z - t["z"]) < 23 for t in SAFE_ZONES):
                 continue

@@ -253,12 +253,12 @@ export class Engine {
   rotCloud(e) {
     const y0 = () => this.groundY(e.x, e.z);
     const top = () => y0() + (e.height || 1.5) + 0.4;
-    // ground rot stain
-    const stain = new THREE.Mesh(new THREE.CircleGeometry(1.4, 20), new THREE.MeshBasicMaterial({ color: "#3a4a10", transparent: true, opacity: 0.75, depthWrite: false }));
+    // ground blood stain
+    const stain = new THREE.Mesh(new THREE.CircleGeometry(1.4, 20), new THREE.MeshBasicMaterial({ color: "#3a0606", transparent: true, opacity: 0.78, depthWrite: false }));
     stain.rotation.x = -Math.PI / 2; stain.position.set(e.x, y0() + 0.04, e.z);
-    this.addFx(stain, 2.4, (t) => { stain.material.opacity = 0.75 * (1 - t) * (1 - t); stain.scale.setScalar(0.7 + t * 0.7); }, () => { stain.geometry.dispose(); stain.material.dispose(); });
-    // boil-up gas puffs: sickly green + mustard
-    const palette = ["#9ed938", "#6fae1c", "#b7e04a", "#4a6a10", "#c2c04a"];
+    this.addFx(stain, 2.4, (t) => { stain.material.opacity = 0.78 * (1 - t) * (1 - t); stain.scale.setScalar(0.7 + t * 0.7); }, () => { stain.geometry.dispose(); stain.material.dispose(); });
+    // boil-up gore puffs: deep crimson + dark red
+    const palette = ["#c01818", "#8a0a0a", "#e02a2a", "#5a0606", "#a01212"];
     for (let i = 0; i < 14; i++) {
       const col = palette[i % palette.length];
       const s = sprite(col, 0.85 + Math.random() * 0.7), ox = (Math.random() - 0.5) * 1.3, oz = (Math.random() - 0.5) * 1.3, ph = Math.random() * 6, rise = 0.6 + Math.random() * 0.8, dl = Math.random() * 0.3;
@@ -270,23 +270,23 @@ export class Engine {
         s.scale.setScalar((0.9 + k * 1.4) * (1 + Math.sin(k * 11 + ph) * 0.08));
       });
     }
-    // additive bright inner highlights
+    // additive bright inner highlights (bloody glow)
     for (let i = 0; i < 8; i++) {
-      const s = sprite("#d6ff6a", 0.5 + Math.random() * 0.4), ox = (Math.random() - 0.5) * 0.9, oz = (Math.random() - 0.5) * 0.9, oy = Math.random() * 0.5, ph = Math.random() * 6;
+      const s = sprite("#ff5a4a", 0.5 + Math.random() * 0.4), ox = (Math.random() - 0.5) * 0.9, oz = (Math.random() - 0.5) * 0.9, oy = Math.random() * 0.5, ph = Math.random() * 6;
       this.addFx(s, 1.6, (t) => { s.position.set(e.x + ox, y0() + 0.3 + oy + Math.sin(t * 7 + ph) * 0.1, e.z + oz); s.material.opacity = (1 - t) * 0.7; s.scale.setScalar(0.5 + t * 0.9); });
     }
-    // dripping green ichor from above
+    // dripping blood from above
     for (let i = 0; i < 12; i++) {
-      const d = sprite("#78b020", 0.22), ox = (Math.random() - 0.5) * 1.0, oz = (Math.random() - 0.5) * 1.0, dl = Math.random() * 1.3;
+      const d = sprite("#b01010", 0.22), ox = (Math.random() - 0.5) * 1.0, oz = (Math.random() - 0.5) * 1.0, dl = Math.random() * 1.3;
       this.addFx(d, 2.4, (t) => { const k = Math.max(0, (t * 2.4 - dl) / 0.8); d.visible = k > 0 && k < 1; d.position.set(e.x + ox, top() - k * ((e.height || 1.5) + 0.4), e.z + oz); d.material.opacity = 1 - k; d.scale.setScalar(0.6 + k * 0.4); });
     }
     // flesh-fly specks orbiting the target
     for (let i = 0; i < 10; i++) {
-      const fly = sprite("#2a1a0a", 0.14), a0 = Math.random() * 6.283, sp = 3.5 + Math.random() * 2, rr = 0.6 + Math.random() * 0.5, yy = 0.5 + Math.random() * 1.2;
+      const fly = sprite("#1a0404", 0.14), a0 = Math.random() * 6.283, sp = 3.5 + Math.random() * 2, rr = 0.6 + Math.random() * 0.5, yy = 0.5 + Math.random() * 1.2;
       this.addFx(fly, 1.8, (t) => { fly.position.set(e.x + Math.cos(a0 + t * sp) * rr, y0() + yy + Math.sin(t * sp * 2 + a0) * 0.15, e.z + Math.sin(a0 + t * sp) * rr); fly.material.opacity = (1 - t) * 0.9; });
     }
     // single bright pop at impact
-    this.shock(e.x, e.z, "#b7ff4a", 1.4);
+    this.shock(e.x, e.z, "#ff3a2a", 1.4);
   }
   cone(src, tgt, color) {
     const ang = Math.atan2(tgt.x - src.x, tgt.z - src.z);
