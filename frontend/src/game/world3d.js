@@ -101,14 +101,39 @@ export class Terrain {
     let amp = 5.5;
     if (x - (this.w.ox || 0) > 880 && z - (this.w.oz || 0) < 130) amp = 11;
     let h = (fbm(x, z) - 0.45) * amp;
-    h *= smooth(1, 14, rd) * 0.85 + 0.15 * (rd < 0 ? 0 : 1);
+    const roadDamp = smooth(1, 14, rd) * 0.85 + 0.15 * (rd < 0 ? 0 : 1);
+    h *= roadDamp;
     if (rd < 1) h *= 0.15;
-    h *= this.townFactor(x, z);
+    const tf = this.townFactor(x, z);
+    h *= tf;
     if (h < 0) h = -0.3 * (1 - Math.exp(h / 0.3));
     if (sd < 7) h = mix(h, mix(-1.0, h, smooth(1.5, 7, sd)), smooth(0.5, 3.5, rd));
     const lk = this.lake(x, z);
     if (lk < 1.4) h = mix(-1.3, h, smooth(0.8, 1.4, lk));
+    // scattered rolling hills, damped near roads/towns/water
+    const bump = this.hillBump(x, z) * tf * smooth(2, 10, rd) * smooth(2.5, 7, sd) * smooth(1.0, 2.0, lk);
+    h += bump;
     return h;
+  }
+  hillBump(x, z) {
+    const CELL = 130;
+    let total = 0;
+    const ix = Math.floor(x / CELL), iz = Math.floor(z / CELL);
+    for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+      const cx = ix + di, cz = iz + dj;
+      const seed = hash(cx * 73.1 + 9.3, cz * 91.7 + 4.1);
+      if (seed < 0.55) continue;
+      const ox = hash(cx + 1.7, cz + 2.9), oz = hash(cx + 5.3, cz + 8.1);
+      const rx = (cx + 0.2 + ox * 0.6) * CELL;
+      const rz = (cz + 0.2 + oz * 0.6) * CELL;
+      const radius = 42 + hash(cx + 3, cz + 5) * 46;
+      const height = 4 + hash(cx + 2, cz + 1) * 5.5;
+      const d = Math.hypot(x - rx, z - rz);
+      if (d >= radius) continue;
+      const t = 1 - d / radius;
+      total += height * t * t * (3 - 2 * t);
+    }
+    return total;
   }
   groundColor(x, z, out) {
     if (z > this.w.oh - 3) {
