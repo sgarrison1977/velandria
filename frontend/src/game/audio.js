@@ -93,7 +93,7 @@ const SOUNDS = {
 const CLIPS = { beam: ["beam1", "beam3"], step: ["step1", "step2", "step3"], swing: ["swing1", "swing2"], hit: ["hit1", "hit2"] };
 const GAIN = { beam: 0.9, legendary: 0.9, step: 0.35, click: 0.5, open: 0.6, loot: 0.7, swing: 0.8, levelup: 0.9, growl_beast: 0.7, growl_undead: 0.7, roar: 0.8, error: 0.6 };
 const FILES = ["step1", "step2", "step3", "swing1", "swing2", "hit1", "hit2", "crit", "heavy", "bow", "hurt", "mdeath", "death", "heal", "arcane", "fire", "frost",
-  "poison", "portal", "zap", "buff", "loot", "coin", "levelup", "click", "error", "open", "growl_beast", "growl_undead", "roar", "dash", "moonbeam", "legendary", "beam1.wav", "beam3.wav", "rot.wav"];
+  "poison", "portal", "zap", "buff", "loot", "coin", "levelup", "click", "error", "open", "growl_beast", "growl_undead", "roar", "dash", "moonbeam", "legendary", "beam1.wav", "beam3.wav", "rot.wav", "impdie.wav", "impgrr.wav", "imphit.wav"];
 const bufs = {};
 let loading = false;
 function loadClips(c) {

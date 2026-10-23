@@ -169,18 +169,25 @@ export class Engine {
       case "attack": case "mattack":
         if (src) { src.anim.atk = 1; if (f.style !== "melee") src.anim.cast = 0; }
         if (src && tgt && f.style !== "melee") this.projectile(src, tgt, f.el ? EL_COLOR[f.el] : f.style === "arrow" ? "#e8d8b0" : f.style === "spell" ? "#b05cff" : "#7fb8ff", f.style === "arrow", 0.6, null, f.el);
-        if (near(src)) { sfx(f.style === "melee" ? "swing" : f.style === "arrow" ? "bow" : "zap"); }
+        if (near(src)) {
+          if (src?.type === "imp" && f.style === "melee") sfx("impgrr");
+          else sfx(f.style === "melee" ? "swing" : f.style === "arrow" ? "bow" : "zap");
+        }
         if (f.miss && tgt) this.number(tgt, "miss", "#bbb");
         break;
       case "dmg": if (tgt) {
         tgt.anim.hurt = 1; tgt.lastHit = performance.now(); const el = EL_COLOR[f.dt];
         this.number(tgt, f.v, el || (f.crit ? "#ffcf3a" : f.dt === "poison" ? "#8aff5a" : f.dt === "magic" ? "#9ac8ff" : "#fff"), f.crit);
-        if (el) { this.burst(tgt, el, f.dt === "lightning" ? 6 : 8, f.dt === "frost" ? 0.6 : 1.2); if (near(tgt)) sfx(EL_SFX[f.dt]); } else if (near(tgt) && !f.q) sfx(f.crit ? "crit" : "hit");
+        if (el) { this.burst(tgt, el, f.dt === "lightning" ? 6 : 8, f.dt === "frost" ? 0.6 : 1.2); if (near(tgt)) sfx(EL_SFX[f.dt]); }
+        else if (near(tgt) && !f.q) {
+          if (tgt?.type === "imp") sfx("imphit");
+          else sfx(f.crit ? "crit" : "hit");
+        }
       } break;
       case "arc": if (src && tgt) this.arc(src, tgt); break;
       case "legendary_burst": this.shock(f.x, f.z, "#ffd36b", 4); this.dirtBurst(f.x, f.z, "#ffd36b"); sfx("legendary"); break;
       case "pdmg": if (tgt) { tgt.anim.hurt = 1; this.number(tgt, f.v, "#ff5040"); if (f.tgt === this.meId) { sfx("hurt"); this.shake = 0.25; } } break;
-      case "death": if (tgt) tgt.anim.dead = true; break;
+      case "death": if (tgt) { tgt.anim.dead = true; if (tgt?.type === "imp" && near(tgt)) sfx("impdie"); } break;
       case "pdeath": if (tgt) tgt.anim.dead = true; if (f.tgt === this.meId) sfx("death"); break;
       case "heal": if (tgt) { this.burst(tgt, "#7aff9a", 14, 1.4); if (f.v) this.number(tgt, `+${f.v}`, "#7aff9a"); if (near(tgt)) sfx("heal"); } break;
       case "levelup": if (src) { this.pillar(src); sfx("levelup"); } break;
